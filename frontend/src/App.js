@@ -1,11 +1,7 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider, createTheme } from '@mui/material';
-
-// Import pages (we'll create these next)
 import Login from './pages/Login';
-import Register from './pages/Register';
-import CustomerHome from './pages/Customer/Home';
 import AdminDashboard from './pages/Admin/Dashboard';
 import BranchDashboard from './pages/Branch/Dashboard';
 
@@ -26,9 +22,8 @@ function App() {
             <AuthProvider>
                 <Router>
                     <Routes>
+                        <Route path="/" element={<Navigate to="/login" replace />} />
                         <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
-                        <Route path="/customer/*" element={<CustomerHome />} />
                         <Route path="/admin/*" element={<AdminDashboard />} />
                         <Route path="/branch/*" element={<BranchDashboard />} />
                     </Routes>

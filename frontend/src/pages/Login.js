@@ -20,8 +20,22 @@ function Login() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await login(email, password);
-            // Redirect based on user role
+            // For testing purposes, use email to determine role
+            // In production, this would come from the backend
+            let userRole;
+            if (email.includes('admin')) {
+                userRole = 'admin';
+            } else if (email.includes('branch')) {
+                userRole = 'branch';
+            } else {
+                userRole = 'customer';
+            }
+
+            // Simulate successful login
+            navigate(`/${userRole}`);
+            
+            // Original authentication code (for when backend is ready)
+            /*const response = await login(email, password);
             switch (response.user.role) {
                 case 'admin':
                     navigate('/admin');
@@ -31,7 +45,7 @@ function Login() {
                     break;
                 default:
                     navigate('/customer');
-            }
+            }*/
         } catch (err) {
             setError('Invalid email or password');
         }
@@ -50,6 +64,11 @@ function Login() {
                 <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
                     <Typography component="h1" variant="h5" align="center">
                         Sign In
+                    </Typography>
+                    <Typography color="textSecondary" align="center" sx={{ mt: 1 }}>
+                        Use admin@example.com for admin dashboard
+                        <br />
+                        Use branch@example.com for branch dashboard
                     </Typography>
                     {error && (
                         <Typography color="error" align="center" sx={{ mt: 2 }}>

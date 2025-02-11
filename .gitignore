@@ -1,0 +1,15 @@
+.DS_Store
+.idea/.gitignore
+.idea/discord.xml
+.idea/food-delivery-webapp.iml
+.idea/material_theme_project_new.xml
+.idea/modules.xml
+.idea/vcs.xml
+backend/.env
+frontend/.env
+backend/.gitignore
+backend/node_modules/
+frontend/.DS_Store
+frontend/package-lock.json
+frontend/package.json
+frontend/node_modules/
