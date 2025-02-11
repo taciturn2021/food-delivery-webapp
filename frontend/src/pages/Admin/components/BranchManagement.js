@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Paper,
@@ -28,6 +28,7 @@ import {
     Edit as EditIcon,
     Delete as DeleteIcon,
 } from '@mui/icons-material';
+import { getAllBranches, createBranch, updateBranch, deleteBranch } from '../../../services/api';
 
 const TabPanel = ({ children, value, index }) => (
     <div hidden={value !== index} style={{ display: value === index ? 'block' : 'none' }}>
@@ -36,46 +37,96 @@ const TabPanel = ({ children, value, index }) => (
 );
 
 const BranchManagement = () => {
+    const [branches, setBranches] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [formData, setFormData] = useState({
+        name: '',
+        address: '',
+        phone: '',
+        manager_id: '',
+        status: 'active'
+    });
+    const [editingId, setEditingId] = useState(null);
     const [open, setOpen] = useState(false);
-    const [editingBranch, setEditingBranch] = useState(null);
     const [activeTab, setActiveTab] = useState(0);
-    const [branches, setBranches] = useState([
-        {
-            id: 1,
-            name: 'Downtown Branch',
-            address: '123 Main St',
-            phone: '(555) 123-4567',
-            status: 'active',
-            openingTime: '09:00',
-            closingTime: '22:00',
-            // Added branch-specific settings
-            deliveryRadius: 10,
-            minimumOrderAmount: 15,
-            allowScheduledOrders: true,
-            maxScheduleDays: 7,
-            automaticOrderAssignment: true,
-            customDeliveryAreas: [],
-            maxConcurrentOrders: 20,
-            preparationTimeMinutes: 30,
-        },
-    ]);
+
+    useEffect(() => {
+        loadBranches();
+    }, []);
+
+    const loadBranches = async () => {
+        try {
+            const response = await getAllBranches();
+            setBranches(response.data);
+        } catch (error) {
+            setError('Failed to load branches');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleOpen = (branch = null) => {
-        setEditingBranch(branch);
+        if (branch) {
+            setFormData({
+                name: branch.name,
+                address: branch.address,
+                phone: branch.phone,
+                manager_id: branch.manager_id || '',
+                status: branch.status
+            });
+            setEditingId(branch.id);
+        } else {
+            resetForm();
+        }
         setOpen(true);
         setActiveTab(0);
     };
 
     const handleClose = () => {
-        setEditingBranch(null);
+        resetForm();
         setOpen(false);
     };
 
-    const handleSubmit = (event) => {
-        event.preventDefault();
-        // TODO: Implement branch creation/editing logic
-        handleClose();
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            if (editingId) {
+                await updateBranch(editingId, formData);
+            } else {
+                await createBranch(formData);
+            }
+            loadBranches();
+            handleClose();
+        } catch (error) {
+            setError(error.response?.data?.message || 'Error saving branch');
+        }
     };
+
+    const handleDelete = async (id) => {
+        if (window.confirm('Are you sure you want to delete this branch?')) {
+            try {
+                await deleteBranch(id);
+                loadBranches();
+            } catch (error) {
+                setError('Failed to delete branch');
+            }
+        }
+    };
+
+    const resetForm = () => {
+        setFormData({
+            name: '',
+            address: '',
+            phone: '',
+            manager_id: '',
+            status: 'active'
+        });
+        setEditingId(null);
+    };
+
+    if (loading) return <div>Loading...</div>;
+    if (error) return <div>Error: {error}</div>;
 
     return (
         <Box>
@@ -98,7 +149,6 @@ const BranchManagement = () => {
                             <TableCell>Address</TableCell>
                             <TableCell>Phone</TableCell>
                             <TableCell>Status</TableCell>
-                            <TableCell>Hours</TableCell>
                             <TableCell>Actions</TableCell>
                         </TableRow>
                     </TableHead>
@@ -115,7 +165,6 @@ const BranchManagement = () => {
                                         size="small"
                                     />
                                 </TableCell>
-                                <TableCell>{`${branch.openingTime} - ${branch.closingTime}`}</TableCell>
                                 <TableCell>
                                     <IconButton
                                         size="small"
@@ -126,6 +175,7 @@ const BranchManagement = () => {
                                     <IconButton
                                         size="small"
                                         color="error"
+                                        onClick={() => handleDelete(branch.id)}
                                     >
                                         <DeleteIcon />
                                     </IconButton>
@@ -143,7 +193,7 @@ const BranchManagement = () => {
                 fullWidth
             >
                 <DialogTitle>
-                    {editingBranch ? 'Edit Branch' : 'Add New Branch'}
+                    {editingId ? 'Edit Branch' : 'Add New Branch'}
                 </DialogTitle>
                 <DialogContent>
                     <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
@@ -161,7 +211,8 @@ const BranchManagement = () => {
                                     <TextField
                                         fullWidth
                                         label="Branch Name"
-                                        defaultValue={editingBranch?.name}
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({...formData, name: e.target.value})}
                                         required
                                     />
                                 </Grid>
@@ -169,7 +220,8 @@ const BranchManagement = () => {
                                     <TextField
                                         fullWidth
                                         label="Address"
-                                        defaultValue={editingBranch?.address}
+                                        value={formData.address}
+                                        onChange={(e) => setFormData({...formData, address: e.target.value})}
                                         required
                                     />
                                 </Grid>
@@ -177,7 +229,8 @@ const BranchManagement = () => {
                                     <TextField
                                         fullWidth
                                         label="Phone Number"
-                                        defaultValue={editingBranch?.phone}
+                                        value={formData.phone}
+                                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
                                         required
                                     />
                                 </Grid>
@@ -185,8 +238,9 @@ const BranchManagement = () => {
                                     <TextField
                                         label="Opening Time"
                                         type="time"
-                                        defaultValue={editingBranch?.openingTime || '09:00'}
+                                        value={formData.openingTime || '09:00'}
                                         InputLabelProps={{ shrink: true }}
+                                        onChange={(e) => setFormData({...formData, openingTime: e.target.value})}
                                         required
                                         fullWidth
                                     />
@@ -195,8 +249,9 @@ const BranchManagement = () => {
                                     <TextField
                                         label="Closing Time"
                                         type="time"
-                                        defaultValue={editingBranch?.closingTime || '22:00'}
+                                        value={formData.closingTime || '22:00'}
                                         InputLabelProps={{ shrink: true }}
+                                        onChange={(e) => setFormData({...formData, closingTime: e.target.value})}
                                         required
                                         fullWidth
                                     />
@@ -211,7 +266,8 @@ const BranchManagement = () => {
                                         fullWidth
                                         label="Delivery Radius (km)"
                                         type="number"
-                                        defaultValue={editingBranch?.deliveryRadius || 10}
+                                        value={formData.deliveryRadius || 10}
+                                        onChange={(e) => setFormData({...formData, deliveryRadius: e.target.value})}
                                         inputProps={{ min: 1 }}
                                     />
                                 </Grid>
@@ -220,7 +276,8 @@ const BranchManagement = () => {
                                         fullWidth
                                         label="Minimum Order Amount ($)"
                                         type="number"
-                                        defaultValue={editingBranch?.minimumOrderAmount || 15}
+                                        value={formData.minimumOrderAmount || 15}
+                                        onChange={(e) => setFormData({...formData, minimumOrderAmount: e.target.value})}
                                         inputProps={{ min: 0 }}
                                     />
                                 </Grid>
@@ -229,7 +286,8 @@ const BranchManagement = () => {
                                         fullWidth
                                         label="Maximum Concurrent Orders"
                                         type="number"
-                                        defaultValue={editingBranch?.maxConcurrentOrders || 20}
+                                        value={formData.maxConcurrentOrders || 20}
+                                        onChange={(e) => setFormData({...formData, maxConcurrentOrders: e.target.value})}
                                         inputProps={{ min: 1 }}
                                     />
                                 </Grid>
@@ -238,7 +296,8 @@ const BranchManagement = () => {
                                         fullWidth
                                         label="Preparation Time (minutes)"
                                         type="number"
-                                        defaultValue={editingBranch?.preparationTimeMinutes || 30}
+                                        value={formData.preparationTimeMinutes || 30}
+                                        onChange={(e) => setFormData({...formData, preparationTimeMinutes: e.target.value})}
                                         inputProps={{ min: 5 }}
                                     />
                                 </Grid>
@@ -251,7 +310,8 @@ const BranchManagement = () => {
                                     <FormControlLabel
                                         control={
                                             <Switch
-                                                defaultChecked={editingBranch?.allowScheduledOrders}
+                                                checked={formData.allowScheduledOrders}
+                                                onChange={(e) => setFormData({...formData, allowScheduledOrders: e.target.checked})}
                                             />
                                         }
                                         label="Allow Scheduled Orders"
@@ -262,7 +322,8 @@ const BranchManagement = () => {
                                         fullWidth
                                         label="Maximum Schedule Days"
                                         type="number"
-                                        defaultValue={editingBranch?.maxScheduleDays || 7}
+                                        value={formData.maxScheduleDays || 7}
+                                        onChange={(e) => setFormData({...formData, maxScheduleDays: e.target.value})}
                                         inputProps={{ min: 1, max: 30 }}
                                     />
                                 </Grid>
@@ -270,7 +331,8 @@ const BranchManagement = () => {
                                     <FormControlLabel
                                         control={
                                             <Switch
-                                                defaultChecked={editingBranch?.automaticOrderAssignment}
+                                                checked={formData.automaticOrderAssignment}
+                                                onChange={(e) => setFormData({...formData, automaticOrderAssignment: e.target.checked})}
                                             />
                                         }
                                         label="Automatic Order Assignment"
@@ -283,7 +345,7 @@ const BranchManagement = () => {
                 <DialogActions>
                     <Button onClick={handleClose}>Cancel</Button>
                     <Button type="submit" variant="contained" onClick={handleSubmit}>
-                        {editingBranch ? 'Save Changes' : 'Add Branch'}
+                        {editingId ? 'Save Changes' : 'Add Branch'}
                     </Button>
                 </DialogActions>
             </Dialog>

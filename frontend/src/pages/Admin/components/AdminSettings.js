@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { useAuth } from '../../../context/AuthContext';
 import {
     Box,
     Paper,
@@ -13,6 +14,7 @@ import {
 } from '@mui/material';
 
 const AdminSettings = () => {
+    const { user } = useAuth();
     const [settings, setSettings] = useState({
         platformFee: 2,
         maintenanceMode: false,
@@ -21,6 +23,10 @@ const AdminSettings = () => {
         allowBranchScheduling: true, // Whether branches can set their own schedules
         requireOrderApproval: false, // Whether orders need admin approval
         autoCreateBranchAccounts: false, // Auto create accounts when adding branches
+        emailNotifications: true,
+        orderConfirmationRequired: true,
+        automaticBranchAssignment: false,
+        defaultOrderTimeout: 30,
     });
 
     const [showSuccess, setShowSuccess] = useState(false);
@@ -162,6 +168,103 @@ const AdminSettings = () => {
                                 }
                                 label="Automatically Create Branch Accounts"
                             />
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <Divider sx={{ my: 2 }} />
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <Typography variant="h6" gutterBottom>
+                                General Settings
+                            </Typography>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={settings.emailNotifications}
+                                        onChange={handleChange('emailNotifications')}
+                                    />
+                                }
+                                label="Email Notifications"
+                            />
+                            <Typography variant="body2" color="textSecondary">
+                                Receive email notifications for new orders and updates
+                            </Typography>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={settings.orderConfirmationRequired}
+                                        onChange={handleChange('orderConfirmationRequired')}
+                                    />
+                                }
+                                label="Order Confirmation Required"
+                            />
+                            <Typography variant="body2" color="textSecondary">
+                                Require manual confirmation for new orders
+                            </Typography>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={settings.automaticBranchAssignment}
+                                        onChange={handleChange('automaticBranchAssignment')}
+                                    />
+                                }
+                                label="Automatic Branch Assignment"
+                            />
+                            <Typography variant="body2" color="textSecondary">
+                                Automatically assign orders to nearest branch
+                            </Typography>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="Default Order Timeout (minutes)"
+                                type="number"
+                                value={settings.defaultOrderTimeout}
+                                onChange={handleChange('defaultOrderTimeout')}
+                                inputProps={{ min: 1, max: 120 }}
+                            />
+                            <Typography variant="body2" color="textSecondary">
+                                Time before unconfirmed orders are automatically cancelled
+                            </Typography>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <Divider sx={{ my: 2 }} />
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <Typography variant="h6" gutterBottom>
+                                Account Information
+                            </Typography>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <Typography variant="body1">
+                                <strong>Username:</strong> {user.username}
+                            </Typography>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <Typography variant="body1">
+                                <strong>Email:</strong> {user.email}
+                            </Typography>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <Typography variant="body1">
+                                <strong>Role:</strong> {user.role}
+                            </Typography>
                         </Grid>
 
                         <Grid item xs={12}>

@@ -1,3 +1,5 @@
+import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Drawer,
     List,
@@ -5,14 +7,15 @@ import {
     ListItemIcon,
     ListItemText,
     ListItemButton,
-    styled,
-    Divider,
     Box,
+    styled,
+    Typography,
+    Divider,
 } from '@mui/material';
 import {
     Dashboard as DashboardIcon,
-    Store as StoreIcon,
     Restaurant as MenuIcon,
+    Store as BranchIcon,
     Settings as SettingsIcon,
 } from '@mui/icons-material';
 
@@ -25,7 +28,6 @@ const StyledDrawer = styled(Drawer, {
         position: 'relative',
         whiteSpace: 'nowrap',
         width: drawerWidth,
-        height: '100vh',
         transition: theme.transitions.create('width', {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.enteringScreen,
@@ -45,45 +47,112 @@ const StyledDrawer = styled(Drawer, {
     },
 }));
 
-const mainListItems = [
-    { id: 'overview', text: 'Overview', icon: <DashboardIcon /> },
-    { id: 'branches', text: 'Branches', icon: <StoreIcon /> },
-    { id: 'menu', text: 'Menu Items', icon: <MenuIcon /> },
+const navItems = [
+    { path: '/admin', label: 'Overview', icon: <DashboardIcon /> },
+    { path: '/admin/menu', label: 'Menu Management', icon: <MenuIcon /> },
+    { path: '/admin/branches', label: 'Branch Management', icon: <BranchIcon /> },
 ];
 
-const secondaryListItems = [
-    { id: 'settings', text: 'Settings', icon: <SettingsIcon /> },
+const secondaryItems = [
+    { path: '/admin/settings', label: 'Settings', icon: <SettingsIcon /> },
 ];
 
-const AdminSidebar = ({ open, selectedSection, onSectionChange }) => {
+const AdminSidebar = ({ open }) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+
     return (
         <StyledDrawer variant="permanent" open={open}>
-            <Box sx={{ height: 64 }} /> {/* Spacer for header */}
-            <List component="nav" sx={{ height: '100%', pt: 0 }}>
-                {mainListItems.map((item) => (
-                    <ListItem key={item.id} disablePadding>
-                        <ListItemButton
-                            selected={selectedSection === item.id}
-                            onClick={() => onSectionChange(item.id)}
-                        >
-                            <ListItemIcon>{item.icon}</ListItemIcon>
-                            <ListItemText primary={item.text} />
-                        </ListItemButton>
-                    </ListItem>
-                ))}
+            <Box sx={{ 
+                height: 64, 
+                display: 'flex', 
+                alignItems: 'center', 
+                px: 2,
+                backgroundColor: 'primary.main',
+                color: 'white'
+            }}>
+                <Typography variant="h6" noWrap component="div">
+                    Food Delivery
+                </Typography>
+            </Box>
+
+            <Box sx={{ overflow: 'auto', height: '100%' }}>
+                <List>
+                    {navItems.map((item) => (
+                        <ListItem key={item.path} disablePadding>
+                            <ListItemButton
+                                onClick={() => navigate(item.path)}
+                                selected={location.pathname === item.path}
+                                sx={{
+                                    minHeight: 48,
+                                    px: 2.5,
+                                    '&.Mui-selected': {
+                                        backgroundColor: 'primary.lighter',
+                                        '&:hover': {
+                                            backgroundColor: 'primary.light',
+                                        },
+                                    },
+                                }}
+                            >
+                                <ListItemIcon sx={{ 
+                                    minWidth: 0, 
+                                    mr: open ? 3 : 'auto', 
+                                    justifyContent: 'center',
+                                    color: location.pathname === item.path ? 'primary.main' : 'inherit'
+                                }}>
+                                    {item.icon}
+                                </ListItemIcon>
+                                <ListItemText 
+                                    primary={item.label} 
+                                    sx={{ 
+                                        opacity: open ? 1 : 0,
+                                        color: location.pathname === item.path ? 'primary.main' : 'inherit'
+                                    }}
+                                />
+                            </ListItemButton>
+                        </ListItem>
+                    ))}
+                </List>
+                
                 <Divider sx={{ my: 1 }} />
-                {secondaryListItems.map((item) => (
-                    <ListItem key={item.id} disablePadding>
-                        <ListItemButton
-                            selected={selectedSection === item.id}
-                            onClick={() => onSectionChange(item.id)}
-                        >
-                            <ListItemIcon>{item.icon}</ListItemIcon>
-                            <ListItemText primary={item.text} />
-                        </ListItemButton>
-                    </ListItem>
-                ))}
-            </List>
+                
+                <List>
+                    {secondaryItems.map((item) => (
+                        <ListItem key={item.path} disablePadding>
+                            <ListItemButton
+                                onClick={() => navigate(item.path)}
+                                selected={location.pathname === item.path}
+                                sx={{
+                                    minHeight: 48,
+                                    px: 2.5,
+                                    '&.Mui-selected': {
+                                        backgroundColor: 'primary.lighter',
+                                        '&:hover': {
+                                            backgroundColor: 'primary.light',
+                                        },
+                                    },
+                                }}
+                            >
+                                <ListItemIcon sx={{ 
+                                    minWidth: 0, 
+                                    mr: open ? 3 : 'auto', 
+                                    justifyContent: 'center',
+                                    color: location.pathname === item.path ? 'primary.main' : 'inherit'
+                                }}>
+                                    {item.icon}
+                                </ListItemIcon>
+                                <ListItemText 
+                                    primary={item.label} 
+                                    sx={{ 
+                                        opacity: open ? 1 : 0,
+                                        color: location.pathname === item.path ? 'primary.main' : 'inherit'
+                                    }}
+                                />
+                            </ListItemButton>
+                        </ListItem>
+                    ))}
+                </List>
+            </Box>
         </StyledDrawer>
     );
 };

@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { Box, CssBaseline, Container } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Container } from '@mui/material';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import AdminSidebar from './components/AdminSidebar';
 import AdminHeader from './components/AdminHeader';
 import AdminOverview from './components/AdminOverview';
@@ -8,54 +10,45 @@ import MenuManagement from './components/MenuManagement';
 import AdminSettings from './components/AdminSettings';
 
 const AdminDashboard = () => {
-    const [selectedSection, setSelectedSection] = useState('overview');
+    const { user, isAdmin } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(true);
 
     const handleSidebarToggle = () => {
         setSidebarOpen(!sidebarOpen);
     };
 
-    const renderContent = () => {
-        switch (selectedSection) {
-            case 'overview':
-                return <AdminOverview />;
-            case 'branches':
-                return <BranchManagement />;
-            case 'menu':
-                return <MenuManagement />;
-            case 'settings':
-                return <AdminSettings />;
-            default:
-                return <AdminOverview />;
-        }
-    };
+    if (!user || !isAdmin) {
+        return <Navigate to="/login" replace />;
+    }
 
     return (
-        <Box sx={{ display: 'flex' }}>
-            <CssBaseline />
+        <Box sx={{ display: 'flex', minHeight: '100vh' }}>
             <AdminHeader 
                 sidebarOpen={sidebarOpen} 
                 onSidebarToggle={handleSidebarToggle} 
             />
             <AdminSidebar 
-                open={sidebarOpen} 
-                onClose={handleSidebarToggle}
-                selectedSection={selectedSection}
-                onSectionChange={setSelectedSection}
+                open={sidebarOpen}
             />
             <Box
                 component="main"
                 sx={{
                     flexGrow: 1,
-                    height: '100vh',
                     overflow: 'auto',
-                    pt: 8,
-                    px: 3,
-                    backgroundColor: (theme) => theme.palette.grey[100]
+                    pt: { xs: 7, sm: 8 },
+                    px: { xs: 2, sm: 3 },
+                    pb: 3,
+                    backgroundColor: 'background.default',
+                    minHeight: '100vh'
                 }}
             >
-                <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-                    {renderContent()}
+                <Container maxWidth="xl">
+                    <Routes>
+                        <Route path="/" element={<AdminOverview />} />
+                        <Route path="/menu" element={<MenuManagement />} />
+                        <Route path="/branches" element={<BranchManagement />} />
+                        <Route path="/settings" element={<AdminSettings />} />
+                    </Routes>
                 </Container>
             </Box>
         </Box>
