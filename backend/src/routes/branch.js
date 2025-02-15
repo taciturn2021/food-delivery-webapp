@@ -4,7 +4,9 @@ import {
     getAllBranches,
     updateBranch,
     deleteBranch,
-    getBranchMenu
+    getBranchMenu,
+    getBranchSettings,
+    updateBranchSettings
 } from '../controllers/branchController.js';
 import { protect, isAdmin, isAdminOrManager } from '../middleware/auth.js';
 
@@ -17,8 +19,8 @@ router.delete('/:id', protect, isAdmin, deleteBranch);
 // Admin and branch manager routes
 router.get('/', protect, isAdminOrManager, getAllBranches);
 router.get('/:id/menu', protect, isAdminOrManager, getBranchMenu);
-router.get('/:id/settings', protect, isAdminOrManager);
-router.put('/:id/settings', protect, isAdminOrManager);
+router.get('/:id/settings', protect, isAdminOrManager, getBranchSettings);
+router.put('/:id/settings', protect, isAdminOrManager, updateBranchSettings);
 router.put('/:id', protect, isAdminOrManager, updateBranch);
 
 export default router;

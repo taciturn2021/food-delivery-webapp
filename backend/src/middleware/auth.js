@@ -15,7 +15,7 @@ export const protect = async (req, res, next) => {
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             const result = await pool.query(
-                'SELECT id, username, email, role FROM users WHERE id = $1',
+                'SELECT u.id, u.username, u.email, u.role, b.id as branch_id FROM users u LEFT JOIN branches b ON u.id = b.manager_id WHERE u.id = $1',
                 [decoded.userId]
             );
 
@@ -27,7 +27,8 @@ export const protect = async (req, res, next) => {
                 userId: decoded.userId,
                 role: result.rows[0].role,
                 username: result.rows[0].username,
-                email: result.rows[0].email
+                email: result.rows[0].email,
+                branchId: result.rows[0].branch_id
             };
             
             next();
@@ -105,4 +106,13 @@ export const isRiderForOrder = async (req, res, next) => {
     } catch (error) {
         res.status(500).json({ message: 'Error verifying order assignment' });
     }
+};
+
+export default {
+    protect,
+    isAdmin,
+    isRider,
+    isBranchManager,
+    isAdminOrManager,
+    isRiderOrManager
 };

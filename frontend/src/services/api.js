@@ -21,6 +21,35 @@ api.interceptors.request.use(
     }
 );
 
+// Response interceptor for handling auth errors
+api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config;
+        
+        // If the error is 401 and we haven't already tried to refresh
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+            
+            try {
+                // Try to get a fresh profile
+                const response = await getProfile();
+                // If successful, update stored user data
+                localStorage.setItem('user', JSON.stringify(response.data));
+                // Retry the original request
+                return api(originalRequest);
+            } catch (refreshError) {
+                // If refreshing fails, clear auth data and redirect to login
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login';
+                return Promise.reject(refreshError);
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 // Auth APIs
 export const login = (credentials) => api.post('/auth/login', credentials);
 export const register = (userData) => api.post('/auth/register', userData);
@@ -71,17 +100,5 @@ export const updateDeliveryStatus = (orderId, assignmentId, status) =>
     api.put(`/riders/orders/${orderId}/status`, { assignmentId, status });
 export const updateRiderLocation = (location) => api.post('/riders/location', location);
 export const getDeliveryLocation = (assignmentId) => api.get(`/riders/delivery/${assignmentId}/location`);
-
-// Error handler
-api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        if (error.response?.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = '/login';
-        }
-        return Promise.reject(error);
-    }
-);
 
 export default api;

@@ -12,6 +12,7 @@ import {
     TextField,
     Tab,
     Tabs,
+    CircularProgress,
 } from '@mui/material';
 import { useAuth } from '../../../context/AuthContext';
 import MapLocationPicker from '../../../components/common/MapLocationPicker';
@@ -24,7 +25,7 @@ const TabPanel = ({ children, value, index }) => (
 );
 
 const BranchSettings = () => {
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const [activeTab, setActiveTab] = useState(0);
     const [showSuccess, setShowSuccess] = useState(false);
     const [error, setError] = useState(null);
@@ -34,7 +35,6 @@ const BranchSettings = () => {
         name: '',
         address: '',
         phone: '',
-        email: '',
         openingTime: '09:00',
         closingTime: '22:00',
         location: null,
@@ -49,22 +49,52 @@ const BranchSettings = () => {
         allowScheduledOrders: true,
         maxScheduleDays: 7,
         automaticOrderAssignment: true,
+        
+        // Manager info (read-only)
+        managerEmail: ''
     });
 
     useEffect(() => {
-        loadBranchSettings();
-    }, []);
+        if (!authLoading && user?.branchId) {
+            loadBranchSettings();
+        }
+    }, [user?.branchId, authLoading]);
 
     const loadBranchSettings = async () => {
         try {
             const response = await getBranchSettings(user.branchId);
-            setSettings({
-                ...response.data,
+            console.log('Raw settings from server:', response.data);
+            
+            // Transform the time fields to HH:mm format and handle null values
+            const formattedData = {
+                name: response.data.name || '',
+                address: response.data.address || '',
+                phone: response.data.phone || '',
+                openingTime: response.data.opening_time ? response.data.opening_time.slice(0, 5) : '09:00',
+                closingTime: response.data.closing_time ? response.data.closing_time.slice(0, 5) : '22:00',
+                managerEmail: response.data.manager_email || '',
+                
+                // Handle delivery settings
+                deliveryRadius: response.data.delivery_radius === null ? 10 : response.data.delivery_radius,
+                minimumOrderAmount: response.data.minimum_order_amount === null ? 15 : parseFloat(response.data.minimum_order_amount),
+                maxConcurrentOrders: response.data.max_concurrent_orders === null ? 20 : parseInt(response.data.max_concurrent_orders),
+                preparationTimeMinutes: response.data.preparation_time_minutes === null ? 30 : parseInt(response.data.preparation_time_minutes),
+                
+                // Handle order settings
+                allowScheduledOrders: response.data.allow_scheduled_orders === null ? true : response.data.allow_scheduled_orders,
+                maxScheduleDays: response.data.max_schedule_days === null ? 7 : parseInt(response.data.max_schedule_days),
+                automaticOrderAssignment: response.data.automatic_order_assignment === null ? true : response.data.automatic_order_assignment,
+                
+                // Handle location
                 location: response.data.latitude && response.data.longitude ? {
                     lat: parseFloat(response.data.latitude),
                     lng: parseFloat(response.data.longitude)
                 } : null
-            });
+            };
+            
+            console.log('Formatted settings:', formattedData);
+            setSettings(formattedData);
+            setError(null); // Clear any previous errors
         } catch (error) {
             setError('Failed to load branch settings');
             console.error('Error loading branch settings:', error);
@@ -94,37 +124,64 @@ const BranchSettings = () => {
         
         try {
             // First update basic info if changed
-            if (settings.location) {
-                await updateBranch(user.branchId, {
-                    name: settings.name,
-                    address: settings.address,
-                    phone: settings.phone,
-                    email: settings.email,
-                    latitude: settings.location.lat,
-                    longitude: settings.location.lng
-                });
-            }
+            const basicInfoUpdate = {
+                name: settings.name,
+                address: settings.address,
+                phone: settings.phone,
+                latitude: settings.location?.lat,
+                longitude: settings.location?.lng
+            };
+            
+            console.log('Sending basic info update:', basicInfoUpdate);
+            await updateBranch(user.branchId, basicInfoUpdate);
 
-            // Then update settings
-            await updateBranchSettings(user.branchId, {
-                openingTime: settings.openingTime,
-                closingTime: settings.closingTime,
-                deliveryRadius: settings.deliveryRadius,
-                minimumOrderAmount: settings.minimumOrderAmount,
-                maxConcurrentOrders: settings.maxConcurrentOrders,
-                preparationTimeMinutes: settings.preparationTimeMinutes,
-                allowScheduledOrders: settings.allowScheduledOrders,
-                maxScheduleDays: settings.maxScheduleDays,
-                automaticOrderAssignment: settings.automaticOrderAssignment
-            });
+            // Then update settings - ensure all values are properly typed
+            const settingsUpdate = {
+                openingTime: settings.openingTime || '09:00',
+                closingTime: settings.closingTime || '22:00',
+                deliveryRadius: settings.deliveryRadius === '' ? null : parseInt(settings.deliveryRadius),
+                minimumOrderAmount: settings.minimumOrderAmount === '' ? null : parseFloat(settings.minimumOrderAmount),
+                maxConcurrentOrders: settings.maxConcurrentOrders === '' ? null : parseInt(settings.maxConcurrentOrders),
+                preparationTimeMinutes: settings.preparationTimeMinutes === '' ? null : parseInt(settings.preparationTimeMinutes),
+                allowScheduledOrders: Boolean(settings.allowScheduledOrders),
+                maxScheduleDays: settings.maxScheduleDays === '' ? null : parseInt(settings.maxScheduleDays),
+                automaticOrderAssignment: Boolean(settings.automaticOrderAssignment)
+            };
+            
+            console.log('Sending settings update:', settingsUpdate);
+            await updateBranchSettings(user.branchId, settingsUpdate);
 
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 3000);
         } catch (error) {
+            console.error('Error details:', error.response?.data);
             setError(error.response?.data?.message || 'Failed to update settings');
-            console.error('Error updating settings:', error);
         }
     };
+
+    if (authLoading || (!user?.branchId && loading)) {
+        return (
+            <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                minHeight: 400 
+            }}>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Loading user data...</Typography>
+            </Box>
+        );
+    }
+
+    if (!user?.branchId) {
+        return (
+            <Box sx={{ p: 3 }}>
+                <Alert severity="error">
+                    Unable to load branch settings. Please try logging out and back in.
+                </Alert>
+            </Box>
+        );
+    }
 
     if (loading) {
         return <Box sx={{ p: 3 }}>Loading settings...</Box>;
@@ -190,16 +247,6 @@ const BranchSettings = () => {
                             <Grid item xs={12} md={6}>
                                 <TextField
                                     fullWidth
-                                    label="Email"
-                                    type="email"
-                                    value={settings.email}
-                                    onChange={handleChange('email')}
-                                    required
-                                />
-                            </Grid>
-                            <Grid item xs={12} md={6}>
-                                <TextField
-                                    fullWidth
                                     label="Opening Time"
                                     type="time"
                                     value={settings.openingTime}
@@ -217,6 +264,18 @@ const BranchSettings = () => {
                                     onChange={handleChange('closingTime')}
                                     InputLabelProps={{ shrink: true }}
                                     required
+                                />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Email (Branch Manager)"
+                                    type="email"
+                                    value={settings.managerEmail}
+                                    InputProps={{
+                                        readOnly: true,
+                                    }}
+                                    helperText="This is the branch manager's email address"
                                 />
                             </Grid>
                             <Grid item xs={12}>

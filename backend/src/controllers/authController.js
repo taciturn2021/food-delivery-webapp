@@ -21,7 +21,7 @@ export const login = async (req, res) => {
         
         // Get user with password for comparison
         const result = await pool.query(
-            'SELECT * FROM users WHERE email = $1',
+            'SELECT u.*, b.id as branch_id FROM users u LEFT JOIN branches b ON u.id = b.manager_id WHERE u.email = $1',
             [email.toLowerCase()]
         );
 
@@ -47,33 +47,32 @@ export const login = async (req, res) => {
             return res.status(401).json({ message: 'Invalid email or password' });
         }
 
-        const tokenPayload = { userId: user.id, role: user.role };
-        console.log('Generating token with payload:', tokenPayload);
-        
+        // Create consistent user data structure
+        const userData = {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            branchId: user.branch_id
+        };
+
         const token = jwt.sign(
-            tokenPayload,
+            { userId: user.id, role: user.role, branchId: user.branch_id },
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRES_IN }
         );
 
-        // Send response without password
-        const response = {
-            token,
-            user: {
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                role: user.role
-            }
-        };
-
-        console.log('Sending successful response:', {
-            userId: user.id,
-            role: user.role,
-            tokenGenerated: !!token
+        console.log('Login successful:', {
+            userId: userData.id,
+            role: userData.role,
+            tokenGenerated: !!token,
+            hasBranchId: !!userData.branchId
         });
 
-        res.json(response);
+        res.json({
+            token,
+            user: userData
+        });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ 
@@ -131,7 +130,7 @@ export const register = async (req, res) => {
 export const getProfile = async (req, res) => {
     try {
         const result = await pool.query(
-            'SELECT id, username, email, role FROM users WHERE id = $1',
+            'SELECT u.id, u.username, u.email, u.role, b.id as branch_id FROM users u LEFT JOIN branches b ON u.id = b.manager_id WHERE u.id = $1',
             [req.user.userId]
         );
 
@@ -139,7 +138,16 @@ export const getProfile = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        res.json(result.rows[0]);
+        // Format the response to match login response structure
+        const userData = {
+            id: result.rows[0].id,
+            username: result.rows[0].username,
+            email: result.rows[0].email,
+            role: result.rows[0].role,
+            branchId: result.rows[0].branch_id
+        };
+
+        res.json(userData);
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }

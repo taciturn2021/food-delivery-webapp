@@ -76,7 +76,19 @@ const initializeDatabase = async () => {
                 phone VARCHAR(20),
                 manager_id INTEGER REFERENCES users(id),
                 status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                latitude DECIMAL(10, 8),
+                longitude DECIMAL(11, 8),
+                opening_time TIME DEFAULT '09:00',
+                closing_time TIME DEFAULT '22:00',
+                delivery_radius INTEGER DEFAULT 10,
+                minimum_order_amount DECIMAL(10,2) DEFAULT 15.00,
+                max_concurrent_orders INTEGER DEFAULT 20,
+                preparation_time_minutes INTEGER DEFAULT 30,
+                allow_scheduled_orders BOOLEAN DEFAULT true,
+                max_schedule_days INTEGER DEFAULT 7,
+                automatic_order_assignment BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
 

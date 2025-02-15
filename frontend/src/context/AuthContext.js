@@ -9,7 +9,13 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const token = localStorage.getItem('token');
+        const storedUser = localStorage.getItem('user');
         if (token) {
+            if (storedUser) {
+                // Immediately restore user data from localStorage
+                setUser(JSON.parse(storedUser));
+            }
+            // Still refresh from server
             loadUser();
         } else {
             setLoading(false);
@@ -19,9 +25,14 @@ export const AuthProvider = ({ children }) => {
     const loadUser = async () => {
         try {
             const response = await getProfile();
-            setUser(response.data);
+            const userData = response.data;
+            setUser(userData);
+            // Store the complete user data
+            localStorage.setItem('user', JSON.stringify(userData));
         } catch (error) {
             localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            setUser(null);
         } finally {
             setLoading(false);
         }
@@ -29,20 +40,18 @@ export const AuthProvider = ({ children }) => {
 
     const login = (token, userData) => {
         localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
     };
 
     const logout = () => {
         localStorage.removeItem('token');
+        localStorage.removeItem('user');
         setUser(null);
     };
 
-    if (loading) {
-        return <div>Loading...</div>;
-    }
-
     return (
-        <AuthContext.Provider value={{ user, login, logout, isAdmin: user?.role === 'admin' }}>
+        <AuthContext.Provider value={{ user, loading, login, logout, isAdmin: user?.role === 'admin' }}>
             {children}
         </AuthContext.Provider>
     );
