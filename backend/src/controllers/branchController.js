@@ -2,15 +2,13 @@ import { pool } from '../config/database.js';
 import bcrypt from 'bcryptjs';
 
 export const createBranch = async (req, res) => {
-    const { name, address, phone, managerEmail, managerPassword, managerName } = req.body;
+    const { name, address, phone, managerEmail, managerPassword, managerName, latitude, longitude } = req.body;
 
     try {
-        // Start a transaction since we're making multiple related changes
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
 
-            // Create branch manager user first
             const hashedPassword = await bcrypt.hash(managerPassword, 10);
             const managerResult = await client.query(
                 'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id',
@@ -19,15 +17,13 @@ export const createBranch = async (req, res) => {
 
             const managerId = managerResult.rows[0].id;
 
-            // Create the branch with the new manager
             const branchResult = await client.query(
-                'INSERT INTO branches (name, address, phone, manager_id) VALUES ($1, $2, $3, $4) RETURNING *',
-                [name, address, phone, managerId]
+                'INSERT INTO branches (name, address, phone, manager_id, latitude, longitude) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+                [name, address, phone, managerId, latitude, longitude]
             );
 
             await client.query('COMMIT');
 
-            // Return combined result
             res.status(201).json({
                 ...branchResult.rows[0],
                 manager: {
@@ -66,10 +62,9 @@ export const getAllBranches = async (req, res) => {
 
 export const updateBranch = async (req, res) => {
     const { id } = req.params;
-    const { name, address, phone, manager_id, status } = req.body;
+    const { name, address, phone, manager_id, status, latitude, longitude } = req.body;
 
     try {
-        // Check if new manager is valid and available
         if (manager_id) {
             const managerCheck = await pool.query(
                 'SELECT * FROM users WHERE id = $1 AND role = $2',
@@ -91,8 +86,8 @@ export const updateBranch = async (req, res) => {
         }
 
         const result = await pool.query(
-            'UPDATE branches SET name = $1, address = $2, phone = $3, manager_id = $4, status = $5 WHERE id = $6 RETURNING *',
-            [name, address, phone, manager_id, status, id]
+            'UPDATE branches SET name = $1, address = $2, phone = $3, manager_id = $4, status = $5, latitude = $6, longitude = $7 WHERE id = $8 RETURNING *',
+            [name, address, phone, manager_id, status, latitude, longitude, id]
         );
 
         if (result.rows.length === 0) {
@@ -109,14 +104,12 @@ export const deleteBranch = async (req, res) => {
     const { id } = req.params;
 
     try {
-        // Check if branch has any orders
         const orderCheck = await pool.query(
             'SELECT * FROM orders WHERE branch_id = $1 LIMIT 1',
             [id]
         );
 
         if (orderCheck.rows.length > 0) {
-            // If branch has orders, just mark it as inactive
             await pool.query(
                 'UPDATE branches SET status = $1 WHERE id = $2',
                 ['inactive', id]
@@ -124,7 +117,6 @@ export const deleteBranch = async (req, res) => {
             return res.json({ message: 'Branch marked as inactive due to existing orders' });
         }
 
-        // If no orders, proceed with deletion
         const result = await pool.query(
             'DELETE FROM branches WHERE id = $1 RETURNING *',
             [id]

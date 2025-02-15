@@ -58,6 +58,9 @@ export const updateBranchMenuItem = async (branchId, menuItemId, data) => {
     return api.put(`/branches/${branchId}/menu/${menuItemId}`, data);
 };
 
+export const getBranchSettings = (id) => api.get(`/branches/${id}/settings`);
+export const updateBranchSettings = (id, data) => api.put(`/branches/${id}/settings`, data);
+
 // Rider Management APIs
 export const createRider = (data) => api.post('/riders', data);
 export const getBranchRiders = (branchId) => api.get(`/riders/branch/${branchId}`);

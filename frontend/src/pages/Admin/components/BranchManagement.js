@@ -18,8 +18,6 @@ import {
     IconButton,
     Chip,
     Grid,
-    Switch,
-    FormControlLabel,
     Tabs,
     Tab,
 } from '@mui/material';
@@ -29,6 +27,7 @@ import {
     Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { getAllBranches, createBranch, updateBranch, deleteBranch } from '../../../services/api';
+import MapLocationPicker from '../../../components/common/MapLocationPicker';
 
 const TabPanel = ({ children, value, index }) => (
     <div hidden={value !== index} style={{ display: value === index ? 'block' : 'none' }}>
@@ -48,6 +47,7 @@ const BranchManagement = () => {
         managerName: '',
         managerEmail: '',
         managerPassword: '',
+        location: null
     });
     const [editingId, setEditingId] = useState(null);
     const [open, setOpen] = useState(false);
@@ -68,14 +68,24 @@ const BranchManagement = () => {
         }
     };
 
+    const handleLocationChange = (location) => {
+        setFormData({
+            ...formData,
+            location
+        });
+    };
+
     const handleOpen = (branch = null) => {
         if (branch) {
             setFormData({
                 name: branch.name,
                 address: branch.address,
                 phone: branch.phone,
-                manager_id: branch.manager_id || '',
-                status: branch.status
+                status: branch.status,
+                location: branch.latitude && branch.longitude ? {
+                    lat: parseFloat(branch.latitude),
+                    lng: parseFloat(branch.longitude)
+                } : null
             });
             setEditingId(branch.id);
         } else {
@@ -94,17 +104,21 @@ const BranchManagement = () => {
         e.preventDefault();
         try {
             if (editingId) {
-                // For editing, use existing update logic
                 const updateData = {
                     name: formData.name,
                     address: formData.address,
                     phone: formData.phone,
-                    status: formData.status
+                    status: formData.status,
+                    latitude: formData.location?.lat,
+                    longitude: formData.location?.lng
                 };
                 await updateBranch(editingId, updateData);
             } else {
-                // For new branch, include manager details
-                await createBranch(formData);
+                await createBranch({
+                    ...formData,
+                    latitude: formData.location?.lat,
+                    longitude: formData.location?.lng
+                });
             }
             loadBranches();
             handleClose();
@@ -133,6 +147,7 @@ const BranchManagement = () => {
             managerName: '',
             managerEmail: '',
             managerPassword: '',
+            location: null
         });
         setEditingId(null);
         setActiveTab(0);
@@ -268,6 +283,15 @@ const BranchManagement = () => {
                                         fullWidth
                                     />
                                 </Grid>
+                                <Grid item xs={12}>
+                                    <Typography variant="subtitle1" gutterBottom>
+                                        Branch Location (Click on map to set location)
+                                    </Typography>
+                                    <MapLocationPicker
+                                        location={formData.location}
+                                        onLocationChange={handleLocationChange}
+                                    />
+                                </Grid>
                             </Grid>
                         </TabPanel>
 
@@ -311,7 +335,12 @@ const BranchManagement = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleClose}>Cancel</Button>
-                    <Button type="submit" variant="contained" onClick={handleSubmit}>
+                    <Button 
+                        type="submit" 
+                        variant="contained" 
+                        onClick={handleSubmit}
+                        disabled={!formData.location}
+                    >
                         {editingId ? 'Save Changes' : 'Create Branch'}
                     </Button>
                 </DialogActions>
