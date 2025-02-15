@@ -14,6 +14,7 @@ import {
     ShoppingCart as OrdersIcon,
     Restaurant as MenuIcon,
     Settings as SettingsIcon,
+    DeliveryDining as RidersIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 240;
@@ -49,6 +50,7 @@ const mainListItems = [
     { id: 'overview', text: 'Overview', icon: <DashboardIcon /> },
     { id: 'orders', text: 'Orders', icon: <OrdersIcon /> },
     { id: 'menu', text: 'Menu Items', icon: <MenuIcon /> },
+    { id: 'riders', text: 'Delivery Staff', icon: <RidersIcon /> },
 ];
 
 const secondaryListItems = [

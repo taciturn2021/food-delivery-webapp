@@ -5,12 +5,14 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { initializeDatabase } from './config/database.js';
+import cookieParser from 'cookie-parser';
 
 // Routes
 import authRoutes from './routes/auth.js';
 import menuRoutes from './routes/menu.js';
 import branchRoutes from './routes/branch.js';
 import orderRoutes from './routes/order.js';
+import riderRoutes from './routes/rider.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,7 +23,7 @@ const app = express();
 
 // CORS configuration
 const corsOptions = {
-    origin: 'http://localhost:3000', // Frontend URL
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Frontend URL
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -31,6 +33,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(morgan('dev'));
+app.use(cookieParser());
 
 // Initialize database
 initializeDatabase().catch(console.error);
@@ -40,6 +43,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/branches', branchRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/riders', riderRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

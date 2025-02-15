@@ -6,6 +6,7 @@ import BranchOverview from './components/BranchOverview';
 import BranchSettings from './components/BranchSettings';
 import BranchMenu from './components/BranchMenu';
 import OrderManagement from './components/OrderManagement';
+import RiderManagement from './components/RiderManagement';
 
 const BranchDashboard = () => {
     const [selectedSection, setSelectedSection] = useState('overview');
@@ -16,6 +17,9 @@ const BranchDashboard = () => {
     };
 
     const renderContent = () => {
+        // TODO: Get actual branch ID from context/state
+        const branchId = 1;
+
         switch (selectedSection) {
             case 'overview':
                 return <BranchOverview />;
@@ -23,6 +27,8 @@ const BranchDashboard = () => {
                 return <OrderManagement />;
             case 'menu':
                 return <BranchMenu />;
+            case 'riders':
+                return <RiderManagement branchId={branchId} />;
             case 'settings':
                 return <BranchSettings />;
             default:

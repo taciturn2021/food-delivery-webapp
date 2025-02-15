@@ -44,8 +44,10 @@ const BranchManagement = () => {
         name: '',
         address: '',
         phone: '',
-        manager_id: '',
-        status: 'active'
+        status: 'active',
+        managerName: '',
+        managerEmail: '',
+        managerPassword: '',
     });
     const [editingId, setEditingId] = useState(null);
     const [open, setOpen] = useState(false);
@@ -92,8 +94,16 @@ const BranchManagement = () => {
         e.preventDefault();
         try {
             if (editingId) {
-                await updateBranch(editingId, formData);
+                // For editing, use existing update logic
+                const updateData = {
+                    name: formData.name,
+                    address: formData.address,
+                    phone: formData.phone,
+                    status: formData.status
+                };
+                await updateBranch(editingId, updateData);
             } else {
+                // For new branch, include manager details
                 await createBranch(formData);
             }
             loadBranches();
@@ -119,10 +129,13 @@ const BranchManagement = () => {
             name: '',
             address: '',
             phone: '',
-            manager_id: '',
-            status: 'active'
+            status: 'active',
+            managerName: '',
+            managerEmail: '',
+            managerPassword: '',
         });
         setEditingId(null);
+        setActiveTab(0);
     };
 
     if (loading) return <div>Loading...</div>;
@@ -198,9 +211,8 @@ const BranchManagement = () => {
                 <DialogContent>
                     <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
                         <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
-                            <Tab label="Basic Info" />
-                            <Tab label="Delivery Settings" />
-                            <Tab label="Order Settings" />
+                            <Tab label="Branch Info" />
+                            {!editingId && <Tab label="Manager Account" />}
                         </Tabs>
                     </Box>
 
@@ -261,81 +273,36 @@ const BranchManagement = () => {
 
                         <TabPanel value={activeTab} index={1}>
                             <Grid container spacing={2}>
-                                <Grid item xs={12} md={6}>
-                                    <TextField
-                                        fullWidth
-                                        label="Delivery Radius (km)"
-                                        type="number"
-                                        value={formData.deliveryRadius || 10}
-                                        onChange={(e) => setFormData({...formData, deliveryRadius: e.target.value})}
-                                        inputProps={{ min: 1 }}
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={6}>
-                                    <TextField
-                                        fullWidth
-                                        label="Minimum Order Amount ($)"
-                                        type="number"
-                                        value={formData.minimumOrderAmount || 15}
-                                        onChange={(e) => setFormData({...formData, minimumOrderAmount: e.target.value})}
-                                        inputProps={{ min: 0 }}
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={6}>
-                                    <TextField
-                                        fullWidth
-                                        label="Maximum Concurrent Orders"
-                                        type="number"
-                                        value={formData.maxConcurrentOrders || 20}
-                                        onChange={(e) => setFormData({...formData, maxConcurrentOrders: e.target.value})}
-                                        inputProps={{ min: 1 }}
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={6}>
-                                    <TextField
-                                        fullWidth
-                                        label="Preparation Time (minutes)"
-                                        type="number"
-                                        value={formData.preparationTimeMinutes || 30}
-                                        onChange={(e) => setFormData({...formData, preparationTimeMinutes: e.target.value})}
-                                        inputProps={{ min: 5 }}
-                                    />
-                                </Grid>
-                            </Grid>
-                        </TabPanel>
-
-                        <TabPanel value={activeTab} index={2}>
-                            <Grid container spacing={2}>
                                 <Grid item xs={12}>
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                checked={formData.allowScheduledOrders}
-                                                onChange={(e) => setFormData({...formData, allowScheduledOrders: e.target.checked})}
-                                            />
-                                        }
-                                        label="Allow Scheduled Orders"
-                                    />
-                                </Grid>
-                                <Grid item xs={12} md={6}>
                                     <TextField
                                         fullWidth
-                                        label="Maximum Schedule Days"
-                                        type="number"
-                                        value={formData.maxScheduleDays || 7}
-                                        onChange={(e) => setFormData({...formData, maxScheduleDays: e.target.value})}
-                                        inputProps={{ min: 1, max: 30 }}
+                                        label="Manager Name"
+                                        value={formData.managerName}
+                                        onChange={(e) => setFormData({...formData, managerName: e.target.value})}
+                                        required={!editingId}
+                                        disabled={editingId}
                                     />
                                 </Grid>
                                 <Grid item xs={12}>
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                checked={formData.automaticOrderAssignment}
-                                                onChange={(e) => setFormData({...formData, automaticOrderAssignment: e.target.checked})}
-                                            />
-                                        }
-                                        label="Automatic Order Assignment"
+                                    <TextField
+                                        fullWidth
+                                        type="email"
+                                        label="Manager Email"
+                                        value={formData.managerEmail}
+                                        onChange={(e) => setFormData({...formData, managerEmail: e.target.value})}
+                                        required={!editingId}
+                                        disabled={editingId}
+                                    />
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <TextField
+                                        fullWidth
+                                        type="password"
+                                        label="Manager Password"
+                                        value={formData.managerPassword}
+                                        onChange={(e) => setFormData({...formData, managerPassword: e.target.value})}
+                                        required={!editingId}
+                                        disabled={editingId}
                                     />
                                 </Grid>
                             </Grid>
@@ -345,7 +312,7 @@ const BranchManagement = () => {
                 <DialogActions>
                     <Button onClick={handleClose}>Cancel</Button>
                     <Button type="submit" variant="contained" onClick={handleSubmit}>
-                        {editingId ? 'Save Changes' : 'Add Branch'}
+                        {editingId ? 'Save Changes' : 'Create Branch'}
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -1,38 +1,52 @@
 import { pool } from '../config/database.js';
+import bcrypt from 'bcryptjs';
 
 export const createBranch = async (req, res) => {
-    const { name, address, phone, manager_id } = req.body;
+    const { name, address, phone, managerEmail, managerPassword, managerName } = req.body;
 
     try {
-        // Verify if manager exists and is not already assigned
-        if (manager_id) {
-            const managerCheck = await pool.query(
-                'SELECT * FROM users WHERE id = $1 AND role = $2',
-                [manager_id, 'branch_manager']
+        // Start a transaction since we're making multiple related changes
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // Create branch manager user first
+            const hashedPassword = await bcrypt.hash(managerPassword, 10);
+            const managerResult = await client.query(
+                'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id',
+                [managerName, managerEmail, hashedPassword, 'branch_manager']
             );
 
-            if (managerCheck.rows.length === 0) {
-                return res.status(400).json({ message: 'Invalid manager ID or user is not a branch manager' });
-            }
+            const managerId = managerResult.rows[0].id;
 
-            const existingAssignment = await pool.query(
-                'SELECT * FROM branches WHERE manager_id = $1',
-                [manager_id]
+            // Create the branch with the new manager
+            const branchResult = await client.query(
+                'INSERT INTO branches (name, address, phone, manager_id) VALUES ($1, $2, $3, $4) RETURNING *',
+                [name, address, phone, managerId]
             );
 
-            if (existingAssignment.rows.length > 0) {
-                return res.status(400).json({ message: 'Manager is already assigned to another branch' });
-            }
+            await client.query('COMMIT');
+
+            // Return combined result
+            res.status(201).json({
+                ...branchResult.rows[0],
+                manager: {
+                    id: managerId,
+                    username: managerName,
+                    email: managerEmail
+                }
+            });
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
         }
-
-        const result = await pool.query(
-            'INSERT INTO branches (name, address, phone, manager_id) VALUES ($1, $2, $3, $4) RETURNING *',
-            [name, address, phone, manager_id]
-        );
-
-        res.status(201).json(result.rows[0]);
     } catch (error) {
-        res.status(500).json({ message: 'Error creating branch', error: error.message });
+        res.status(500).json({ 
+            message: 'Error creating branch and manager account', 
+            error: error.message 
+        });
     }
 };
 

@@ -130,6 +130,65 @@ const initializeDatabase = async () => {
             )
         `);
 
+        // Create riders table
+        await createTableIfNotExists('riders', `
+            CREATE TABLE IF NOT EXISTS riders (
+                id SERIAL PRIMARY KEY,
+                branch_id INTEGER REFERENCES branches(id),
+                user_id INTEGER REFERENCES users(id),
+                full_name VARCHAR(100) NOT NULL,
+                cnic VARCHAR(15) NOT NULL UNIQUE,
+                contact_number VARCHAR(20) NOT NULL,
+                emergency_contact VARCHAR(20),
+                vehicle_type VARCHAR(50) NOT NULL,
+                vehicle_plate_no VARCHAR(20) NOT NULL UNIQUE,
+                license_no VARCHAR(50) NOT NULL UNIQUE,
+                status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'busy')),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Create order_assignments table for tracking rider assignments
+        await createTableIfNotExists('order_assignments', `
+            CREATE TABLE IF NOT EXISTS order_assignments (
+                id SERIAL PRIMARY KEY,
+                order_id INTEGER REFERENCES orders(id),
+                rider_id INTEGER REFERENCES riders(id),
+                assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP,
+                status VARCHAR(20) DEFAULT 'assigned' CHECK (status IN ('assigned', 'picked', 'delivered', 'cancelled'))
+            )
+        `);
+
+        // Create rider_locations table for tracking real-time locations
+        await createTableIfNotExists('rider_locations', `
+            CREATE TABLE IF NOT EXISTS rider_locations (
+                id SERIAL PRIMARY KEY,
+                rider_id INTEGER REFERENCES riders(id),
+                latitude DECIMAL(10, 8) NOT NULL,
+                longitude DECIMAL(11, 8) NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (rider_id)
+            )
+        `);
+
+        // Create delivery_metrics table for tracking performance
+        await createTableIfNotExists('delivery_metrics', `
+            CREATE TABLE IF NOT EXISTS delivery_metrics (
+                id SERIAL PRIMARY KEY,
+                rider_id INTEGER REFERENCES riders(id),
+                order_id INTEGER REFERENCES orders(id),
+                assignment_id INTEGER REFERENCES order_assignments(id),
+                pickup_time TIMESTAMP,
+                delivery_time TIMESTAMP,
+                estimated_distance DECIMAL(10,2),
+                actual_distance DECIMAL(10,2),
+                customer_rating INTEGER CHECK (customer_rating BETWEEN 1 AND 5),
+                delivery_notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         // Create default admin user with a fresh password hash
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash('admin123', salt);
