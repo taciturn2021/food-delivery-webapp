@@ -34,6 +34,7 @@ import {
     Cancel as UnavailableIcon,
 } from '@mui/icons-material';
 import { getBranchMenu, assignMenuItemToBranch } from '../../../services/api';
+import { useAuth } from '../../../context/AuthContext';
 
 const categories = [
     'All',
@@ -47,6 +48,7 @@ const categories = [
 
 const BranchMenu = () => {
     const theme = useTheme();
+    const { user } = useAuth();
     const [menuItems, setMenuItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -63,8 +65,7 @@ const BranchMenu = () => {
 
     const loadBranchMenu = async () => {
         try {
-            // TODO: Replace with actual branch ID
-            const branchId = 1;
+            const branchId = user.branchId;
             const response = await getBranchMenu(branchId);
             setMenuItems(response.data);
         } catch (error) {
@@ -101,8 +102,7 @@ const BranchMenu = () => {
 
     const handleEditSave = async () => {
         try {
-            // TODO: Replace with actual branch ID
-            const branchId = 1;
+            const branchId = user.branchId;
             await assignMenuItemToBranch({
                 branch_id: branchId,
                 menu_item_id: editItem.id,
@@ -119,8 +119,7 @@ const BranchMenu = () => {
 
     const handleAvailabilityChange = async (itemId, newValue) => {
         try {
-            // TODO: Replace with actual branch ID
-            const branchId = 1;
+            const branchId = user.branchId;
             await assignMenuItemToBranch({
                 branch_id: branchId,
                 menu_item_id: itemId,
@@ -236,7 +235,7 @@ const BranchMenu = () => {
 
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                     <Typography variant="h6" color="primary">
-                                        ${(item.branch_price || item.price).toFixed(2)}
+                                        ${Number(item.branch_price || item.price).toFixed(2)}
                                     </Typography>
                                     <Chip
                                         label={item.category}
