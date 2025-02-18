@@ -414,3 +414,72 @@ export const getBranchRiderStatuses = async (req, res) => {
         res.status(500).json({ message: 'Error fetching rider statuses', error: error.message });
     }
 };
+
+export const getRiderSettings = async (req, res) => {
+    const { rider_id } = req.params;
+    try {
+        const result = await pool.query(
+            `SELECT r.is_available, r.max_concurrent_orders, r.preferred_area, r.notification_preferences
+             FROM riders r
+             WHERE r.id = $1`,
+            [rider_id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Rider not found' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching rider settings', error: error.message });
+    }
+};
+
+export const updateRiderSettings = async (req, res) => {
+    const { rider_id } = req.params;
+    const { isAvailable, maxConcurrentOrders, preferredArea, notifications } = req.body;
+    
+    try {
+        const result = await pool.query(
+            `UPDATE riders 
+             SET is_available = $1,
+                 max_concurrent_orders = $2,
+                 preferred_area = $3,
+                 notification_preferences = $4,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $5 
+             RETURNING *`,
+            [isAvailable, maxConcurrentOrders, preferredArea, notifications, rider_id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Rider not found' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating rider settings', error: error.message });
+    }
+};
+
+export const updateRiderAvailability = async (req, res) => {
+    const { rider_id } = req.params;
+    const { isAvailable } = req.body;
+    
+    try {
+        const result = await pool.query(
+            `UPDATE riders 
+             SET is_available = $1,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $2 
+             RETURNING is_available`,
+            [isAvailable, rider_id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Rider not found' });
+        }
+        
+        res.json({ message: 'Availability updated successfully', isAvailable: result.rows[0].is_available });
+    } catch (error) {
+        res.status(500).json({ message: 'Error updating rider availability', error: error.message });
+    }
+};

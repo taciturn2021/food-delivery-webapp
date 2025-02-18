@@ -4,13 +4,13 @@ import { updateRiderLocation } from '../../../services/api';
 
 const LocationTracker = () => {
     const [error, setError] = useState(null);
-    const [watchId, setWatchId] = useState(null);
+    const [intervalId, setIntervalId] = useState(null);
 
     useEffect(() => {
         startTracking();
         return () => {
-            if (watchId) {
-                navigator.geolocation.clearWatch(watchId);
+            if (intervalId) {
+                clearInterval(intervalId);
             }
         };
     }, []);
@@ -22,19 +22,27 @@ const LocationTracker = () => {
         }
 
         try {
-            const id = navigator.geolocation.watchPosition(
-                handlePositionUpdate,
-                handleLocationError,
-                {
-                    enableHighAccuracy: true,
-                    timeout: 5000,
-                    maximumAge: 0
-                }
-            );
-            setWatchId(id);
+            // Get initial position immediately
+            getCurrentPosition();
+            
+            // Then set up 30-second interval
+            const id = setInterval(getCurrentPosition, 30000);
+            setIntervalId(id);
         } catch (error) {
             setError('Error starting location tracking');
         }
+    };
+
+    const getCurrentPosition = () => {
+        navigator.geolocation.getCurrentPosition(
+            handlePositionUpdate,
+            handleLocationError,
+            {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0
+            }
+        );
     };
 
     const handlePositionUpdate = async (position) => {

@@ -12,7 +12,7 @@ api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
         if (token) {
-            config.headers.Authorization = `Bearer ${token}`; // Ensuring proper Bearer format
+            config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
     },
@@ -27,11 +27,20 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
         
-        // If the error is 401 and we haven't already tried to refresh
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // If the error is 401 and it's not a profile request (to prevent loops)
+        if (error.response?.status === 401 && 
+            !originalRequest._retry && 
+            !originalRequest.url.endsWith('/auth/profile')) {
+            
             originalRequest._retry = true;
             
             try {
+                // Only try to refresh if we have a token
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    throw new Error('No token available');
+                }
+                
                 // Try to get a fresh profile
                 const response = await getProfile();
                 // If successful, update stored user data
@@ -39,10 +48,13 @@ api.interceptors.response.use(
                 // Retry the original request
                 return api(originalRequest);
             } catch (refreshError) {
-                // If refreshing fails, clear auth data and redirect to login
+                // If refreshing fails, clear auth data
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
-                window.location.href = '/login';
+                // Only redirect if we're not already on the login page
+                if (!window.location.pathname.includes('/login')) {
+                    window.location.href = '/login';
+                }
                 return Promise.reject(refreshError);
             }
         }
@@ -100,5 +112,11 @@ export const updateDeliveryStatus = (orderId, assignmentId, status) =>
     api.put(`/riders/orders/${orderId}/status`, { assignmentId, status });
 export const updateRiderLocation = (location) => api.post('/riders/location', location);
 export const getDeliveryLocation = (assignmentId) => api.get(`/riders/delivery/${assignmentId}/location`);
+
+// New Rider Settings APIs
+export const getRiderSettings = (riderId) => api.get(`/riders/${riderId}/settings`);
+export const updateRiderSettings = (riderId, settings) => api.put(`/riders/${riderId}/settings`, settings);
+export const updateRiderAvailability = (riderId, isAvailable) => 
+    api.put(`/riders/${riderId}/availability`, { isAvailable });
 
 export default api;

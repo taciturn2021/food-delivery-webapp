@@ -26,7 +26,12 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
 
     if (user) {
-        return <Navigate to={user.role === 'admin' ? '/admin' : '/branch'} replace />;
+        const redirectPath = {
+            'admin': '/admin',
+            'branch_manager': '/branch',
+            'rider': '/rider'
+        }[user.role] || '/login';
+        return <Navigate to={redirectPath} replace />;
     }
 
     const handleSubmit = async (e) => {
@@ -56,7 +61,12 @@ const Login = () => {
                     hasToken: !!response.data.token
                 });
                 login(response.data.token, response.data.user);
-                navigate(response.data.user.role === 'admin' ? '/admin' : '/branch');
+                const redirectPath = {
+                    'admin': '/admin',
+                    'branch_manager': '/branch',
+                    'rider': '/rider'
+                }[response.data.user.role] || '/login';
+                navigate(redirectPath);
             } else {
                 console.error('Invalid response structure:', response.data);
                 throw new Error('Invalid response format');

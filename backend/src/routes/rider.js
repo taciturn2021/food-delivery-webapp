@@ -13,7 +13,10 @@ import {
     submitDeliveryRating,
     getRiderMetrics,
     getRiderStatus,
-    getBranchRiderStatuses
+    getBranchRiderStatuses,
+    getRiderSettings,
+    updateRiderSettings,
+    updateRiderAvailability
 } from '../controllers/riderController.js';
 import { protect, isAdmin, isAdminOrManager, isRider, isRiderForOrder } from '../middleware/auth.js';
 
@@ -38,5 +41,10 @@ router.post('/delivery/:orderId/start', protect, isRider, startDelivery);
 router.post('/delivery/:orderId/complete', protect, isRider, completeDelivery);
 router.post('/delivery/:orderId/rate', protect, submitDeliveryRating);
 router.get('/:rider_id/metrics', protect, isAdminOrManager, getRiderMetrics);
+
+// New settings routes
+router.get('/:rider_id/settings', protect, getRiderSettings);
+router.put('/:rider_id/settings', protect, updateRiderSettings);
+router.put('/:rider_id/availability', protect, updateRiderAvailability);
 
 export default router;

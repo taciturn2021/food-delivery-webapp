@@ -8,35 +8,35 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
-        if (token) {
+        const checkAuth = async () => {
+            const token = localStorage.getItem('token');
+            const storedUser = localStorage.getItem('user');
+            
+            if (!token) {
+                setLoading(false);
+                return;
+            }
+
             if (storedUser) {
-                // Immediately restore user data from localStorage
                 setUser(JSON.parse(storedUser));
             }
-            // Still refresh from server
-            loadUser();
-        } else {
-            setLoading(false);
-        }
-    }, []);
 
-    const loadUser = async () => {
-        try {
-            const response = await getProfile();
-            const userData = response.data;
-            setUser(userData);
-            // Store the complete user data
-            localStorage.setItem('user', JSON.stringify(userData));
-        } catch (error) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            setUser(null);
-        } finally {
-            setLoading(false);
-        }
-    };
+            try {
+                const response = await getProfile();
+                const userData = response.data;
+                setUser(userData);
+                localStorage.setItem('user', JSON.stringify(userData));
+            } catch (error) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                setUser(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        checkAuth();
+    }, []); // Only run on mount
 
     const login = (token, userData) => {
         localStorage.setItem('token', token);
@@ -51,7 +51,15 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout, isAdmin: user?.role === 'admin' }}>
+        <AuthContext.Provider value={{ 
+            user, 
+            loading, 
+            login, 
+            logout, 
+            isAdmin: user?.role === 'admin',
+            isBranch: user?.role === 'branch_manager',
+            isRider: user?.role === 'rider'
+        }}>
             {children}
         </AuthContext.Provider>
     );
