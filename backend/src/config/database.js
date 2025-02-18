@@ -175,12 +175,10 @@ const initializeDatabase = async () => {
         // Create rider_locations table for tracking real-time locations
         await createTableIfNotExists('rider_locations', `
             CREATE TABLE IF NOT EXISTS rider_locations (
-                id SERIAL PRIMARY KEY,
-                rider_id INTEGER REFERENCES riders(id),
+                rider_id INTEGER REFERENCES riders(id) PRIMARY KEY,
                 latitude DECIMAL(10, 8) NOT NULL,
                 longitude DECIMAL(11, 8) NOT NULL,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE (rider_id)
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
 

@@ -20,8 +20,13 @@ export const login = async (req, res) => {
         const { email, password } = req.body;
         
         // Get user with password for comparison
-        const result = await pool.query(
-            'SELECT u.*, b.id as branch_id FROM users u LEFT JOIN branches b ON u.id = b.manager_id WHERE u.email = $1',
+        let result;
+        result = await pool.query(
+            `SELECT u.*, b.id as branch_id, r.id as rider_id 
+             FROM users u 
+             LEFT JOIN branches b ON u.id = b.manager_id 
+             LEFT JOIN riders r ON u.id = r.user_id 
+             WHERE u.email = $1`,
             [email.toLowerCase()]
         );
 
@@ -53,11 +58,12 @@ export const login = async (req, res) => {
             username: user.username,
             email: user.email,
             role: user.role,
-            branchId: user.branch_id
+            branchId: user.branch_id,
+            riderId: user.rider_id
         };
 
         const token = jwt.sign(
-            { userId: user.id, role: user.role, branchId: user.branch_id },
+            { userId: user.id, role: user.role, branchId: user.branch_id, riderId: user.rider_id },
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRES_IN }
         );
@@ -66,7 +72,8 @@ export const login = async (req, res) => {
             userId: userData.id,
             role: userData.role,
             tokenGenerated: !!token,
-            hasBranchId: !!userData.branchId
+            hasBranchId: !!userData.branchId,
+            hasRiderId: !!userData.riderId
         });
 
         res.json({
@@ -129,22 +136,37 @@ export const register = async (req, res) => {
 
 export const getProfile = async (req, res) => {
     try {
-        const result = await pool.query(
-            'SELECT u.id, u.username, u.email, u.role, b.id as branch_id FROM users u LEFT JOIN branches b ON u.id = b.manager_id WHERE u.id = $1',
-            [req.user.userId]
-        );
+        let result;
+        if (req.user.role === 'rider') {
+            result = await pool.query(
+                `SELECT u.id, u.username, u.email, u.role, r.id as rider_id, r.branch_id 
+                 FROM users u 
+                 LEFT JOIN riders r ON u.id = r.user_id 
+                 WHERE u.id = $1`,
+                [req.user.userId]
+            );
+        } else {
+            result = await pool.query(
+                `SELECT u.id, u.username, u.email, u.role, b.id as branch_id 
+                 FROM users u 
+                 LEFT JOIN branches b ON u.id = b.manager_id 
+                 WHERE u.id = $1`,
+                [req.user.userId]
+            );
+        }
 
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Format the response to match login response structure
+        // Format the response to include rider_id if applicable
         const userData = {
             id: result.rows[0].id,
             username: result.rows[0].username,
             email: result.rows[0].email,
             role: result.rows[0].role,
-            branchId: result.rows[0].branch_id
+            branchId: result.rows[0].branch_id,
+            riderId: result.rows[0].rider_id
         };
 
         res.json(userData);

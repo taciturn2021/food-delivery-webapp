@@ -112,36 +112,53 @@ export const getBranchRiders = async (req, res) => {
     }
 };
 
+// Update this endpoint to handle general rider data
 export const updateRider = async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params;  // this is the user_id from frontend
     const {
-        full_name,
+        status,
         contact_number,
         emergency_contact,
         vehicle_type,
         vehicle_plate_no,
-        license_no,
-        status
+        license_no
     } = req.body;
 
     try {
+        // First get the rider ID from user_id
+        const riderQuery = await pool.query(
+            'SELECT id FROM riders WHERE user_id = $1',
+            [id]
+        );
+
+        if (riderQuery.rows.length === 0) {
+            return res.status(404).json({ message: 'Rider not found' });
+        }
+
+        const riderId = riderQuery.rows[0].id;
+
+        // Then update the rider's data
         const result = await pool.query(
             `UPDATE riders 
-             SET full_name = $1, contact_number = $2, emergency_contact = $3,
-                 vehicle_type = $4, vehicle_plate_no = $5, license_no = $6,
-                 status = $7
-             WHERE id = $8 
+             SET status = COALESCE($1, status),
+                 contact_number = COALESCE($2, contact_number),
+                 emergency_contact = COALESCE($3, emergency_contact),
+                 vehicle_type = COALESCE($4, vehicle_type),
+                 vehicle_plate_no = COALESCE($5, vehicle_plate_no),
+                 license_no = COALESCE($6, license_no)
+             WHERE id = $7 
              RETURNING *`,
-            [full_name, contact_number, emergency_contact, vehicle_type,
-             vehicle_plate_no, license_no, status, id]
+            [status, contact_number, emergency_contact, vehicle_type,
+             vehicle_plate_no, license_no, riderId]
         );
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'Rider not found' });
+            return res.status(404).json({ message: 'Failed to update rider' });
         }
 
         res.json(result.rows[0]);
     } catch (error) {
+        console.error('Error updating rider:', error);
         res.status(500).json({ message: 'Error updating rider', error: error.message });
     }
 };
@@ -250,19 +267,76 @@ export const updateDeliveryStatus = async (req, res) => {
 
 export const updateRiderLocation = async (req, res) => {
     const { latitude, longitude } = req.body;
-    const rider_id = req.user.id;
-
     try {
-        await pool.query(
+        console.log('Location update request received:', {
+            userId: req.user.userId,
+            time: new Date().toISOString(),
+            coordinates: { latitude, longitude }
+        });
+        
+        // First get the rider ID from user_id
+        const riderQuery = await pool.query(
+            'SELECT id, full_name FROM riders WHERE user_id = $1',
+            [req.user.userId]
+        );
+
+        if (riderQuery.rows.length === 0) {
+            console.error('No rider found for user_id:', req.user.userId);
+            return res.status(404).json({ message: 'Rider not found' });
+        }
+
+        const riderId = riderQuery.rows[0].id;
+        console.log('Found rider:', {
+            riderId,
+            name: riderQuery.rows[0].full_name,
+            previousData: await getCurrentLocation(riderId)
+        });
+
+        // Use UPSERT to update or insert the location and return the updated data
+        const result = await pool.query(
             `INSERT INTO rider_locations (rider_id, latitude, longitude)
              VALUES ($1, $2, $3)
              ON CONFLICT (rider_id) 
-             DO UPDATE SET latitude = $2, longitude = $3, updated_at = CURRENT_TIMESTAMP`,
-            [rider_id, latitude, longitude]
+             DO UPDATE SET 
+                latitude = EXCLUDED.latitude,
+                longitude = EXCLUDED.longitude,
+                updated_at = CURRENT_TIMESTAMP
+             RETURNING *`,
+            [riderId, latitude, longitude]
         );
-        res.json({ message: 'Location updated successfully' });
+        
+        console.log('Location updated successfully:', {
+            riderId,
+            newLocation: result.rows[0],
+            timestamp: new Date().toISOString()
+        });
+        
+        res.json({
+            message: 'Location updated successfully',
+            data: result.rows[0]
+        });
     } catch (error) {
+        console.error('Error updating location:', error);
+        console.error('Full error details:', {
+            message: error.message,
+            stack: error.stack,
+            user: req.user,
+            requestBody: req.body
+        });
         res.status(500).json({ message: 'Error updating location', error: error.message });
+    }
+};
+
+const getCurrentLocation = async (riderId) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM rider_locations WHERE rider_id = $1',
+            [riderId]
+        );
+        return result.rows[0] || null;
+    } catch (error) {
+        console.error('Error getting current location:', error);
+        return null;
     }
 };
 
@@ -387,14 +461,24 @@ export const getRiderMetrics = async (req, res) => {
 };
 
 export const getRiderStatus = async (req, res) => {
-    const { riderId } = req.params;
+    const { id } = req.params;
     try {
+        // Query by user_id since we're getting data from the frontend user ID
         const result = await pool.query(
-            'SELECT status FROM riders WHERE id = $1',
-            [riderId]
+            `SELECT r.*, u.email 
+             FROM riders r 
+             JOIN users u ON r.user_id = u.id 
+             WHERE r.user_id = $1`,
+            [id]
         );
-        res.json(result.rows[0] || { status: 'unknown' });
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Rider not found' });
+        }
+        
+        res.json(result.rows[0]);
     } catch (error) {
+        console.error('Error in getRiderStatus:', error);
         res.status(500).json({ message: 'Error fetching rider status', error: error.message });
     }
 };

@@ -28,7 +28,8 @@ export const protect = async (req, res, next) => {
                 role: result.rows[0].role,
                 username: result.rows[0].username,
                 email: result.rows[0].email,
-                branchId: result.rows[0].branch_id
+                branchId: result.rows[0].branch_id,
+                riderId: decoded.riderId  // Make sure riderId is included
             };
             
             next();
@@ -105,6 +106,25 @@ export const isRiderForOrder = async (req, res, next) => {
         next();
     } catch (error) {
         res.status(500).json({ message: 'Error verifying order assignment' });
+    }
+};
+
+export const isAdminOrManagerOrSelfRider = async (req, res, next) => {
+    try {
+        // Allow admin and branch managers
+        if (req.user.role === 'admin' || req.user.role === 'branch_manager') {
+            return next();
+        }
+
+        // For riders, verify if they are updating their own profile
+        if (req.user.role === 'rider' && req.user.userId === parseInt(req.params.id)) {
+            return next();
+        }
+
+        res.status(403).json({ message: 'Access denied. Not authorized.' });
+    } catch (error) {
+        console.error('Permission check error:', error);
+        res.status(500).json({ message: 'Error checking permissions', error: error.message });
     }
 };
 

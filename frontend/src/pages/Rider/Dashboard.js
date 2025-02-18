@@ -23,6 +23,7 @@ import {
     Settings as SettingsIcon,
     History as HistoryIcon,
     Logout as LogoutIcon,
+    LocationOn as LocationIcon,
 } from '@mui/icons-material';
 import { getRiderOrders, updateDeliveryStatus } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -125,6 +126,7 @@ const RiderDashboard = () => {
                             Logout
                         </Button>
                     </Grid>
+
                     {successMessage && (
                         <Grid item xs={12}>
                             <Alert severity="success">
@@ -159,9 +161,13 @@ const RiderDashboard = () => {
                         </Card>
                     </Grid>
 
+                    {/* LocationTracker in its own Grid item */}
+                    <Grid item xs={12}>
+                        <LocationTracker />
+                    </Grid>
+
                     <Grid item xs={12}>
                         <TabPanel value={activeTab} index={0}>
-                            <LocationTracker />
                             <Card>
                                 <CardContent>
                                     <Typography variant="h6" gutterBottom>

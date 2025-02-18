@@ -106,17 +106,13 @@ export const updateBranchSettings = (id, data) => api.put(`/branches/${id}/setti
 export const createRider = (data) => api.post('/riders', data);
 export const getBranchRiders = (branchId) => api.get(`/riders/branch/${branchId}`);
 export const updateRider = (id, data) => api.put(`/riders/${id}`, data);
+export const getRiderDetails = (userId) => api.get(`/riders/${userId}`);  // Changed to getRiderDetails for clarity
 export const assignOrderToRider = (data) => api.post('/riders/assign-order', data);
 export const getRiderOrders = (riderId) => api.get(`/riders/${riderId}/orders`);
 export const updateDeliveryStatus = (orderId, assignmentId, status) => 
     api.put(`/riders/orders/${orderId}/status`, { assignmentId, status });
 export const updateRiderLocation = (location) => api.post('/riders/location', location);
 export const getDeliveryLocation = (assignmentId) => api.get(`/riders/delivery/${assignmentId}/location`);
-
-// New Rider Settings APIs
-export const getRiderSettings = (riderId) => api.get(`/riders/${riderId}/settings`);
-export const updateRiderSettings = (riderId, settings) => api.put(`/riders/${riderId}/settings`, settings);
-export const updateRiderAvailability = (riderId, isAvailable) => 
-    api.put(`/riders/${riderId}/availability`, { isAvailable });
+export const getRiderStatus = (riderId) => api.get(`/riders/${riderId}`);
 
 export default api;
