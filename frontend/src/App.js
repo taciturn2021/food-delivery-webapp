@@ -1,10 +1,13 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import Login from './pages/Login';
 import AdminDashboard from './pages/Admin/Dashboard';
 import BranchDashboard from './pages/Branch/Dashboard';
 import RiderDashboard from './pages/Rider/Dashboard';
+import CustomerLanding from './pages/Customer/CustomerLanding';
+import CustomerMenu from './pages/Customer/components/CustomerMenu';
 
 const theme = createTheme({
     palette: {
@@ -204,15 +207,18 @@ function App() {
         <ThemeProvider theme={theme}>
             <CssBaseline />
             <AuthProvider>
-                <Router>
-                    <Routes>
-                        <Route path="/" element={<Navigate to="/login" replace />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/admin/*" element={<AdminDashboard />} />
-                        <Route path="/branch/*" element={<BranchDashboard />} />
-                        <Route path="/rider/*" element={<RiderDashboard />} />
-                    </Routes>
-                </Router>
+                <CartProvider>
+                    <Router>
+                        <Routes>
+                            <Route path="/" element={<CustomerLanding />} />
+                            <Route path="/customer/menu/:branchId" element={<CustomerMenu />} />
+                            <Route path="/login" element={<Login />} />
+                            <Route path="/admin/*" element={<AdminDashboard />} />
+                            <Route path="/branch/*" element={<BranchDashboard />} />
+                            <Route path="/rider/*" element={<RiderDashboard />} />
+                        </Routes>
+                    </Router>
+                </CartProvider>
             </AuthProvider>
         </ThemeProvider>
     );

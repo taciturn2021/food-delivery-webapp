@@ -199,6 +199,58 @@ const initializeDatabase = async () => {
             )
         `);
 
+        // Create branch_settings table
+        await createTableIfNotExists('branch_settings', `
+            CREATE TABLE IF NOT EXISTS branch_settings (
+                branch_id INTEGER REFERENCES branches(id),
+                opening_time TIME NOT NULL DEFAULT '09:00:00',
+                closing_time TIME NOT NULL DEFAULT '22:00:00',
+                delivery_radius INTEGER NOT NULL DEFAULT 10,
+                minimum_order_amount DECIMAL(10,2) NOT NULL DEFAULT 15.00,
+                max_concurrent_orders INTEGER NOT NULL DEFAULT 20,
+                preparation_time_minutes INTEGER NOT NULL DEFAULT 30,
+                allow_scheduled_orders BOOLEAN NOT NULL DEFAULT true,
+                max_schedule_days INTEGER NOT NULL DEFAULT 7,
+                automatic_order_assignment BOOLEAN NOT NULL DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (branch_id)
+            )
+        `);
+
+        // Create customer_favorites table
+        await createTableIfNotExists('customer_favorites', `
+            CREATE TABLE IF NOT EXISTS customer_favorites (
+                user_id INTEGER REFERENCES users(id),
+                menu_item_id INTEGER REFERENCES menu_items(id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, menu_item_id)
+            )
+        `);
+
+        // Update branches table constraints
+        await client.query(`
+            ALTER TABLE branches
+            ALTER COLUMN opening_time SET DEFAULT '09:00:00',
+            ALTER COLUMN closing_time SET DEFAULT '22:00:00',
+            ALTER COLUMN status SET DEFAULT 'active',
+            ALTER COLUMN status TYPE VARCHAR(20)
+        `);
+
+        // Update order_assignments table constraints
+        await client.query(`
+            ALTER TABLE order_assignments
+            ALTER COLUMN status SET DEFAULT 'assigned',
+            ALTER COLUMN status TYPE VARCHAR(20)
+        `);
+
+        // Update riders table constraints
+        await client.query(`
+            ALTER TABLE riders
+            ALTER COLUMN status SET DEFAULT 'active',
+            ALTER COLUMN status TYPE VARCHAR(20)
+        `);
+
         // Create default admin user with a fresh password hash
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash('admin123', salt);

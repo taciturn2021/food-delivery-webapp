@@ -48,6 +48,28 @@ export const createBranch = async (req, res) => {
 
 export const getAllBranches = async (req, res) => {
     try {
+        // If it's a public request (no auth), only return active branches with limited info
+        if (!req.user) {
+            const result = await pool.query(`
+                SELECT 
+                    id, 
+                    name, 
+                    address, 
+                    latitude, 
+                    longitude,
+                    opening_time,
+                    closing_time,
+                    delivery_radius,
+                    minimum_order_amount,
+                    status
+                FROM branches 
+                WHERE status = 'active'
+                ORDER BY name
+            `);
+            return res.json(result.rows);
+        }
+
+        // For authenticated admin/manager requests, return full branch details
         const result = await pool.query(`
             SELECT b.*, u.username as manager_name, u.email as manager_email 
             FROM branches b 
@@ -181,6 +203,34 @@ export const getBranchMenu = async (req, res) => {
             SELECT mi.*, bmi.price as branch_price, bmi.is_available as branch_availability 
             FROM menu_items mi 
             LEFT JOIN branch_menu_items bmi ON mi.id = bmi.menu_item_id AND bmi.branch_id = $1
+            ORDER BY mi.category, mi.name
+        `, [id]);
+
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching branch menu', error: error.message });
+    }
+};
+
+export const getPublicBranchMenu = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const result = await pool.query(`
+            SELECT 
+                mi.id,
+                mi.name,
+                mi.description,
+                mi.price,
+                mi.category,
+                mi.image_url,
+                bmi.price as branch_price,
+                bmi.is_available as branch_availability
+            FROM menu_items mi 
+            LEFT JOIN branch_menu_items bmi 
+                ON mi.id = bmi.menu_item_id 
+                AND bmi.branch_id = $1
+            WHERE (bmi.is_available IS NULL OR bmi.is_available = true)
             ORDER BY mi.category, mi.name
         `, [id]);
 

@@ -6,11 +6,16 @@ import {
     deleteBranch,
     getBranchMenu,
     getBranchSettings,
-    updateBranchSettings
+    updateBranchSettings,
+    getPublicBranchMenu
 } from '../controllers/branchController.js';
 import { protect, isAdmin, isAdminOrManager } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Public routes
+router.get('/public', getAllBranches); // Public endpoint for customers
+router.get('/:id/menu/public', getPublicBranchMenu);
 
 // Admin-only routes
 router.post('/', protect, isAdmin, createBranch);
