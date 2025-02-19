@@ -6,8 +6,7 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/Admin/Dashboard';
 import BranchDashboard from './pages/Branch/Dashboard';
 import RiderDashboard from './pages/Rider/Dashboard';
-import CustomerLanding from './pages/Customer/CustomerLanding';
-import CustomerMenu from './pages/Customer/components/CustomerMenu';
+import LandingPage from './pages/Customer/LandingPage';
 
 const theme = createTheme({
     palette: {
@@ -210,8 +209,7 @@ function App() {
                 <CartProvider>
                     <Router>
                         <Routes>
-                            <Route path="/" element={<CustomerLanding />} />
-                            <Route path="/customer/menu/:branchId" element={<CustomerMenu />} />
+                            <Route path="/" element={<LandingPage />} />
                             <Route path="/login" element={<Login />} />
                             <Route path="/admin/*" element={<AdminDashboard />} />
                             <Route path="/branch/*" element={<BranchDashboard />} />
