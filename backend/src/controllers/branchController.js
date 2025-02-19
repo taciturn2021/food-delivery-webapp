@@ -323,13 +323,13 @@ export const getPublicBranchMenu = async (req, res) => {
                 mi.price,
                 mi.category,
                 mi.image_url,
-                bmi.price as branch_price,
-                bmi.is_available as branch_availability
+                COALESCE(bmi.price, mi.price) as branch_price
             FROM menu_items mi 
-            LEFT JOIN branch_menu_items bmi 
+            INNER JOIN branch_menu_items bmi 
                 ON mi.id = bmi.menu_item_id 
                 AND bmi.branch_id = $1
-            WHERE (bmi.is_available IS NULL OR bmi.is_available = true)
+            WHERE mi.is_available = true
+                AND bmi.is_available = true
             ORDER BY mi.category, mi.name
         `, [id]);
 

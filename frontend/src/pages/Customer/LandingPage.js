@@ -113,7 +113,7 @@ const IntegratedLanding = () => {
                                     </Typography>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                         <Typography variant="h6" color="primary">
-                                            ${Number(item.price).toFixed(2)}
+                                            ${Number(item.branch_price).toFixed(2)}
                                         </Typography>
                                         <Chip
                                             label={item.category}
@@ -126,9 +126,8 @@ const IntegratedLanding = () => {
                                         variant="contained"
                                         fullWidth
                                         startIcon={<ShoppingCart />}
-                                        disabled={!item.is_available}
                                     >
-                                        {item.is_available ? 'Add to Cart' : 'Unavailable'}
+                                        Add to Cart
                                     </Button>
                                 </CardContent>
                             </Card>
