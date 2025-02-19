@@ -85,7 +85,10 @@ const BranchManagement = () => {
                 location: branch.latitude && branch.longitude ? {
                     lat: parseFloat(branch.latitude),
                     lng: parseFloat(branch.longitude)
-                } : null
+                } : null,
+                managerName: branch.manager_name || '',
+                managerEmail: branch.manager_email || '',
+                managerPassword: ''
             });
             setEditingId(branch.id);
         } else {
@@ -93,11 +96,6 @@ const BranchManagement = () => {
         }
         setOpen(true);
         setActiveTab(0);
-    };
-
-    const handleClose = () => {
-        resetForm();
-        setOpen(false);
     };
 
     const handleSubmit = async (e) => {
@@ -110,8 +108,16 @@ const BranchManagement = () => {
                     phone: formData.phone,
                     status: formData.status,
                     latitude: formData.location?.lat,
-                    longitude: formData.location?.lng
+                    longitude: formData.location?.lng,
+                    manager_name: formData.managerName,
+                    manager_email: formData.managerEmail
                 };
+    
+                // Only include password if it's provided (for password update)
+                if (formData.managerPassword && formData.managerPassword.trim() !== '') {
+                    updateData.manager_password = formData.managerPassword;
+                }
+    
                 await updateBranch(editingId, updateData);
             } else {
                 await createBranch({
@@ -125,6 +131,11 @@ const BranchManagement = () => {
         } catch (error) {
             setError(error.response?.data?.message || 'Error saving branch');
         }
+    };
+
+    const handleClose = () => {
+        resetForm();
+        setOpen(false);
     };
 
     const handleDelete = async (id) => {
@@ -227,7 +238,7 @@ const BranchManagement = () => {
                     <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
                         <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
                             <Tab label="Branch Info" />
-                            {!editingId && <Tab label="Manager Account" />}
+                            <Tab label="Manager Account" />
                         </Tabs>
                     </Box>
 
@@ -304,7 +315,6 @@ const BranchManagement = () => {
                                         value={formData.managerName}
                                         onChange={(e) => setFormData({...formData, managerName: e.target.value})}
                                         required={!editingId}
-                                        disabled={editingId}
                                     />
                                 </Grid>
                                 <Grid item xs={12}>
@@ -315,7 +325,6 @@ const BranchManagement = () => {
                                         value={formData.managerEmail}
                                         onChange={(e) => setFormData({...formData, managerEmail: e.target.value})}
                                         required={!editingId}
-                                        disabled={editingId}
                                     />
                                 </Grid>
                                 <Grid item xs={12}>
@@ -326,7 +335,7 @@ const BranchManagement = () => {
                                         value={formData.managerPassword}
                                         onChange={(e) => setFormData({...formData, managerPassword: e.target.value})}
                                         required={!editingId}
-                                        disabled={editingId}
+                                        helperText={editingId ? 'Leave blank to keep current password' : 'Enter password for new manager'}
                                     />
                                 </Grid>
                             </Grid>

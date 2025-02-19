@@ -84,7 +84,7 @@ export const getAllBranches = async (req, res) => {
 
 export const updateBranch = async (req, res) => {
     const { id } = req.params;
-    const { name, address, phone, manager_id, status, latitude, longitude } = req.body;
+    const { name, address, phone, manager_id, status, latitude, longitude, manager_name, manager_email, manager_password} = req.body;
 
     // For branch managers, only allow updating their own branch
     if (req.user.role === 'branch_manager' && req.user.branchId !== parseInt(id)) {
@@ -152,7 +152,50 @@ export const updateBranch = async (req, res) => {
             ]
         );
 
-        res.json(result.rows[0]);
+        // Update manager details if provided
+        if (manager_name || manager_email || manager_password) {
+            const updateFields = [];
+            const updateValues = [];
+            let valueCounter = 1;
+
+            if (manager_name) {
+                updateFields.push(`username = $${valueCounter}`);
+                updateValues.push(manager_name);
+                valueCounter++;
+            }
+
+            if (manager_email) {
+                updateFields.push(`email = $${valueCounter}`);
+                updateValues.push(manager_email);
+                valueCounter++;
+            }
+
+            if (manager_password) {
+                const salt = await bcrypt.genSalt(10);
+                const hashedPassword = await bcrypt.hash(manager_password, salt);
+                updateFields.push(`password = $${valueCounter}`);
+                updateValues.push(hashedPassword);
+                valueCounter++;
+            }
+
+            if (updateFields.length > 0) {
+                await pool.query(
+                    `UPDATE users SET ${updateFields.join(', ')} WHERE id = $${valueCounter}`,
+                    [...updateValues, current.manager_id]
+                );
+            }
+        }
+
+        // Fetch updated branch data with manager info
+        const updatedBranch = await pool.query(
+            `SELECT b.*, u.username as manager_name, u.email as manager_email 
+             FROM branches b 
+             LEFT JOIN users u ON b.manager_id = u.id 
+             WHERE b.id = $1`,
+            [id]
+        );
+
+        res.json(updatedBranch.rows[0]);
     } catch (error) {
         res.status(500).json({ message: 'Error updating branch', error: error.message });
     }
@@ -160,33 +203,89 @@ export const updateBranch = async (req, res) => {
 
 export const deleteBranch = async (req, res) => {
     const { id } = req.params;
+    const client = await pool.connect();
 
     try {
-        const orderCheck = await pool.query(
+        await client.query('BEGIN');
+
+        // First check if branch exists
+        const branchCheck = await client.query(
+            'SELECT * FROM branches WHERE id = $1',
+            [id]
+        );
+
+        if (branchCheck.rows.length === 0) {
+            return res.status(404).json({ message: 'Branch not found' });
+        }
+
+        const branch = branchCheck.rows[0];
+        const managerId = branch.manager_id;
+
+        // Check for existing orders
+        const orderCheck = await client.query(
             'SELECT * FROM orders WHERE branch_id = $1 LIMIT 1',
             [id]
         );
 
         if (orderCheck.rows.length > 0) {
-            await pool.query(
-                'UPDATE branches SET status = $1 WHERE id = $2',
+            await client.query(
+                'UPDATE branches SET status = $1, manager_id = NULL WHERE id = $2',
                 ['inactive', id]
             );
-            return res.json({ message: 'Branch marked as inactive due to existing orders' });
+
+            // Update the manager's role to 'customer' if they exist
+            if (managerId) {
+                await client.query(
+                    'UPDATE users SET role = $1 WHERE id = $2',
+                    ['customer', managerId]
+                );
+            }
+
+            await client.query('COMMIT');
+            return res.json({ 
+                message: 'Branch marked as inactive and manager role updated due to existing orders'
+            });
         }
 
-        const result = await pool.query(
-            'DELETE FROM branches WHERE id = $1 RETURNING *',
+        // If no orders exist, proceed with deletion
+        // First remove branch_menu_items
+        await client.query(
+            'DELETE FROM branch_menu_items WHERE branch_id = $1',
             [id]
         );
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'Branch not found' });
+        // Remove riders associated with this branch
+        await client.query(
+            'UPDATE riders SET branch_id = NULL WHERE branch_id = $1',
+            [id]
+        );
+
+        // Delete the branch
+        await client.query(
+            'DELETE FROM branches WHERE id = $1',
+            [id]
+        );
+
+        // Update the manager's role to 'customer' if they exist
+        if (managerId) {
+            await client.query(
+                'UPDATE users SET role = $1 WHERE id = $2',
+                ['customer', managerId]
+            );
         }
 
-        res.json({ message: 'Branch deleted successfully' });
+        await client.query('COMMIT');
+        res.json({ message: 'Branch and related data deleted successfully' });
     } catch (error) {
-        res.status(500).json({ message: 'Error deleting branch', error: error.message });
+        await client.query('ROLLBACK');
+        console.error('Error in deleteBranch:', error);
+        res.status(500).json({ 
+            message: 'Error deleting branch', 
+            error: error.message,
+            stack: error.stack
+        });
+    } finally {
+        client.release();
     }
 };
 
