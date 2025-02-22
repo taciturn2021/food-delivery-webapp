@@ -1,26 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    AppBar,
-    Toolbar,
-    Typography,
-    Button,
     Container,
     Dialog,
     Box,
     CircularProgress,
-    useTheme,
-    alpha,
-    IconButton,
-    Card,
-    CardContent,
     Grid,
     Alert,
+    Card,
+    CardContent,
     CardMedia,
+    Typography,
+    Button,
     Chip
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { Menu as MenuIcon, LocationOn, Search, ShoppingCart } from '@mui/icons-material';
+import { ShoppingCart } from '@mui/icons-material';
+import CustomerHeader from '../../components/customer/CustomerHeader';
 import BranchSelector from './components/BranchSelector';
 import { getPublicBranches, getPublicBranchMenu } from '../../services/api';
 
@@ -33,7 +29,6 @@ const IntegratedLanding = () => {
     const [menuItems, setMenuItems] = useState([]);
     const [menuLoading, setMenuLoading] = useState(false);
     const navigate = useNavigate();
-    const theme = useTheme();
 
     useEffect(() => {
         const fetchBranches = async () => {
@@ -113,7 +108,7 @@ const IntegratedLanding = () => {
                                     </Typography>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                         <Typography variant="h6" color="primary">
-                                            ${Number(item.branch_price).toFixed(2)}
+                                            ${Number(item.branch_price || item.price).toFixed(2)}
                                         </Typography>
                                         <Chip
                                             label={item.category}
@@ -140,64 +135,10 @@ const IntegratedLanding = () => {
 
     return (
         <Box sx={{ minHeight: '100vh' }}>
-            <AppBar position="fixed" sx={{ backgroundColor: 'white', boxShadow: 1 }}>
-                <Container maxWidth="xl">
-                    <Toolbar disableGutters>
-                        <IconButton
-                            size="large"
-                            edge="start"
-                            color="primary"
-                            sx={{ mr: 2 }}
-                        >
-                            <MenuIcon />
-                        </IconButton>
-
-                        <Typography
-                            variant="h6"
-                            noWrap
-                            component="div"
-                            sx={{
-                                flexGrow: 1,
-                                color: theme.palette.primary.main,
-                                fontWeight: 600,
-                                cursor: 'pointer'
-                            }}
-                            onClick={() => navigate('/')}
-                        >
-                            FoodDelivery
-                        </Typography>
-
-                        <Box sx={{ display: 'flex', gap: 2 }}>
-                            {selectedBranch && (
-                                <Button
-                                    variant="outlined"
-                                    color="primary"
-                                    onClick={() => setBranchDialogOpen(true)}
-                                    startIcon={<LocationOn />}
-                                >
-                                    {selectedBranch.name}
-                                </Button>
-                            )}
-                            <Button
-                                color="inherit"
-                                onClick={() => navigate('/login')}
-                                sx={{ color: theme.palette.primary.main }}
-                            >
-                                Sign In
-                            </Button>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={() => navigate('/register')}
-                            >
-                                Register
-                            </Button>
-                        </Box>
-                    </Toolbar>
-                </Container>
-            </AppBar>
-
-            <Toolbar /> {/* Spacer for fixed AppBar */}
+            <CustomerHeader onBranchSelect={handleBranchSelect} />
+            
+            {/* Spacer for fixed AppBar */}
+            <Box sx={{ height: 64 }} />
 
             {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
@@ -221,7 +162,6 @@ const IntegratedLanding = () => {
                 maxWidth="md"
                 fullWidth
                 disableEscapeKeyDown={!selectedBranch}
-                disableBackdropClick={!selectedBranch}
             >
                 <BranchSelector
                     branches={branches}

@@ -9,13 +9,14 @@ import {
     Paper,
     Grid,
     Button,
-    Chip
+    Chip,
+    CircularProgress
 } from '@mui/material';
 import MapLocationPicker from '../../../components/common/MapLocationPicker';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 
-const BranchSelector = ({ branches, onBranchSelect }) => {
+const BranchSelector = ({ branches = [], onBranchSelect }) => {
     const [selectedBranch, setSelectedBranch] = useState('');
 
     const handleChange = (event) => {
@@ -31,6 +32,15 @@ const BranchSelector = ({ branches, onBranchSelect }) => {
 
     const selectedBranchData = branches.find(b => b.id === selectedBranch);
 
+    if (!branches || branches.length === 0) {
+        return (
+            <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <CircularProgress size={24} sx={{ mr: 1 }} />
+                <Typography>Loading branches...</Typography>
+            </Box>
+        );
+    }
+
     return (
         <Box>
             <FormControl fullWidth variant="outlined">
@@ -41,7 +51,7 @@ const BranchSelector = ({ branches, onBranchSelect }) => {
                     label="Select a Branch"
                     sx={{ mb: 3 }}
                 >
-                    {branches && branches.map((branch) => (
+                    {branches.map((branch) => (
                         <MenuItem key={branch.id} value={branch.id}>
                             {branch.name} - {branch.address}
                         </MenuItem>

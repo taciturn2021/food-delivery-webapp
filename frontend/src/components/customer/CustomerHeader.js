@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     AppBar,
     Toolbar,
@@ -8,22 +8,63 @@ import {
     Dialog,
     IconButton,
     Box,
-    useTheme
+    useTheme,
+    Menu,
+    MenuItem,
+    Avatar,
+    Divider
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { Menu as MenuIcon } from '@mui/icons-material';
+import { 
+    Menu as MenuIcon,
+    Person as PersonIcon,
+    LocationOn as LocationIcon,
+    ShoppingBag as OrdersIcon,
+    Logout as LogoutIcon
+} from '@mui/icons-material';
 import BranchSelector from '../../pages/Customer/components/BranchSelector';
+import { useAuth } from '../../context/AuthContext';
+import { getPublicBranches } from '../../services/api';
 
 const CustomerHeader = ({ onBranchSelect }) => {
     const [branchDialogOpen, setBranchDialogOpen] = useState(false);
+    const [anchorEl, setAnchorEl] = useState(null);
+    const [branches, setBranches] = useState([]);
     const navigate = useNavigate();
     const theme = useTheme();
+    const { user, logout } = useAuth();
+
+    useEffect(() => {
+        const fetchBranches = async () => {
+            try {
+                const response = await getPublicBranches();
+                const activeBranches = response.data.filter(branch => branch.status === 'active');
+                setBranches(activeBranches);
+            } catch (error) {
+                console.error('Error fetching branches:', error);
+            }
+        };
+        fetchBranches();
+    }, []);
 
     const handleBranchSelect = (branchId) => {
         if (onBranchSelect) {
             onBranchSelect(branchId);
         }
         setBranchDialogOpen(false);
+    };
+
+    const handleMenu = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
     };
 
     return (
@@ -56,28 +97,94 @@ const CustomerHeader = ({ onBranchSelect }) => {
                             FoodDelivery
                         </Typography>
 
-                        <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                             <Button
                                 variant="outlined"
                                 color="primary"
                                 onClick={() => setBranchDialogOpen(true)}
+                                startIcon={<LocationIcon />}
                             >
                                 Select Branch
                             </Button>
-                            <Button
-                                color="inherit"
-                                onClick={() => navigate('/login')}
-                                sx={{ color: theme.palette.primary.main }}
-                            >
-                                Sign In
-                            </Button>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={() => navigate('/register')}
-                            >
-                                Register
-                            </Button>
+                            
+                            {user ? (
+                                <>
+                                    <IconButton
+                                        onClick={handleMenu}
+                                        sx={{ 
+                                            ml: 2,
+                                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.04)' }
+                                        }}
+                                    >
+                                        <Avatar 
+                                            sx={{ 
+                                                width: 35, 
+                                                height: 35,
+                                                bgcolor: theme.palette.primary.main
+                                            }}
+                                        >
+                                            {user.username?.[0]?.toUpperCase()}
+                                        </Avatar>
+                                    </IconButton>
+                                    <Menu
+                                        anchorEl={anchorEl}
+                                        open={Boolean(anchorEl)}
+                                        onClose={handleClose}
+                                        anchorOrigin={{
+                                            vertical: 'bottom',
+                                            horizontal: 'right',
+                                        }}
+                                        transformOrigin={{
+                                            vertical: 'top',
+                                            horizontal: 'right',
+                                        }}
+                                        PaperProps={{
+                                            elevation: 3,
+                                            sx: { minWidth: 200 }
+                                        }}
+                                    >
+                                        <Box sx={{ px: 2, py: 1 }}>
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                                                {user.username}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {user.email}
+                                            </Typography>
+                                        </Box>
+                                        <Divider />
+                                        <MenuItem onClick={() => { handleClose(); }}>
+                                            <PersonIcon sx={{ mr: 2 }} /> Edit Profile
+                                        </MenuItem>
+                                        <MenuItem onClick={() => { handleClose(); }}>
+                                            <LocationIcon sx={{ mr: 2 }} /> Manage Addresses
+                                        </MenuItem>
+                                        <MenuItem onClick={() => { handleClose(); }}>
+                                            <OrdersIcon sx={{ mr: 2 }} /> View Orders
+                                        </MenuItem>
+                                        <Divider />
+                                        <MenuItem onClick={handleLogout}>
+                                            <LogoutIcon sx={{ mr: 2 }} /> Logout
+                                        </MenuItem>
+                                    </Menu>
+                                </>
+                            ) : (
+                                <>
+                                    <Button
+                                        color="inherit"
+                                        onClick={() => navigate('/login')}
+                                        sx={{ color: theme.palette.primary.main }}
+                                    >
+                                        Sign In
+                                    </Button>
+                                    <Button
+                                        variant="contained"
+                                        color="primary"
+                                        onClick={() => navigate('/register')}
+                                    >
+                                        Register
+                                    </Button>
+                                </>
+                            )}
                         </Box>
                     </Toolbar>
                 </Container>
@@ -90,6 +197,7 @@ const CustomerHeader = ({ onBranchSelect }) => {
                 fullWidth
             >
                 <BranchSelector
+                    branches={branches}
                     onBranchSelect={handleBranchSelect}
                     isDialog={true}
                 />

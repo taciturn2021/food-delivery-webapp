@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { login as loginApi } from '../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { login as loginApi } from '../../services/api';
 import {
     Box,
     Container,
@@ -14,9 +14,9 @@ import {
     CircularProgress,
     Link
 } from '@mui/material';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
-const Login = () => {
+const AdminLogin = () => {
     const navigate = useNavigate();
     const { user, login } = useAuth();
     const [formData, setFormData] = useState({
@@ -29,11 +29,10 @@ const Login = () => {
     // Redirect logged in users
     if (user) {
         const redirectPath = {
-            'customer': '/',
             'admin': '/admin',
             'branch_manager': '/branch',
             'rider': '/rider'
-        }[user.role] || '/';
+        }[user.role] || '/admin/login';
         return <Navigate to={redirectPath} replace />;
     }
 
@@ -51,12 +50,17 @@ const Login = () => {
             const response = await loginApi(cleanedFormData);
             
             if (response.data?.token && response.data?.user) {
-                if (response.data.user.role !== 'customer') {
-                    setError('This login is for customers only. Staff members please use the admin login.');
+                if (response.data.user.role === 'customer') {
+                    setError('This login is for staff members only. Customers please use the main login.');
                     return;
                 }
                 login(response.data.token, response.data.user);
-                navigate('/');
+                const redirectPath = {
+                    'admin': '/admin',
+                    'branch_manager': '/branch',
+                    'rider': '/rider'
+                }[response.data.user.role] || '/admin/login';
+                navigate(redirectPath);
             }
         } catch (err) {
             setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
@@ -71,7 +75,7 @@ const Login = () => {
                 minHeight: '100vh',
                 display: 'flex',
                 alignItems: 'center',
-                background: 'linear-gradient(45deg, #FF5F6D 30%, #FFC371 90%)',
+                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
                 py: 12,
                 px: 2
             }}
@@ -89,11 +93,11 @@ const Login = () => {
                 >
                     <Avatar sx={{ 
                         m: 1, 
-                        bgcolor: 'secondary.main',
+                        bgcolor: 'primary.main',
                         width: 56,
                         height: 56
                     }}>
-                        <LockOutlinedIcon fontSize="large" />
+                        <AdminPanelSettingsIcon fontSize="large" />
                     </Avatar>
 
                     <Typography
@@ -107,7 +111,7 @@ const Login = () => {
                             color: 'primary.main'
                         }}
                     >
-                        Welcome Back
+                        Staff Login
                     </Typography>
 
                     {error && (
@@ -142,6 +146,8 @@ const Login = () => {
                             autoFocus
                             value={formData.email}
                             onChange={(e) => setFormData({...formData, email: e.target.value})}
+                            helperText={process.env.NODE_ENV === 'development' ? 
+                                "Default: admin@example.com / admin123" : ""}
                             sx={{
                                 '& .MuiOutlinedInput-root': {
                                     '&:hover fieldset': {
@@ -184,12 +190,9 @@ const Login = () => {
                             {loading ? <CircularProgress size={24} /> : 'Sign In'}
                         </Button>
                         
-                        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
-                            <Link href="/register" variant="body2" sx={{ color: 'primary.main' }}>
-                                {"Don't have an account? Sign Up"}
-                            </Link>
-                            <Link href="/admin/login" variant="body2" sx={{ color: 'text.secondary' }}>
-                                Staff Login
+                        <Box sx={{ mt: 2, textAlign: 'center' }}>
+                            <Link href="/login" variant="body2" sx={{ color: 'text.secondary' }}>
+                                Back to Customer Login
                             </Link>
                         </Box>
                     </Box>
@@ -199,4 +202,4 @@ const Login = () => {
     );
 };
 
-export default Login;
+export default AdminLogin;

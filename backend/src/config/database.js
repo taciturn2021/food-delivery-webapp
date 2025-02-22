@@ -218,13 +218,34 @@ const initializeDatabase = async () => {
             )
         `);
 
-        // Create customer_favorites table
-        await createTableIfNotExists('customer_favorites', `
-            CREATE TABLE IF NOT EXISTS customer_favorites (
-                user_id INTEGER REFERENCES users(id),
-                menu_item_id INTEGER REFERENCES menu_items(id),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (user_id, menu_item_id)
+    
+
+        // Create customers table
+        await createTableIfNotExists('customers', `
+            CREATE TABLE IF NOT EXISTS customers (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+                first_name VARCHAR(100) NOT NULL,
+                last_name VARCHAR(100) NOT NULL,
+                phone VARCHAR(20) NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Create customer_addresses table
+        await createTableIfNotExists('customer_addresses', `
+            CREATE TABLE IF NOT EXISTS customer_addresses (
+                id SERIAL PRIMARY KEY,
+                customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+                street_address TEXT NOT NULL,
+                city VARCHAR(100) NOT NULL,
+                state VARCHAR(100),
+                postal_code VARCHAR(20),
+                country VARCHAR(100) DEFAULT 'Pakistan',
+                latitude DECIMAL(10, 8),
+                longitude DECIMAL(11, 8),
+                is_default BOOLEAN DEFAULT false,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
         `);
 

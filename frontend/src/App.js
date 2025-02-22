@@ -1,12 +1,24 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
-import Login from './pages/Login';
+
+// Admin Routes
 import AdminDashboard from './pages/Admin/Dashboard';
+import AdminLogin from './pages/Admin/AdminLogin';
+
+// Branch Routes
 import BranchDashboard from './pages/Branch/Dashboard';
+
+// Rider Routes
 import RiderDashboard from './pages/Rider/Dashboard';
+
+// Customer Routes
 import LandingPage from './pages/Customer/LandingPage';
+import CustomerRegister from './pages/Customer/components/CustomerRegister';
+import Login from './pages/Login';
 
 const theme = createTheme({
     palette: {
@@ -201,25 +213,69 @@ const theme = createTheme({
     },
 });
 
-function App() {
-    return (
-        <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <AuthProvider>
-                <CartProvider>
-                    <Router>
-                        <Routes>
-                            <Route path="/" element={<LandingPage />} />
-                            <Route path="/login" element={<Login />} />
-                            <Route path="/admin/*" element={<AdminDashboard />} />
-                            <Route path="/branch/*" element={<BranchDashboard />} />
-                            <Route path="/rider/*" element={<RiderDashboard />} />
-                        </Routes>
-                    </Router>
-                </CartProvider>
-            </AuthProvider>
-        </ThemeProvider>
-    );
-}
+const App = () => {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AuthProvider>
+        <CartProvider>
+          <Router>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<CustomerRegister />} />
+              <Route path="/admin/login" element={<AdminLogin />} />
+
+              {/* Protected Admin Routes */}
+              <Route
+                path="/admin/*"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Protected Branch Routes */}
+              <Route
+                path="/branch/*"
+                element={
+                  <ProtectedRoute allowedRoles={['branch_manager']}>
+                    <BranchDashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Protected Rider Routes */}
+              <Route
+                path="/rider/*"
+                element={
+                  <ProtectedRoute allowedRoles={['rider']}>
+                    <RiderDashboard />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </Router>
+        </CartProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+};
+
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user || !allowedRoles.includes(user.role)) {
+    return <Navigate to={user?.role === 'customer' ? '/' : '/admin/login'} />;
+  }
+
+  return children;
+};
 
 export default App;

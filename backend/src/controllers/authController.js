@@ -134,6 +134,70 @@ export const register = async (req, res) => {
     }
 };
 
+export const registerCustomer = async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { username, email, password, firstName, lastName, phone } = req.body;
+
+        // Check if user already exists
+        const userExists = await client.query(
+            'SELECT * FROM users WHERE email = $1 OR username = $2',
+            [email.toLowerCase(), username]
+        );
+
+        if (userExists.rows.length > 0) {
+            return res.status(400).json({ message: 'User already exists' });
+        }
+
+        await client.query('BEGIN');
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Create user
+        const userResult = await client.query(
+            'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, username, email, role',
+            [username, email.toLowerCase(), hashedPassword, 'customer']
+        );
+
+        // Create customer profile
+        const customerResult = await client.query(
+            'INSERT INTO customers (user_id, first_name, last_name, phone) VALUES ($1, $2, $3, $4) RETURNING id',
+            [userResult.rows[0].id, firstName, lastName, phone]
+        );
+
+        await client.query('COMMIT');
+
+        const userData = {
+            ...userResult.rows[0],
+            customer_id: customerResult.rows[0].id,
+            firstName,
+            lastName,
+            phone
+        };
+
+        const token = jwt.sign(
+            { userId: userData.id, role: userData.role },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRES_IN }
+        );
+
+        res.status(201).json({
+            token,
+            user: userData
+        });
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Registration error:', error);
+        res.status(500).json({ 
+            message: 'Server error during registration', 
+            error: error.message 
+        });
+    } finally {
+        client.release();
+    }
+};
+
 export const getProfile = async (req, res) => {
     try {
         let result;

@@ -8,35 +8,31 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const checkAuth = async () => {
+        const initializeAuth = async () => {
             const token = localStorage.getItem('token');
             const storedUser = localStorage.getItem('user');
-            
-            if (!token) {
-                setLoading(false);
-                return;
-            }
 
-            if (storedUser) {
-                setUser(JSON.parse(storedUser));
+            if (token && storedUser) {
+                try {
+                    const parsedUser = JSON.parse(storedUser);
+                    setUser(parsedUser);
+                    
+                    // Verify and refresh user data
+                    const response = await getProfile();
+                    setUser(response.data);
+                    localStorage.setItem('user', JSON.stringify(response.data));
+                } catch (error) {
+                    console.error('Auth initialization error:', error);
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    setUser(null);
+                }
             }
-
-            try {
-                const response = await getProfile();
-                const userData = response.data;
-                setUser(userData);
-                localStorage.setItem('user', JSON.stringify(userData));
-            } catch (error) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                setUser(null);
-            } finally {
-                setLoading(false);
-            }
+            setLoading(false);
         };
 
-        checkAuth();
-    }, []); // Only run on mount
+        initializeAuth();
+    }, []);
 
     const login = (token, userData) => {
         localStorage.setItem('token', token);
@@ -47,6 +43,7 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('selectedBranch'); // Clear selected branch on logout
         setUser(null);
     };
 
@@ -55,10 +52,11 @@ export const AuthProvider = ({ children }) => {
             user, 
             loading, 
             login, 
-            logout, 
+            logout,
             isAdmin: user?.role === 'admin',
             isBranch: user?.role === 'branch_manager',
-            isRider: user?.role === 'rider'
+            isRider: user?.role === 'rider',
+            isCustomer: user?.role === 'customer'
         }}>
             {children}
         </AuthContext.Provider>

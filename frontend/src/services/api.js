@@ -65,6 +65,7 @@ api.interceptors.response.use(
 // Public APIs (no auth required)
 export const getPublicBranches = () => api.get('/branches/public');
 export const getPublicBranchMenu = (branchId) => api.get(`/branches/${branchId}/menu/public`);
+export const registerCustomer = (customerData) => api.post('/auth/register/customer', customerData);
 
 // Auth APIs
 export const login = (credentials) => api.post('/auth/login', credentials);
