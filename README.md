@@ -1,4 +1,4 @@
-# Food Delivery Web Application
+# Food Delivery Web Application (Work In Progress)
 
 A comprehensive multi-tier restaurant management and food delivery system that supports multiple branches, administrative controls, and real-time order tracking.
 
@@ -23,7 +23,7 @@ A comprehensive multi-tier restaurant management and food delivery system that s
   - Interactive cart and checkout system
   - Cash on delivery payment option
 
-- **Order Management**:
+- **Order Management**: ( To be Implemented)
   - Real-time order status updates
   - Order cancellation (before confirmation)
   - Live tracking map showing:
