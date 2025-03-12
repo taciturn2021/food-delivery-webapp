@@ -107,21 +107,31 @@ const apiService = {
   login: (credentials) => api.post('/auth/login', credentials),
   getProfile: () => api.get('/auth/profile'),
 
-  // Rider Orders
+  // Rider Profile and Settings
+  updateRider: (userId, data) => api.put(`/riders/${userId}`, data),
+  getRiderSettings: (riderId) => api.get(`/riders/${riderId}/settings`),
+  updateRiderSettings: (riderId, settings) => api.put(`/riders/${riderId}/settings`, settings),
+  getRiderStatus: (riderId) => api.get(`/riders/${riderId}`),
+  updateRiderAvailability: (riderId, isAvailable) => api.put(`/riders/${riderId}`, { status: isAvailable ? 'active' : 'inactive' }),
+  // Orders and Deliveries
   getRiderOrders: (riderId) => api.get(`/riders/${riderId}/orders`),
   updateDeliveryStatus: (orderId, assignmentId, status) => 
     api.put(`/riders/orders/${orderId}/status`, { assignmentId, status }),
   startDelivery: (orderId) => api.post(`/riders/delivery/${orderId}/start`),
   completeDelivery: (orderId) => api.post(`/riders/delivery/${orderId}/complete`),
+  submitDeliveryRating: (orderId, rating, feedback) => 
+    api.post(`/riders/delivery/${orderId}/rate`, { rating, feedback }),
 
-  // Location
+  // Location Services
   updateLocation: (location) => api.post('/riders/location', location),
-  
-  // Settings
-  getRiderSettings: (riderId) => api.get(`/riders/${riderId}/settings`),
-  updateRiderSettings: (riderId, settings) => api.put(`/riders/${riderId}/settings`, settings),
-  updateRiderAvailability: (riderId, isAvailable) => 
-    api.put(`/riders/${riderId}/availability`, { isAvailable }),
+  getDeliveryLocation: (assignmentId) => api.get(`/riders/delivery/${assignmentId}/location`),
+
+  // Metrics
+  getRiderMetrics: (riderId) => api.get(`/riders/${riderId}/metrics`, {
+    headers: {
+      'Authorization': `Bearer ${api.defaults.headers.common['Authorization']}`
+    }
+  }),
   
   // Core request methods with offline support
   async get(url, config = {}) {

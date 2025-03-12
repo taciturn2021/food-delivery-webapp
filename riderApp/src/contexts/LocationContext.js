@@ -36,7 +36,7 @@ export const LocationProvider = ({ children }) => {
   const loadOnlineStatus = async () => {
     try {
       const response = await api.getRiderStatus(riderId);
-      setIsOnline(response.data.is_available || false);
+      setIsOnline(response.data.status === 'active');
     } catch (error) {
       console.error('Error loading online status:', error);
     }
@@ -153,11 +153,11 @@ export const LocationProvider = ({ children }) => {
         errorMsg,
         isTracking,
         isOnline,
+        markAsOnline,
+        markAsOffline,
         startLocationTracking,
         stopLocationTracking,
-        getCurrentLocation,
-        markAsOnline,
-        markAsOffline
+        getCurrentLocation
       }}
     >
       {children}

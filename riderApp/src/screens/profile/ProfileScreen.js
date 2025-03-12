@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { 
   Text, 
@@ -13,7 +13,8 @@ import {
   useTheme,
   Dialog,
   Portal,
-  TextInput
+  TextInput,
+  ActivityIndicator
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
@@ -26,10 +27,31 @@ const ProfileScreen = () => {
   const { user, logout } = useAuth();
   const { isOnline, markAsOffline } = useLocation();
   
+  const [loading, setLoading] = useState(false);
+  const [riderData, setRiderData] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [editDialogVisible, setEditDialogVisible] = useState(false);
   const [currentField, setCurrentField] = useState({ key: '', value: '', label: '' });
+  
+  useEffect(() => {
+    loadRiderProfile();
+  }, []);
+
+  const loadRiderProfile = async () => {
+    if (!user?.id) return;
+    
+    setLoading(true);
+    try {
+      const response = await api.getRiderStatus(user.id);
+      setRiderData(response.data);
+    } catch (error) {
+      console.error('Failed to load rider profile:', error);
+      Alert.alert('Error', 'Failed to load your profile information');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Handle logout
   const handleLogout = () => {
@@ -64,25 +86,29 @@ const ProfileScreen = () => {
   // Handle updating user profile field
   const handleUpdateField = async () => {
     try {
-      // Close dialog first to show progress
       setEditDialogVisible(false);
       
-      // Prepare update data
       const updateData = {
         [currentField.key]: currentField.value
       };
       
-      // Make API call
-      await api.updateRiderSettings(user.riderId, updateData);
+      await api.updateRider(user.id, updateData);
+      await loadRiderProfile(); // Reload profile data
       
-      // Show success message
       Alert.alert('Success', 'Your information has been updated');
-      
     } catch (error) {
       console.error('Failed to update profile:', error);
       Alert.alert('Error', 'Failed to update your information. Please try again.');
     }
   };
+
+  if (loading && !riderData) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
   
   return (
     <ScrollView 
@@ -99,7 +125,7 @@ const ProfileScreen = () => {
           />
           
           <View style={styles.profileInfo}>
-            <Title>{user?.full_name || 'Rider'}</Title>
+            <Title>{riderData?.full_name || user?.full_name || 'Rider'}</Title>
             <Caption>{user?.email || 'No email available'}</Caption>
             <View style={styles.onlineStatusContainer}>
               <View style={[
@@ -115,7 +141,7 @@ const ProfileScreen = () => {
         
         <Button 
           mode="outlined" 
-          onPress={() => openEditDialog('full_name', user?.full_name, 'Full Name')}
+          onPress={() => openEditDialog('full_name', riderData?.full_name, 'Full Name')}
           style={styles.editButton}
         >
           Edit Profile
@@ -128,10 +154,10 @@ const ProfileScreen = () => {
         
         <List.Item
           title="Phone Number"
-          description={user?.contact_number || 'Not provided'}
+          description={riderData?.contact_number || 'Not provided'}
           left={() => <List.Icon icon="phone" />}
           right={() => (
-            <TouchableOpacity onPress={() => openEditDialog('contact_number', user?.contact_number, 'Phone Number')}>
+            <TouchableOpacity onPress={() => openEditDialog('contact_number', riderData?.contact_number, 'Phone Number')}>
               <MaterialCommunityIcons name="pencil" size={24} color={theme.colors.primary} />
             </TouchableOpacity>
           )}
@@ -141,10 +167,10 @@ const ProfileScreen = () => {
         
         <List.Item
           title="Emergency Contact"
-          description={user?.emergency_contact || 'Not provided'}
+          description={riderData?.emergency_contact || 'Not provided'}
           left={() => <List.Icon icon="phone-alert" />}
           right={() => (
-            <TouchableOpacity onPress={() => openEditDialog('emergency_contact', user?.emergency_contact, 'Emergency Contact')}>
+            <TouchableOpacity onPress={() => openEditDialog('emergency_contact', riderData?.emergency_contact, 'Emergency Contact')}>
               <MaterialCommunityIcons name="pencil" size={24} color={theme.colors.primary} />
             </TouchableOpacity>
           )}
@@ -157,10 +183,10 @@ const ProfileScreen = () => {
         
         <List.Item
           title="Vehicle Type"
-          description={user?.vehicle_type || 'Not provided'}
+          description={riderData?.vehicle_type || 'Not provided'}
           left={() => <List.Icon icon="motorbike" />}
           right={() => (
-            <TouchableOpacity onPress={() => openEditDialog('vehicle_type', user?.vehicle_type, 'Vehicle Type')}>
+            <TouchableOpacity onPress={() => openEditDialog('vehicle_type', riderData?.vehicle_type, 'Vehicle Type')}>
               <MaterialCommunityIcons name="pencil" size={24} color={theme.colors.primary} />
             </TouchableOpacity>
           )}
@@ -170,10 +196,10 @@ const ProfileScreen = () => {
         
         <List.Item
           title="Vehicle Plate Number"
-          description={user?.vehicle_plate_no || 'Not provided'}
+          description={riderData?.vehicle_plate_no || 'Not provided'}
           left={() => <List.Icon icon="card-account-details" />}
           right={() => (
-            <TouchableOpacity onPress={() => openEditDialog('vehicle_plate_no', user?.vehicle_plate_no, 'Vehicle Plate Number')}>
+            <TouchableOpacity onPress={() => openEditDialog('vehicle_plate_no', riderData?.vehicle_plate_no, 'Vehicle Plate Number')}>
               <MaterialCommunityIcons name="pencil" size={24} color={theme.colors.primary} />
             </TouchableOpacity>
           )}
@@ -183,10 +209,10 @@ const ProfileScreen = () => {
         
         <List.Item
           title="License Number"
-          description={user?.license_no || 'Not provided'}
+          description={riderData?.license_no || 'Not provided'}
           left={() => <List.Icon icon="card-account-details-outline" />}
           right={() => (
-            <TouchableOpacity onPress={() => openEditDialog('license_no', user?.license_no, 'License Number')}>
+            <TouchableOpacity onPress={() => openEditDialog('license_no', riderData?.license_no, 'License Number')}>
               <MaterialCommunityIcons name="pencil" size={24} color={theme.colors.primary} />
             </TouchableOpacity>
           )}
@@ -227,10 +253,10 @@ const ProfileScreen = () => {
         
         <List.Item
           title="Preferred Area"
-          description={user?.preferred_area || 'Not set'}
+          description={riderData?.preferred_area || 'Not set'}
           left={() => <List.Icon icon="map-marker-radius" />}
           right={() => (
-            <TouchableOpacity onPress={() => openEditDialog('preferred_area', user?.preferred_area, 'Preferred Area')}>
+            <TouchableOpacity onPress={() => openEditDialog('preferred_area', riderData?.preferred_area, 'Preferred Area')}>
               <MaterialCommunityIcons name="pencil" size={24} color={theme.colors.primary} />
             </TouchableOpacity>
           )}
@@ -292,6 +318,10 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   contentContainer: {
     padding: 16,

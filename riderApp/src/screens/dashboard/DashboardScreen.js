@@ -21,24 +21,12 @@ const DashboardScreen = ({ navigation }) => {
   const theme = useTheme();
   const { user, riderId } = useAuth();
   const { startLocationTracking, stopLocationTracking, isTracking } = useLocation();
-  const [metrics, setMetrics] = useState(null);
   const [isAvailable, setIsAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadMetrics();
+    setLoading(false);
   }, []);
-
-  const loadMetrics = async () => {
-    try {
-      const response = await api.getRiderMetrics(riderId);
-      setMetrics(response.data);
-    } catch (error) {
-      console.error('Error loading metrics:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const toggleAvailability = async (value) => {
     try {
@@ -95,7 +83,7 @@ const DashboardScreen = ({ navigation }) => {
             size={30} 
             color={theme.colors.primary} 
           />
-          <Title>{metrics?.total_deliveries || 0}</Title>
+          <Title>0</Title>
           <Text>Total Deliveries</Text>
         </Surface>
 
@@ -105,7 +93,7 @@ const DashboardScreen = ({ navigation }) => {
             size={30} 
             color={theme.colors.accent} 
           />
-          <Title>{metrics?.average_rating?.toFixed(1) || '0.0'}</Title>
+          <Title>0.0</Title>
           <Text>Average Rating</Text>
         </Surface>
 
@@ -115,7 +103,7 @@ const DashboardScreen = ({ navigation }) => {
             size={30} 
             color="#4CAF50" 
           />
-          <Title>{metrics?.completed_deliveries || 0}</Title>
+          <Title>0</Title>
           <Text>Completed</Text>
         </Surface>
       </View>
