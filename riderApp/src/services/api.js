@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '@env';
 
-// Configure API base URL - Update this to your backend URL
-const BASE_URL = 'http://192.168.31.215:5001/api';
+// Configure API base URL from environment variable
+const BASE_URL = API_BASE_URL || 'http://192.168.31.215:5001/api'; // Fallback if env variable is not loaded
 
 // Create axios instance
 const api = axios.create({
