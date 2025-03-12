@@ -1,185 +1,166 @@
-import React from 'react';
-import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
-import { 
-  Text, 
-  Surface, 
-  useTheme, 
-  Button, 
-  Chip,
-  Title,
-  Caption,
-  Divider,
-  ActivityIndicator,
-  FAB
-} from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  Alert
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useDelivery } from '../../contexts/DeliveryContext';
+import LoadingIndicator from '../../components/common/LoadingIndicator';
+import ErrorMessage from '../../components/common/ErrorMessage';
 
 const ActiveDeliveriesScreen = ({ navigation }) => {
-  const theme = useTheme();
   const { 
     activeDeliveries, 
     isLoading, 
+    error, 
     refreshing, 
-    handleRefresh,
-    updateDeliveryStatus 
+    handleRefresh, 
+    fetchActiveDeliveries,
+    setDeliveryAsPicked,
+    setDeliveryAsDelivered
   } = useDelivery();
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'assigned':
-        return { bg: '#FFF9C4', text: '#F57F17' };
-      case 'picked':
-        return { bg: '#E3F2FD', text: '#1976D2' };
-      default:
-        return { bg: '#EEEEEE', text: '#757575' };
+  useEffect(() => {
+    fetchActiveDeliveries();
+  }, []);
+
+  const handleStatusUpdate = async (delivery) => {
+    if (delivery.delivery_status === 'assigned') {
+      Alert.alert(
+        'Update Status',
+        'Are you ready to pick up this order?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Mark as Picked Up',
+            onPress: () => setDeliveryAsPicked(delivery.id, delivery.assignment_id)
+          }
+        ]
+      );
+    } else if (delivery.delivery_status === 'picked') {
+      Alert.alert(
+        'Update Status',
+        'Confirm delivery completion?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Confirm Delivery',
+            style: 'default',
+            onPress: () => setDeliveryAsDelivered(delivery.id, delivery.assignment_id)
+          }
+        ]
+      );
     }
   };
 
-  const handleStatusUpdate = async (orderId, assignmentId, currentStatus) => {
-    // Determine next status based on current status
-    const newStatus = currentStatus === 'assigned' ? 'picked' : 'delivered';
-    await updateDeliveryStatus(orderId, assignmentId, newStatus);
-  };
-
-  const renderDeliveryItem = ({ item }) => {
-    const statusStyle = getStatusColor(item.delivery_status);
-    
-    return (
-      <Surface style={styles.deliveryCard}>
-        <View style={styles.deliveryHeader}>
-          <View>
-            <Title style={styles.orderNumber}>Order #{item.id}</Title>
-            <Caption>{new Date(item.created_at).toLocaleString()}</Caption>
-          </View>
-          <Chip 
-            mode="flat" 
-            style={{ backgroundColor: statusStyle.bg }}
-            textStyle={{ color: statusStyle.text, fontWeight: 'bold' }}
-          >
-            {item.delivery_status === 'assigned' ? 'New' : 
-             item.delivery_status === 'picked' ? 'Picked Up' : 
-             item.delivery_status}
-          </Chip>
+  const renderDeliveryItem = ({ item: delivery }) => (
+    <TouchableOpacity
+      style={styles.deliveryItem}
+      onPress={() => navigation.navigate('DeliveryDetails', { deliveryId: delivery.id })}
+    >
+      <View style={styles.deliveryHeader}>
+        <Text style={styles.deliveryId}>Order #{delivery.id}</Text>
+        <View style={[
+          styles.statusBadge, 
+          delivery.delivery_status === 'picked' ? styles.pickedBadge : styles.assignedBadge
+        ]}>
+          <Text style={styles.statusText}>
+            {delivery.delivery_status === 'picked' ? 'In Transit' : 'Pickup'}
+          </Text>
         </View>
-
-        <Divider style={styles.divider} />
-
-        <View style={styles.locationContainer}>
-          {/* Restaurant location */}
-          <View style={styles.locationItem}>
-            <MaterialCommunityIcons 
-              name="store" 
-              size={24} 
-              color={theme.colors.primary} 
-            />
-            <View style={styles.locationText}>
-              <Text numberOfLines={1} style={styles.locationName}>
-                {item.branch_name}
-              </Text>
-              <Text numberOfLines={2} style={styles.address}>
-                {item.branch_address}
-              </Text>
-            </View>
-          </View>
-
-          {/* Delivery location */}
-          <View style={[styles.locationItem, { marginTop: 12 }]}>
-            <MaterialCommunityIcons 
-              name="map-marker" 
-              size={24} 
-              color={theme.colors.accent} 
-            />
-            <View style={styles.locationText}>
-              <Text numberOfLines={1} style={styles.locationName}>
-                {item.customer_name}
-              </Text>
-              <Text numberOfLines={2} style={styles.address}>
-                {item.delivery_address}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.actionButtons}>
-          <Button 
-            mode="contained"
-            onPress={() => handleStatusUpdate(
-              item.id, 
-              item.assignment_id, 
-              item.delivery_status
-            )}
-            style={styles.actionButton}
-          >
-            {item.delivery_status === 'assigned' ? 'Mark as Picked Up' : 'Complete Delivery'}
-          </Button>
-          <Button 
-            mode="outlined"
-            onPress={() => navigation.navigate('DeliveryMap', { 
-              deliveryId: item.id,
-              destination: {
-                latitude: item.delivery_latitude,
-                longitude: item.delivery_longitude,
-                address: item.delivery_address
-              },
-              origin: {
-                latitude: item.branch_latitude,
-                longitude: item.branch_longitude,
-                address: item.branch_address
-              }
-            })}
-            icon="map"
-            style={styles.mapButton}
-          >
-            Navigate
-          </Button>
-        </View>
-      </Surface>
-    );
-  };
-
-  if (isLoading && !refreshing && activeDeliveries.length === 0) {
-    return (
-      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Loading deliveries...</Text>
       </View>
-    );
+      
+      <Text style={styles.deliveryAddress} numberOfLines={2}>
+        {delivery.delivery_address}
+      </Text>
+      
+      <View style={styles.deliveryInfo}>
+        <View style={styles.infoItem}>
+          <Ionicons name="time-outline" size={16} color="#777" />
+          <Text style={styles.infoText}>
+            Assigned: {new Date(delivery.assigned_at).toLocaleTimeString([], { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: true 
+            })}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.actionContainer}>
+        <TouchableOpacity
+          style={styles.mapButton}
+          onPress={() => navigation.navigate('DeliveryMapScreen', { 
+            latitude: delivery.latitude,
+            longitude: delivery.longitude,
+            address: delivery.delivery_address
+          })}
+        >
+          <Ionicons name="map-outline" size={16} color="#0066cc" />
+          <Text style={styles.mapButtonText}>View on Map</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.actionButton,
+            delivery.delivery_status === 'picked' ? styles.deliverButton : styles.pickupButton
+          ]}
+          onPress={() => handleStatusUpdate(delivery)}
+        >
+          <Text style={styles.actionButtonText}>
+            {delivery.delivery_status === 'picked' ? 'Mark as Delivered' : 'Mark as Picked'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyContainer}>
+      <Ionicons name="bicycle" size={60} color="#cccccc" />
+      <Text style={styles.emptyText}>No active deliveries</Text>
+      <Text style={styles.emptySubText}>
+        Assigned deliveries will appear here
+      </Text>
+    </View>
+  );
+
+  if (isLoading && !refreshing) {
+    return <LoadingIndicator message="Loading deliveries..." />;
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <View style={styles.container}>
+      {error && (
+        <ErrorMessage 
+          message={error} 
+          onRetry={fetchActiveDeliveries} 
+        />
+      )}
+      
       <FlatList
         data={activeDeliveries}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderDeliveryItem}
-        contentContainerStyle={styles.listContent}
+        ListEmptyComponent={renderEmptyState}
+        contentContainerStyle={styles.listContainer}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={handleRefresh} 
+          />
         }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons 
-              name="package-variant" 
-              size={80} 
-              color={theme.colors.disabled} 
-            />
-            <Text style={styles.emptyText}>No active deliveries</Text>
-            <Button 
-              mode="contained" 
-              onPress={handleRefresh}
-              style={styles.refreshButton}
-            >
-              Refresh
-            </Button>
-          </View>
-        }
-      />
-      <FAB
-        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-        icon="history"
-        label="History"
-        onPress={() => navigation.navigate('DeliveryHistory')}
       />
     </View>
   );
@@ -188,86 +169,121 @@ const ActiveDeliveriesScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f8f9fa'
   },
-  listContent: {
+  listContainer: {
     padding: 16,
-    paddingBottom: 80, // Space for FAB
+    paddingBottom: 80,
+    flexGrow: 1
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 8,
-  },
-  deliveryCard: {
+  deliveryItem: {
+    backgroundColor: 'white',
+    borderRadius: 10,
     padding: 16,
     marginBottom: 16,
-    borderRadius: 8,
-    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3
   },
   deliveryHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12
   },
-  orderNumber: {
+  deliveryId: {
     fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333'
   },
-  divider: {
-    marginVertical: 12,
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 4
   },
-  locationContainer: {
-    marginVertical: 8,
+  assignedBadge: {
+    backgroundColor: '#fff3cd'
   },
-  locationItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  pickedBadge: {
+    backgroundColor: '#cce5ff'
   },
-  locationText: {
-    marginLeft: 8,
-    flex: 1,
-  },
-  locationName: {
-    fontWeight: '600',
-  },
-  address: {
+  statusText: {
     fontSize: 12,
-    color: '#757575',
-    marginTop: 2,
+    fontWeight: '600'
   },
-  actionButtons: {
+  deliveryAddress: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 12
+  },
+  deliveryInfo: {
+    marginBottom: 16
+  },
+  infoItem: {
     flexDirection: 'row',
-    marginTop: 16,
+    alignItems: 'center',
+    marginBottom: 4
   },
-  actionButton: {
-    flex: 1,
-    marginRight: 8,
+  infoText: {
+    marginLeft: 6,
+    fontSize: 14,
+    color: '#666'
+  },
+  actionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 12
   },
   mapButton: {
-    flex: 1,
-    marginLeft: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8
+  },
+  mapButtonText: {
+    marginLeft: 4,
+    color: '#0066cc',
+    fontSize: 14,
+    fontWeight: '500'
+  },
+  actionButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 4
+  },
+  pickupButton: {
+    backgroundColor: '#ffc107'
+  },
+  deliverButton: {
+    backgroundColor: '#28a745'
+  },
+  actionButtonText: {
+    color: 'white',
+    fontWeight: '500',
+    fontSize: 14
   },
   emptyContainer: {
-    alignItems: 'center',
+    flex: 1,
     justifyContent: 'center',
-    padding: 20,
-    marginTop: 50,
+    alignItems: 'center',
+    paddingVertical: 60
   },
   emptyText: {
     fontSize: 18,
-    marginVertical: 16,
+    fontWeight: 'bold',
+    color: '#555',
+    marginTop: 16
   },
-  refreshButton: {
+  emptySubText: {
+    fontSize: 14,
+    color: '#777',
     marginTop: 8,
-  },
-  fab: {
-    position: 'absolute',
-    margin: 16,
-    right: 0,
-    bottom: 0,
-  },
+    textAlign: 'center'
+  }
 });
 
 export default ActiveDeliveriesScreen;

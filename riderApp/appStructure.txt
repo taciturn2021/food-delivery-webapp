@@ -1,0 +1,23 @@
+riderApp/
+  ├── App.js                    # Main app component
+  ├── src/
+      ├── components/           # Reusable UI components
+      │   ├── common/           # Common components
+      │   └── delivery/         # Delivery-specific components
+      │
+      ├── contexts/            # Context providers
+      │   ├── AuthContext.js    # Authentication (already working)
+      │   ├── LocationContext.js # Location tracking
+      │   └── DeliveryContext.js # Delivery state management
+      │
+      ├── navigation/          # Navigation configuration
+      │   ├── AppNavigator.js   # Main app navigation
+      │   └── MainTabNavigator.js # Tab navigation
+      │
+      ├── screens/             # App screens
+      │   ├── auth/            # Authentication screens
+      │   ├── delivery/        # Delivery-related screens
+      │   └── profile/         # Profile management
+      │
+      └── services/           # API services
+          └── api.js           # API client (already works)

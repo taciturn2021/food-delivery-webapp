@@ -1,57 +1,48 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Text, Button, Surface, useTheme } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-const ErrorMessage = ({ 
-  message = 'Something went wrong', 
-  icon = 'alert-circle-outline',
-  buttonText = 'Retry',
-  onRetry = null,
-  buttonMode = 'contained'
-}) => {
-  const theme = useTheme();
-
+const ErrorMessage = ({ message, onRetry }) => {
   return (
-    <Surface style={styles.container}>
-      <MaterialCommunityIcons 
-        name={icon} 
-        size={64} 
-        color={theme.colors.error} 
-      />
+    <View style={styles.container}>
+      <Ionicons name="alert-circle" size={24} color="#dc3545" />
       <Text style={styles.message}>{message}</Text>
       {onRetry && (
-        <Button 
-          mode={buttonMode}
-          onPress={onRetry}
-          style={styles.retryButton}
-        >
-          {buttonText}
-        </Button>
+        <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
+          <Text style={styles.retryText}>Retry</Text>
+        </TouchableOpacity>
       )}
-    </Surface>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#f8d7da',
     borderRadius: 8,
-    margin: 16,
-    elevation: 2,
+    padding: 12,
+    marginBottom: 16
   },
   message: {
-    marginTop: 16,
-    marginBottom: 16,
-    fontSize: 16,
-    textAlign: 'center',
+    flex: 1,
+    marginLeft: 8,
+    color: '#721c24',
+    fontSize: 14
   },
   retryButton: {
-    marginTop: 8,
-    minWidth: 120,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#dc3545',
+    borderRadius: 4,
+    marginLeft: 8
   },
+  retryText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500'
+  }
 });
 
 export default ErrorMessage;

@@ -1,40 +1,54 @@
 import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+
+// Import context
 import { useAuth } from '../contexts/AuthContext';
-import { useLocalAuth } from '../contexts/LocalAuthContext';
-import AuthLoadingScreen from '../screens/auth/AuthLoadingScreen';
+
+// Import screens
 import LoginScreen from '../screens/auth/LoginScreen';
-import LocalAuthScreen from '../screens/auth/LocalAuthScreen';
+import AuthLoadingScreen from '../screens/auth/AuthLoadingScreen';
 import MainTabNavigator from './MainTabNavigator';
+import DeliveryDetailsScreen from '../screens/delivery/DeliveryDetailsScreen';
+import DeliveryMapScreen from '../screens/delivery/DeliveryMapScreen';
 
 const Stack = createStackNavigator();
 
 const AppNavigator = () => {
-  const { user, isLoading: authLoading } = useAuth();
-  const { isAuthenticated } = useLocalAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
-  // Show auth loading screen while checking authentication
-  if (authLoading) {
-    return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="AuthLoading" component={AuthLoadingScreen} />
-      </Stack.Navigator>
-    );
+  if (isLoading) {
+    return <AuthLoadingScreen />;
   }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {!user ? (
-        // Not logged in - show login screen
-        <Stack.Screen name="Auth" component={LoginScreen} />
-      ) : !isAuthenticated ? (
-        // Logged in but needs local auth - show PIN/biometric screen
-        <Stack.Screen name="LocalAuth" component={LocalAuthScreen} />
-      ) : (
-        // Fully authenticated - show main app
-        <Stack.Screen name="App" component={MainTabNavigator} />
-      )}
-    </Stack.Navigator>
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {isAuthenticated ? (
+          <>
+            <Stack.Screen name="Main" component={MainTabNavigator} />
+            <Stack.Screen 
+              name="DeliveryDetails" 
+              component={DeliveryDetailsScreen}
+              options={{
+                headerShown: true,
+                title: 'Delivery Details',
+                headerTitleAlign: 'center'
+              }}
+            />
+            <Stack.Screen 
+              name="DeliveryMapScreen" 
+              component={DeliveryMapScreen}
+              options={{
+                headerShown: false
+              }} 
+            />
+          </>
+        ) : (
+          <Stack.Screen name="Login" component={LoginScreen} />
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 };
 

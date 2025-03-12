@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configure API base URL - Update this to your backend URL
-const BASE_URL = 'http://192.168.31.157:5001/api';
+const BASE_URL = 'http://192.168.31.215:5001/api';
 
 // Create axios instance
 const api = axios.create({
@@ -108,13 +108,32 @@ const apiService = {
   getProfile: () => api.get('/auth/profile'),
 
   // Rider Profile and Settings
-  updateRider: (userId, data) => api.put(`/riders/${userId}`, data),
+  updateRider: (userId, data) => {
+    console.log(`Updating rider with ID: ${userId}`, data);
+    return api.put(`/riders/${userId}`, data);
+  },
+  
   getRiderSettings: (riderId) => api.get(`/riders/${riderId}/settings`),
   updateRiderSettings: (riderId, settings) => api.put(`/riders/${riderId}/settings`, settings),
-  getRiderStatus: (riderId) => api.get(`/riders/${riderId}`),
-  updateRiderAvailability: (riderId, isAvailable) => api.put(`/riders/${riderId}`, { status: isAvailable ? 'active' : 'inactive' }),
+  
+  getRiderStatus: (userId) => {
+    console.log(`Fetching rider status for user ID: ${userId}`);
+    return api.get(`/riders/${userId}`);
+  },
+  
+  updateRiderAvailability: (userId, isAvailable) => {
+    console.log(`Updating rider availability for user ID: ${userId} to: ${isAvailable ? 'active' : 'inactive'}`);
+    return api.put(`/riders/${userId}`, { status: isAvailable ? 'active' : 'inactive' });
+  },
+  
+  getRiderDeliveryHistory: (userId, dateRange) => api.get(`/riders/${userId}/history`, { params: dateRange }),
+  
   // Orders and Deliveries
-  getRiderOrders: (riderId) => api.get(`/riders/${riderId}/orders`),
+  getRiderOrders: (userId) => {
+    console.log(`Fetching orders for user ID: ${userId}`);
+    return api.get(`/riders/${userId}/orders`);
+  },
+  
   updateDeliveryStatus: (orderId, assignmentId, status) => 
     api.put(`/riders/orders/${orderId}/status`, { assignmentId, status }),
   startDelivery: (orderId) => api.post(`/riders/delivery/${orderId}/start`),
@@ -127,7 +146,7 @@ const apiService = {
   getDeliveryLocation: (assignmentId) => api.get(`/riders/delivery/${assignmentId}/location`),
 
   // Metrics
-  getRiderMetrics: (riderId) => api.get(`/riders/${riderId}/metrics`, {
+  getRiderMetrics: (userId) => api.get(`/riders/${userId}/metrics`, {
     headers: {
       'Authorization': `Bearer ${api.defaults.headers.common['Authorization']}`
     }

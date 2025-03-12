@@ -1,13 +1,10 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { ActivityIndicator, Text, useTheme } from 'react-native-paper';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 
 const LoadingIndicator = ({ message = 'Loading...' }) => {
-  const theme = useTheme();
-  
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <ActivityIndicator size="large" color={theme.colors.primary} />
+    <View style={styles.container}>
+      <ActivityIndicator size="large" color="#0066cc" />
       <Text style={styles.message}>{message}</Text>
     </View>
   );
@@ -19,11 +16,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: '#f8f9fa'
   },
   message: {
     marginTop: 16,
     fontSize: 16,
-  },
+    color: '#666',
+    textAlign: 'center'
+  }
 });
 
 export default LoadingIndicator;

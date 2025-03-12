@@ -1,215 +1,250 @@
-import React, { useState, useContext } from 'react';
-import { 
-  View, 
-  StyleSheet, 
-  Image, 
-  TouchableOpacity, 
-  KeyboardAvoidingView, 
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  SafeAreaView,
+  KeyboardAvoidingView,
   Platform,
-  ScrollView
+  ScrollView,
+  Alert,
 } from 'react-native';
-import { 
-  Text, 
-  TextInput, 
-  Button, 
-  Surface, 
-  useTheme, 
-  Checkbox,
-  Snackbar,
-  Caption
-} from 'react-native-paper';
-import { AuthContext } from '../../contexts/AuthContext';
-import * as SecureStore from 'expo-secure-store';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../contexts/AuthContext';
 
 const LoginScreen = () => {
-  const theme = useTheme();
-  const { login } = useContext(AuthContext);
-  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  
-  // Load saved email if exists
-  React.useEffect(() => {
-    const loadSavedEmail = async () => {
-      try {
-        const savedEmail = await SecureStore.getItemAsync('savedEmail');
-        if (savedEmail) {
-          setEmail(savedEmail);
-          setRememberMe(true);
-        }
-      } catch (error) {
-        console.error('Failed to load saved email', error);
-      }
-    };
-    
-    loadSavedEmail();
-  }, []);
-  
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+
+  const { login, isLoading, error } = useAuth();
+
+  const validateEmail = (email) => {
+    const emailRegex = /\S+@\S+\.\S+/;
+    return emailRegex.test(email);
+  };
+
   const handleLogin = async () => {
-    if (!email || !password) {
-      setError('Email and password are required');
-      setSnackbarVisible(true);
-      return;
+    // Reset errors
+    setEmailError('');
+    setPasswordError('');
+    
+    // Validate inputs
+    let isValid = true;
+    
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      isValid = false;
+    } else if (!validateEmail(email)) {
+      setEmailError('Please enter a valid email');
+      isValid = false;
     }
     
-    setIsLoading(true);
-    setError('');
+    if (!password) {
+      setPasswordError('Password is required');
+      isValid = false;
+    }
+    
+    if (!isValid) return;
     
     try {
-      const success = await login(email, password);
-      
-      if (success && rememberMe) {
-        // Save email for next login
-        await SecureStore.setItemAsync('savedEmail', email);
-      } else if (!rememberMe) {
-        // Clear saved email if remember me is disabled
-        await SecureStore.deleteItemAsync('savedEmail');
-      }
+      // Attempt login
+      await login(email, password);
     } catch (error) {
+      // Error handling is done in the AuthContext
       console.error('Login error:', error);
-      setError('An unexpected error occurred. Please try again.');
-      setSnackbarVisible(true);
-    } finally {
-      setIsLoading(false);
     }
   };
-  
+
+  const toggleShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
-    >
-      <ScrollView 
-        contentContainerStyle={[
-          styles.container, 
-          { backgroundColor: theme.colors.background }
-        ]}
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidView}
       >
-        <Surface style={styles.loginContainer}>
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
           <View style={styles.logoContainer}>
-            <Image 
-              source={require('../../../assets/icon.png')} 
-              style={styles.logo} 
+            <Image
+              source={require('../../../assets/icon.png')}
+              style={styles.logo}
               resizeMode="contain"
             />
-            <Text style={styles.appTitle}>Food Delivery</Text>
-            <Text style={styles.appSubtitle}>Rider App</Text>
+            <Text style={styles.appName}>Food Delivery</Text>
+            <Text style={styles.subtitle}>Rider App</Text>
           </View>
-          
-          <View style={styles.inputContainer}>
-            <TextInput
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              mode="outlined"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              style={styles.input}
-            />
+
+          <View style={styles.formContainer}>
+            <Text style={styles.heading}>Login to Your Account</Text>
             
-            <TextInput
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              mode="outlined"
-              secureTextEntry
-              style={styles.input}
-            />
+            {error && <Text style={styles.errorMessage}>{error}</Text>}
             
-            <View style={styles.checkboxContainer}>
-              <Checkbox
-                status={rememberMe ? 'checked' : 'unchecked'}
-                onPress={() => setRememberMe(!rememberMe)}
-                color={theme.colors.primary}
+            <View style={styles.inputContainer}>
+              <Ionicons name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Email Address"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  setEmailError('');
+                }}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
               />
-              <Text onPress={() => setRememberMe(!rememberMe)} style={styles.checkboxLabel}>
-                Remember me
-              </Text>
             </View>
-            
-            <Button 
-              mode="contained" 
-              onPress={handleLogin}
-              loading={isLoading}
-              disabled={isLoading}
+            {emailError ? <Text style={styles.fieldError}>{emailError}</Text> : null}
+
+            <View style={styles.inputContainer}>
+              <Ionicons name="lock-closed-outline" size={20} color="#999" style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, styles.passwordInput]}
+                placeholder="Password"
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setPasswordError('');
+                }}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity onPress={toggleShowPassword} style={styles.eyeIcon}>
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#999"
+                />
+              </TouchableOpacity>
+            </View>
+            {passwordError ? <Text style={styles.fieldError}>{passwordError}</Text> : null}
+
+            <TouchableOpacity
               style={styles.loginButton}
-              contentStyle={{ paddingVertical: 8 }}
+              onPress={handleLogin}
+              disabled={isLoading}
             >
-              Login
-            </Button>
-            
-            <Caption style={styles.version}>Version 1.0.0</Caption>
+              {isLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.loginButtonText}>Login</Text>
+              )}
+            </TouchableOpacity>
           </View>
-        </Surface>
-        
-        <Snackbar
-          visible={snackbarVisible}
-          onDismiss={() => setSnackbarVisible(false)}
-          duration={3000}
-          action={{
-            label: 'OK',
-            onPress: () => setSnackbarVisible(false),
-          }}
-        >
-          {error}
-        </Snackbar>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    padding: 16,
+    backgroundColor: '#fff',
   },
-  loginContainer: {
-    padding: 16,
-    borderRadius: 8,
-    elevation: 4,
+  keyboardAvoidView: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 24,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 40,
   },
   logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 8,
+    width: 120,
+    height: 120,
+    marginBottom: 16,
   },
-  appTitle: {
+  appName: {
     fontSize: 24,
     fontWeight: 'bold',
+    color: '#333',
   },
-  appSubtitle: {
+  subtitle: {
     fontSize: 16,
+    color: '#666',
     marginTop: 4,
   },
-  inputContainer: {
-    width: '100%',
+  formContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  input: {
+  heading: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    color: '#dc3545',
+    textAlign: 'center',
     marginBottom: 16,
+    fontSize: 14,
   },
-  checkboxContainer: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: '#f9f9f9',
   },
-  checkboxLabel: {
-    marginLeft: 8,
+  inputIcon: {
+    paddingHorizontal: 12,
+  },
+  input: {
+    flex: 1,
+    height: 50,
+    fontSize: 16,
+    color: '#333',
+  },
+  passwordInput: {
+    paddingRight: 40,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 12,
+  },
+  fieldError: {
+    color: '#dc3545',
+    fontSize: 12,
+    marginBottom: 16,
+    marginTop: -6,
+    paddingLeft: 4,
   },
   loginButton: {
-    marginTop: 8,
-  },
-  version: {
+    backgroundColor: '#0066cc',
+    borderRadius: 8,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 24,
-    textAlign: 'center',
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

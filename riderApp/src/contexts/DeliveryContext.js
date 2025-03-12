@@ -1,132 +1,139 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import api from '../services/api';
 import { useAuth } from './AuthContext';
 
-const DeliveryContext = createContext(null);
+const DeliveryContext = createContext();
 
-export const useDelivery = () => {
-  const context = useContext(DeliveryContext);
-  if (!context) {
-    throw new Error('useDelivery must be used within a DeliveryProvider');
-  }
-  return context;
-};
+export const useDelivery = () => useContext(DeliveryContext);
 
 export const DeliveryProvider = ({ children }) => {
-  const { user, riderId } = useAuth();
+  const { user } = useAuth();
   const [activeDeliveries, setActiveDeliveries] = useState([]);
   const [deliveryHistory, setDeliveryHistory] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (riderId) {
-      fetchActiveDeliveries();
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Get all active and completed deliveries for the rider
+  const fetchActiveDeliveries = useCallback(async () => {
+    if (!user || !user.id) {
+      console.log('No user ID available, skipping deliveries fetch');
+      return;
     }
-  }, [riderId]);
-
-  const fetchActiveDeliveries = async () => {
-    if (!riderId) return;
     
     setIsLoading(true);
     setError(null);
     
     try {
-      const response = await api.getRiderOrders(riderId);
-      const orders = response.data;
+      const response = await api.getRiderOrders(user.id);
       
-      // Filter active and completed orders
-      setActiveDeliveries(orders.filter(order => 
-        ['assigned', 'picked'].includes(order.delivery_status)
-      ));
-      setDeliveryHistory(orders.filter(order => 
-        order.delivery_status === 'delivered'
-      ));
+      // Process deliveries into active and history
+      const allDeliveries = response.data || [];
+      const active = allDeliveries.filter(d => 
+        ['assigned', 'picked'].includes(d.delivery_status)
+      );
+      const history = allDeliveries.filter(d => 
+        ['delivered', 'cancelled'].includes(d.delivery_status)
+      );
+      
+      setActiveDeliveries(active);
+      setDeliveryHistory(history);
+      console.log(`Fetched ${active.length} active deliveries and ${history.length} completed deliveries`);
     } catch (error) {
-      console.error('Error fetching deliveries:', error);
-      setError('Failed to fetch deliveries. Please try again.');
+      console.error('Failed to fetch deliveries:', error);
+      setError('Failed to load deliveries. Please try again.');
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
     }
-  };
-
-  const handleRefresh = async () => {
+  }, [user]);
+  
+  // Pull-to-refresh handler
+  const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    await fetchActiveDeliveries();
-    setRefreshing(false);
-  };
-
-  const updateDeliveryStatus = async (orderId, assignmentId, newStatus) => {
+    fetchActiveDeliveries();
+  }, [fetchActiveDeliveries]);
+  
+  // Update delivery status: Assigned -> Picked -> Delivered
+  const setDeliveryAsPicked = useCallback(async (orderId, assignmentId) => {
+    if (!user) return false;
+    
     try {
-      await api.updateDeliveryStatus(orderId, assignmentId, newStatus);
+      await api.updateDeliveryStatus(orderId, assignmentId, 'picked');
       
       // Update local state
-      setActiveDeliveries(prev => prev.map(delivery => {
-        if (delivery.order_id === orderId) {
-          return { ...delivery, delivery_status: newStatus };
-        }
-        return delivery;
-      }));
-
-      // If delivery is completed, move it to history
-      if (newStatus === 'delivered') {
-        const completedDelivery = activeDeliveries.find(d => d.order_id === orderId);
-        if (completedDelivery) {
-          setActiveDeliveries(prev => prev.filter(d => d.order_id !== orderId));
-          setDeliveryHistory(prev => [{ ...completedDelivery, delivery_status: 'delivered' }, ...prev]);
-        }
+      setActiveDeliveries(prev => 
+        prev.map(delivery => 
+          delivery.id === orderId 
+            ? { ...delivery, delivery_status: 'picked' }
+            : delivery
+        )
+      );
+      
+      console.log(`Delivery ${orderId} status updated to picked`);
+      return true;
+    } catch (error) {
+      console.error('Failed to update delivery status:', error);
+      Alert.alert('Error', 'Failed to update delivery status');
+      return false;
+    }
+  }, [user]);
+  
+  // Mark delivery as delivered
+  const setDeliveryAsDelivered = useCallback(async (orderId, assignmentId) => {
+    if (!user) return false;
+    
+    try {
+      await api.updateDeliveryStatus(orderId, assignmentId, 'delivered');
+      
+      // Update local state - move to history
+      const deliveredOrder = activeDeliveries.find(delivery => delivery.id === orderId);
+      
+      if (deliveredOrder) {
+        // Remove from active deliveries
+        setActiveDeliveries(prev => prev.filter(delivery => delivery.id !== orderId));
+        
+        // Add to history with updated status
+        setDeliveryHistory(prev => [
+          { ...deliveredOrder, delivery_status: 'delivered', completed_at: new Date().toISOString() },
+          ...prev
+        ]);
       }
-
+      
+      console.log(`Delivery ${orderId} marked as delivered`);
       return true;
     } catch (error) {
-      console.error('Error updating delivery status:', error);
-      Alert.alert('Error', 'Failed to update delivery status. Please try again.');
+      console.error('Failed to mark delivery as delivered:', error);
+      Alert.alert('Error', 'Failed to mark delivery as delivered');
       return false;
     }
-  };
-
-  const startDelivery = async (orderId) => {
-    try {
-      await api.startDelivery(orderId);
-      await fetchActiveDeliveries(); // Refresh the list
-      return true;
-    } catch (error) {
-      console.error('Error starting delivery:', error);
-      Alert.alert('Error', 'Failed to start delivery. Please try again.');
-      return false;
+  }, [user, activeDeliveries]);
+  
+  // Fetch deliveries when the context is initialized or when user changes
+  useEffect(() => {
+    if (user && user.id) {
+      fetchActiveDeliveries();
     }
+  }, [user, fetchActiveDeliveries]);
+  
+  const value = {
+    activeDeliveries,
+    deliveryHistory,
+    isLoading,
+    error,
+    refreshing,
+    fetchActiveDeliveries,
+    handleRefresh,
+    setDeliveryAsPicked,
+    setDeliveryAsDelivered
   };
-
-  const completeDelivery = async (orderId) => {
-    try {
-      await api.completeDelivery(orderId);
-      await fetchActiveDeliveries(); // Refresh the list
-      return true;
-    } catch (error) {
-      console.error('Error completing delivery:', error);
-      Alert.alert('Error', 'Failed to complete delivery. Please try again.');
-      return false;
-    }
-  };
-
+  
   return (
-    <DeliveryContext.Provider
-      value={{
-        activeDeliveries,
-        deliveryHistory,
-        isLoading,
-        refreshing,
-        error,
-        fetchActiveDeliveries,
-        handleRefresh,
-        updateDeliveryStatus,
-        startDelivery,
-        completeDelivery
-      }}
-    >
+    <DeliveryContext.Provider value={value}>
       {children}
     </DeliveryContext.Provider>
   );
 };
+
+export default DeliveryContext;

@@ -1,68 +1,72 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { useTheme } from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
-// Import screens and navigators
+// Import screens
 import DashboardScreen from '../screens/dashboard/DashboardScreen';
-import DeliveryNavigator from './DeliveryNavigator';
+import ActiveDeliveriesScreen from '../screens/delivery/ActiveDeliveriesScreen';
+import DeliveryHistoryScreen from '../screens/delivery/DeliveryHistoryScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
 const MainTabNavigator = () => {
-  const theme = useTheme();
-  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
-          switch (route.name) {
-            case 'Dashboard':
-              iconName = focused ? 'view-dashboard' : 'view-dashboard-outline';
-              break;
-            case 'Deliveries':
-              iconName = focused ? 'package-variant' : 'package-variant-closed';
-              break;
-            case 'Profile':
-              iconName = focused ? 'account-circle' : 'account-circle-outline';
-              break;
-            default:
-              iconName = 'circle';
+          if (route.name === 'Dashboard') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Deliveries') {
+            iconName = focused ? 'bicycle' : 'bicycle-outline';
+          } else if (route.name === 'History') {
+            iconName = focused ? 'time' : 'time-outline';
+          } else if (route.name === 'Profile') {
+            iconName = focused ? 'person' : 'person-outline';
           }
 
-          return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
+          return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: theme.colors.primary,
+        tabBarActiveTintColor: '#0066cc',
         tabBarInactiveTintColor: 'gray',
-        tabBarStyle: {
-          paddingBottom: 5,
-          height: 60,
+        headerShown: true,
+        headerTitleAlign: 'center',
+        headerStyle: {
+          backgroundColor: 'white',
         },
-        headerShown: false, // Hide the header for tab screens
+        headerTitleStyle: {
+          fontWeight: 'bold',
+        }
       })}
     >
       <Tab.Screen 
         name="Dashboard" 
-        component={DashboardScreen}
+        component={DashboardScreen} 
         options={{
-          title: 'Dashboard'
+          title: 'Dashboard',
         }}
       />
       <Tab.Screen 
         name="Deliveries" 
-        component={DeliveryNavigator}
+        component={ActiveDeliveriesScreen} 
         options={{
-          title: 'Deliveries'
+          title: 'Active Deliveries',
+        }}
+      />
+      <Tab.Screen 
+        name="History" 
+        component={DeliveryHistoryScreen} 
+        options={{
+          title: 'Delivery History',
         }}
       />
       <Tab.Screen 
         name="Profile" 
-        component={ProfileScreen}
+        component={ProfileScreen} 
         options={{
-          title: 'Profile'
+          title: 'My Profile',
         }}
       />
     </Tab.Navigator>

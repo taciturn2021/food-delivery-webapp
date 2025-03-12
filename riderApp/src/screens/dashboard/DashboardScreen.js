@@ -1,187 +1,250 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { 
-  Text, 
-  Surface, 
-  Title, 
-  Subheading, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  TouchableOpacity,
+  ScrollView,
+  RefreshControl,
+  Alert,
   Switch,
-  useTheme,
-  Button,
-  ActivityIndicator,
-  Avatar,
-  Divider
-} from 'react-native-paper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+  StatusBar,
+  Platform
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLocation } from '../../contexts/LocationContext';
-import api from '../../services/api';
+import { useDelivery } from '../../contexts/DeliveryContext';
+import DeliveryCard from '../../components/delivery/DeliveryCard';
+import LoadingIndicator from '../../components/common/LoadingIndicator';
+import ErrorMessage from '../../components/common/ErrorMessage';
 
 const DashboardScreen = ({ navigation }) => {
-  const theme = useTheme();
-  const { user, riderId } = useAuth();
-  const { startLocationTracking, stopLocationTracking, isTracking } = useLocation();
-  const [isAvailable, setIsAvailable] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { 
+    isOnline, 
+    errorMsg: locationError,
+    markAsOnline,
+    markAsOffline
+  } = useLocation();
+
+  const { 
+    activeDeliveries, 
+    isLoading, 
+    error,
+    refreshing,
+    handleRefresh,
+    fetchActiveDeliveries
+  } = useDelivery();
+
+  const [statusLoading, setStatusLoading] = useState(false);
 
   useEffect(() => {
-    setLoading(false);
-  }, []);
+    // Fetch deliveries when screen is focused
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (user && user.id) {
+        fetchActiveDeliveries();
+      }
+    });
 
-  const toggleAvailability = async (value) => {
+    return unsubscribe;
+  }, [navigation, fetchActiveDeliveries, user]);
+
+  const toggleOnlineStatus = async () => {
+    if (!user || !user.id) {
+      Alert.alert('Error', 'User account not properly loaded. Please log out and log in again.');
+      return;
+    }
+
+    setStatusLoading(true);
     try {
-      await api.updateRiderAvailability(riderId, value);
-      setIsAvailable(value);
-      
-      // Start/stop location tracking based on availability
-      if (value) {
-        await startLocationTracking();
+      if (isOnline) {
+        // If there are active deliveries, don't allow going offline
+        if (activeDeliveries.length > 0) {
+          Alert.alert(
+            'Active Deliveries',
+            'You cannot go offline while you have active deliveries.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        await markAsOffline();
+        console.log('Rider marked as offline');
       } else {
-        await stopLocationTracking();
+        await markAsOnline();
+        console.log('Rider marked as online');
       }
     } catch (error) {
-      console.error('Error updating availability:', error);
+      console.error('Error toggling status:', error);
+      Alert.alert('Error', 'Failed to update your availability status');
+    } finally {
+      setStatusLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.container, styles.loading]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-      </View>
-    );
+  const formatDate = () => {
+    const now = new Date();
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    return now.toLocaleDateString(undefined, options);
+  };
+
+  if (isLoading && !refreshing) {
+    return <LoadingIndicator message="Loading dashboard..." />;
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Surface style={styles.header}>
-        <View style={styles.profileSection}>
-          <Avatar.Text 
-            size={60} 
-            label={user?.username?.charAt(0).toUpperCase() || 'R'} 
-            backgroundColor={theme.colors.primary}
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={handleRefresh} 
           />
-          <View style={styles.profileInfo}>
-            <Title>{user?.username}</Title>
-            <Subheading>{user?.email}</Subheading>
+        }
+      >
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.header}>
+          <View style={styles.welcomeSection}>
+            <Text style={styles.dateText}>{formatDate()}</Text>
+            <Text style={styles.welcomeText}>
+              Hello, {user?.username || 'Rider'}
+            </Text>
+          </View>
+
+          <View style={styles.statusSection}>
+            <Text style={styles.statusLabel}>
+              {isOnline ? 'You are online' : 'You are offline'}
+            </Text>
+            <Switch
+              value={isOnline}
+              onValueChange={toggleOnlineStatus}
+              trackColor={{ false: '#767577', true: '#81b0ff' }}
+              thumbColor={isOnline ? '#0066cc' : '#f4f3f4'}
+              disabled={statusLoading}
+            />
           </View>
         </View>
-        <View style={styles.availabilitySection}>
-          <Text>Available for Deliveries</Text>
-          <Switch
-            value={isAvailable}
-            onValueChange={toggleAvailability}
-            color={theme.colors.primary}
+
+        {(error || locationError) && (
+          <ErrorMessage 
+            message={error || locationError} 
+            onRetry={fetchActiveDeliveries} 
           />
+        )}
+
+        <View style={styles.deliveriesSection}>
+          <Text style={styles.sectionTitle}>
+            Active Deliveries ({activeDeliveries.length})
+          </Text>
+          
+          {activeDeliveries.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="bicycle-outline" size={60} color="#cccccc" />
+              <Text style={styles.emptyText}>No active deliveries</Text>
+              <Text style={styles.emptySubtext}>
+                {isOnline 
+                  ? 'You will be notified when new deliveries are assigned to you'
+                  : 'Go online to start receiving deliveries'}
+              </Text>
+            </View>
+          ) : (
+            activeDeliveries.map(delivery => (
+              <DeliveryCard
+                key={delivery.id}
+                delivery={delivery}
+                onPress={() => navigation.navigate('DeliveryDetails', { delivery })}
+              />
+            ))
+          )}
         </View>
-      </Surface>
-
-      <View style={styles.metricsContainer}>
-        <Surface style={styles.metricCard}>
-          <MaterialCommunityIcons 
-            name="bike-fast" 
-            size={30} 
-            color={theme.colors.primary} 
-          />
-          <Title>0</Title>
-          <Text>Total Deliveries</Text>
-        </Surface>
-
-        <Surface style={styles.metricCard}>
-          <MaterialCommunityIcons 
-            name="star" 
-            size={30} 
-            color={theme.colors.accent} 
-          />
-          <Title>0.0</Title>
-          <Text>Average Rating</Text>
-        </Surface>
-
-        <Surface style={styles.metricCard}>
-          <MaterialCommunityIcons 
-            name="check-circle" 
-            size={30} 
-            color="#4CAF50" 
-          />
-          <Title>0</Title>
-          <Text>Completed</Text>
-        </Surface>
-      </View>
-
-      <Surface style={styles.actionsContainer}>
-        <Button 
-          mode="contained" 
-          icon="package-variant"
-          onPress={() => navigation.navigate('Deliveries')}
-          style={styles.actionButton}
-        >
-          View Active Deliveries
-        </Button>
-
-        <Button 
-          mode="outlined"
-          icon="history"
-          onPress={() => navigation.navigate('Deliveries', { screen: 'DeliveryHistory' })}
-          style={styles.actionButton}
-        >
-          View Delivery History
-        </Button>
-      </Surface>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f8f9fa',
   },
-  loading: {
-    justifyContent: 'center',
-    alignItems: 'center',
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 100,
   },
   header: {
-    padding: 16,
-    margin: 16,
-    borderRadius: 8,
-    elevation: 4,
-  },
-  profileSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  profileInfo: {
-    marginLeft: 16,
-  },
-  availabilitySection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+    marginBottom: 24,
+    paddingTop: Platform.OS === 'ios' ? 40 : 0
   },
-  metricsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  metricCard: {
+  welcomeSection: {
     flex: 1,
-    margin: 4,
-    padding: 16,
+  },
+  dateText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  statusSection: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
+    backgroundColor: 'white',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
     elevation: 2,
   },
-  actionsContainer: {
-    margin: 16,
-    padding: 16,
-    borderRadius: 8,
-    elevation: 4,
+  statusLabel: {
+    marginRight: 8,
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
   },
-  actionButton: {
-    marginBottom: 8,
+  deliveriesSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    color: '#333',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 40,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 8,
+    textAlign: 'center',
   },
 });
 
