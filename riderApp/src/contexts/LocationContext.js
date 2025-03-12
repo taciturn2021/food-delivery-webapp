@@ -121,6 +121,7 @@ export const LocationProvider = ({ children }) => {
     } catch (error) {
       console.error('Error marking as online:', error);
       setErrorMsg('Failed to update availability status');
+      // If the server update failed, don't change local state
       return false;
     }
   }, [user, startLocationTracking]);
@@ -144,6 +145,7 @@ export const LocationProvider = ({ children }) => {
     } catch (error) {
       console.error('Error marking as offline:', error);
       setErrorMsg('Failed to update availability status');
+      // If the server update failed, don't change local state
       return false;
     }
   }, [user, stopLocationTracking]);

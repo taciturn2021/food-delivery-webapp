@@ -19,6 +19,7 @@ import { useDelivery } from '../../contexts/DeliveryContext';
 import DeliveryCard from '../../components/delivery/DeliveryCard';
 import LoadingIndicator from '../../components/common/LoadingIndicator';
 import ErrorMessage from '../../components/common/ErrorMessage';
+import api from '../../services/api';
 
 const DashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -26,7 +27,8 @@ const DashboardScreen = ({ navigation }) => {
     isOnline, 
     errorMsg: locationError,
     markAsOnline,
-    markAsOffline
+    markAsOffline,
+    checkOnlineStatus
   } = useLocation();
 
   const { 
@@ -39,17 +41,52 @@ const DashboardScreen = ({ navigation }) => {
   } = useDelivery();
 
   const [statusLoading, setStatusLoading] = useState(false);
+  const [statusCheckError, setStatusCheckError] = useState(null);
+
+  // Check rider status on screen focus and refresh
+  const checkAndUpdateStatus = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setStatusCheckError(null);
+      const response = await api.getRiderStatus(user.id);
+      const currentStatus = response.data.status;
+      
+      // If status from server doesn't match local state, update local state
+      if ((currentStatus === 'active' && !isOnline) || (currentStatus === 'inactive' && isOnline)) {
+        // Force local state to match server state
+        if (currentStatus === 'active') {
+          await markAsOnline();
+        } else {
+          await markAsOffline();
+        }
+      }
+      
+      // Refresh deliveries after status check
+      await fetchActiveDeliveries();
+    } catch (error) {
+      console.error('Error checking rider status:', error);
+      setStatusCheckError('Failed to check rider status');
+    }
+  };
 
   useEffect(() => {
-    // Fetch deliveries when screen is focused
+    // Check status immediately when screen is focused
     const unsubscribe = navigation.addListener('focus', () => {
-      if (user && user.id) {
-        fetchActiveDeliveries();
-      }
+      console.log('Screen focused, checking rider status...');
+      checkAndUpdateStatus();
     });
 
     return unsubscribe;
-  }, [navigation, fetchActiveDeliveries, user]);
+  }, [navigation, user]);
+
+  // Add status check to the refresh handler
+  const handleRefreshWithStatusCheck = async () => {
+    await Promise.all([
+      handleRefresh(),
+      checkAndUpdateStatus()
+    ]);
+  };
 
   const toggleOnlineStatus = async () => {
     if (!user || !user.id) {
@@ -100,7 +137,7 @@ const DashboardScreen = ({ navigation }) => {
         refreshControl={
           <RefreshControl 
             refreshing={refreshing} 
-            onRefresh={handleRefresh} 
+            onRefresh={handleRefreshWithStatusCheck} 
           />
         }
       >
@@ -127,10 +164,10 @@ const DashboardScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {(error || locationError) && (
+        {(error || locationError || statusCheckError) && (
           <ErrorMessage 
-            message={error || locationError} 
-            onRetry={fetchActiveDeliveries} 
+            message={error || locationError || statusCheckError} 
+            onRetry={checkAndUpdateStatus} 
           />
         )}
 

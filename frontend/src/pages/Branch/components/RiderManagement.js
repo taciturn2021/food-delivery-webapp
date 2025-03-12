@@ -20,6 +20,9 @@ import {
     TableHead,
     TableRow,
     Paper,
+    Switch,
+    FormControlLabel,
+    Alert,
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -35,6 +38,7 @@ const RiderManagement = ({ branchId }) => {
     const [error, setError] = useState(null);
     const [open, setOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
+    const [successMessage, setSuccessMessage] = useState(null);
     const [formData, setFormData] = useState({
         full_name: '',
         email: '',
@@ -118,6 +122,26 @@ const RiderManagement = ({ branchId }) => {
         setEditingId(null);
     };
 
+    const handleStatusToggle = async (rider) => {
+        try {
+            const newStatus = rider.status === 'active' ? 'inactive' : 'active';
+            // Use user_id instead of id for the API call
+            await updateRider(rider.user_id, { status: newStatus });
+            
+            // Update the local state immediately
+            setRiders(riders.map(r => 
+                r.id === rider.id ? {...r, status: newStatus} : r
+            ));
+            
+            // Show success message
+            setSuccessMessage(`Rider ${rider.full_name}'s status changed to ${newStatus}`);
+            setTimeout(() => setSuccessMessage(null), 3000);
+        } catch (error) {
+            setError(`Failed to update rider status: ${error.response?.data?.message || error.message}`);
+            setTimeout(() => setError(null), 5000);
+        }
+    };
+
     if (loading) return <Box>Loading...</Box>;
     if (error) return <Box color="error.main">{error}</Box>;
 
@@ -134,6 +158,12 @@ const RiderManagement = ({ branchId }) => {
                 </Button>
             </Box>
 
+            {successMessage && (
+                <Box sx={{ mb: 2 }}>
+                    <Alert severity="success">{successMessage}</Alert>
+                </Box>
+            )}
+
             <TableContainer component={Paper}>
                 <Table>
                     <TableHead>
@@ -142,6 +172,7 @@ const RiderManagement = ({ branchId }) => {
                             <TableCell>Contact</TableCell>
                             <TableCell>Vehicle</TableCell>
                             <TableCell>Status</TableCell>
+                            <TableCell align="center">Available</TableCell>
                             <TableCell>Actions</TableCell>
                         </TableRow>
                     </TableHead>
@@ -159,6 +190,14 @@ const RiderManagement = ({ branchId }) => {
                                         color={rider.status === 'active' ? 'success' : 
                                               rider.status === 'busy' ? 'warning' : 'default'}
                                         size="small"
+                                    />
+                                </TableCell>
+                                <TableCell align="center">
+                                    <Switch
+                                        checked={rider.status === 'active'}
+                                        onChange={() => handleStatusToggle(rider)}
+                                        disabled={rider.status === 'busy'}
+                                        color="success"
                                     />
                                 </TableCell>
                                 <TableCell>
