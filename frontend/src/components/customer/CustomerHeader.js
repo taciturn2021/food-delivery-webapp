@@ -152,10 +152,16 @@ const CustomerHeader = ({ onBranchSelect }) => {
                                             </Typography>
                                         </Box>
                                         <Divider />
-                                        <MenuItem onClick={() => { handleClose(); }}>
+                                        <MenuItem onClick={() => { 
+                                            handleClose(); 
+                                            navigate('/customer/profile/edit');
+                                        }}>
                                             <PersonIcon sx={{ mr: 2 }} /> Edit Profile
                                         </MenuItem>
-                                        <MenuItem onClick={() => { handleClose(); }}>
+                                        <MenuItem onClick={() => { 
+                                            handleClose(); 
+                                            navigate('/customer/addresses');
+                                        }}>
                                             <LocationIcon sx={{ mr: 2 }} /> Manage Addresses
                                         </MenuItem>
                                         <MenuItem onClick={() => { handleClose(); }}>

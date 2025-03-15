@@ -13,6 +13,7 @@ import menuRoutes from './routes/menu.js';
 import branchRoutes from './routes/branch.js';
 import orderRoutes from './routes/order.js';
 import riderRoutes from './routes/rider.js';
+import customerRoutes from './routes/customer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -44,6 +45,7 @@ app.use('/api/menu', menuRoutes);
 app.use('/api/branches', branchRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/riders', riderRoutes);
+app.use('/api/customers', customerRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

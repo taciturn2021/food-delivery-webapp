@@ -71,6 +71,14 @@ export const registerCustomer = (customerData) => api.post('/auth/register/custo
 export const login = (credentials) => api.post('/auth/login', credentials);
 export const register = (userData) => api.post('/auth/register', userData);
 export const getProfile = () => api.get('/auth/profile');
+export const updateProfile = (userData) => api.put('/auth/profile', userData);
+export const updatePassword = (passwordData) => api.put('/auth/password', passwordData);
+
+// Customer APIs
+export const getCustomerAddresses = () => api.get('/customers/addresses');
+export const addAddress = (addressData) => api.post('/customers/addresses', addressData);
+export const updateAddress = (id, addressData) => api.put(`/customers/addresses/${id}`, addressData);
+export const deleteAddress = (id) => api.delete(`/customers/addresses/${id}`);
 
 // Menu Management APIs
 export const createMenuItem = (data) => api.post('/menu', data);

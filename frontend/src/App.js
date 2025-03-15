@@ -18,6 +18,8 @@ import RiderDashboard from './pages/Rider/Dashboard';
 // Customer Routes
 import LandingPage from './pages/Customer/LandingPage';
 import CustomerRegister from './pages/Customer/components/CustomerRegister';
+import CustomerProfile from './pages/Customer/components/CustomerProfile';
+import CustomerEditProfile from './pages/Customer/components/CustomerEditProfile';
 import Login from './pages/Login';
 
 const theme = createTheme({
@@ -226,6 +228,24 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<CustomerRegister />} />
               <Route path="/admin/login" element={<AdminLogin />} />
+
+              {/* Protected Customer Routes */}
+              <Route
+                path="/customer/profile/edit"
+                element={
+                  <ProtectedRoute allowedRoles={['customer']}>
+                    <CustomerEditProfile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/customer/addresses"
+                element={
+                  <ProtectedRoute allowedRoles={['customer']}>
+                    <CustomerProfile />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Protected Admin Routes */}
               <Route

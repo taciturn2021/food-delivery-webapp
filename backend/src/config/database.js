@@ -244,6 +244,7 @@ const initializeDatabase = async () => {
                 country VARCHAR(100) DEFAULT 'Pakistan',
                 latitude DECIMAL(10, 8),
                 longitude DECIMAL(11, 8),
+                branch_id INTEGER REFERENCES branches(id),
                 is_default BOOLEAN DEFAULT false,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             )
@@ -326,10 +327,13 @@ const initializeDatabase = async () => {
     }
 };
 
+
+
 // Initialize database on server startup
 initializeDatabase().catch(error => {
     console.error('Failed to initialize database:', error);
     process.exit(1);
 });
+
 
 export { pool, initializeDatabase };
