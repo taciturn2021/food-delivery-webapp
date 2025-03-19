@@ -9,8 +9,9 @@ import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-const CustomerMenu = () => {
-    const { branchId } = useParams();
+const CustomerMenu = ({ branchId: propBranchId }) => {
+    const params = useParams();
+    const branchId = propBranchId || params.branchId; // use prop if available, fallback to route param
     const [menuItems, setMenuItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);

@@ -18,7 +18,8 @@ import { useNavigate } from 'react-router-dom';
 import { ShoppingCart } from '@mui/icons-material';
 import CustomerHeader from '../../components/customer/CustomerHeader';
 import BranchSelector from './components/BranchSelector';
-import { getPublicBranches, getPublicBranchMenu } from '../../services/api';
+import { getPublicBranches } from '../../services/api';
+import CustomerMenu from './components/CustomerMenu';  // Imported CustomerMenu
 
 const IntegratedLanding = () => {
     const [branches, setBranches] = useState([]);
@@ -26,8 +27,6 @@ const IntegratedLanding = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [branchDialogOpen, setBranchDialogOpen] = useState(true);
-    const [menuItems, setMenuItems] = useState([]);
-    const [menuLoading, setMenuLoading] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -45,7 +44,6 @@ const IntegratedLanding = () => {
                     if (savedBranch) {
                         setSelectedBranch(savedBranch);
                         setBranchDialogOpen(false);
-                        loadBranchMenu(savedBranchId);
                     }
                 }
             } catch (error) {
@@ -58,85 +56,16 @@ const IntegratedLanding = () => {
         fetchBranches();
     }, []);
 
-    const loadBranchMenu = async (branchId) => {
-        setMenuLoading(true);
-        try {
-            const response = await getPublicBranchMenu(branchId);
-            setMenuItems(response.data);
-        } catch (error) {
-            console.error('Error loading menu:', error);
-            setError('Unable to load menu items. Please try again later.');
-        } finally {
-            setMenuLoading(false);
-        }
-    };
-
     const handleBranchSelect = (branchId) => {
         const selected = branches.find(branch => branch.id === branchId);
         setSelectedBranch(selected);
         localStorage.setItem('selectedBranch', branchId);
         setBranchDialogOpen(false);
-        loadBranchMenu(branchId);
     };
-
-    const renderMenu = () => (
-        <Container maxWidth="lg" sx={{ py: 4 }}>
-            <Typography variant="h4" sx={{ mb: 4 }}>
-                Menu at {selectedBranch?.name}
-            </Typography>
-            {menuLoading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                    <CircularProgress />
-                </Box>
-            ) : (
-                <Grid container spacing={3}>
-                    {menuItems.map((item) => (
-                        <Grid item xs={12} sm={6} md={4} key={item.id}>
-                            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                <CardMedia
-                                    component="img"
-                                    height="200"
-                                    image={item.image_url || 'https://via.placeholder.com/300x200?text=No+Image'}
-                                    alt={item.name}
-                                />
-                                <CardContent sx={{ flexGrow: 1 }}>
-                                    <Typography variant="h6" gutterBottom>
-                                        {item.name}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                        {item.description}
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                        <Typography variant="h6" color="primary">
-                                            ${Number(item.branch_price || item.price).toFixed(2)}
-                                        </Typography>
-                                        <Chip
-                                            label={item.category}
-                                            size="small"
-                                            color="primary"
-                                            variant="outlined"
-                                        />
-                                    </Box>
-                                    <Button
-                                        variant="contained"
-                                        fullWidth
-                                        startIcon={<ShoppingCart />}
-                                    >
-                                        Add to Cart
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                    ))}
-                </Grid>
-            )}
-        </Container>
-    );
 
     return (
         <Box sx={{ minHeight: '100vh' }}>
             <CustomerHeader onBranchSelect={handleBranchSelect} />
-            
             {/* Spacer for fixed AppBar */}
             <Box sx={{ height: 64 }} />
 
@@ -150,7 +79,9 @@ const IntegratedLanding = () => {
                 </Container>
             ) : (
                 <>
-                    {selectedBranch ? renderMenu() : null}
+                    {selectedBranch && (
+                        <CustomerMenu branchId={selectedBranch.id} />
+                    )}
                 </>
             )}
 
