@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { CircularProgress } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getPublicBranchMenu } from '../../../services/api';
@@ -10,6 +10,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 const CustomerMenu = ({ branchId: propBranchId }) => {
+    const navigate = useNavigate();
     const params = useParams();
     const branchId = propBranchId || params.branchId; // use prop if available, fallback to route param
     const [menuItems, setMenuItems] = useState([]);
@@ -50,11 +51,18 @@ const CustomerMenu = ({ branchId: propBranchId }) => {
         return price.toFixed(2);
     };
 
+    const [addedItems, setAddedItems] = useState({});
+
     const handleAddToCart = (item) => {
         addToCart({
             ...item,
             branchId: parseInt(branchId)
         });
+        setAddedItems(prev => ({ ...prev, [item.id]: true }));
+        setTimeout(() => {
+            setAddedItems(prev => ({ ...prev, [item.id]: false }));
+        }, 1000);
+        setCartOpen(true);
     };
 
     const CartDrawer = () => (
@@ -119,7 +127,10 @@ const CustomerMenu = ({ branchId: propBranchId }) => {
                             <span className="text-2xl font-bold">${formatPrice(getTotal())}</span>
                         </div>
                         <button 
-                            onClick={() => {/* TODO: Implement checkout */}}
+                            onClick={() => {
+                                setCartOpen(false);
+                                navigate('/cart');
+                            }}
                             className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
                         >
                             Proceed to Checkout
@@ -209,10 +220,10 @@ const CustomerMenu = ({ branchId: propBranchId }) => {
                                                 </span>
                                                 <button 
                                                     onClick={() => handleAddToCart(item)}
-                                                    className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                                                    className={`flex items-center space-x-2 ${addedItems[item.id] ? 'bg-green-600' : 'bg-blue-600'} text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors`}
                                                 >
                                                     <AddIcon />
-                                                    <span>Add to Cart</span>
+                                                    <span>{addedItems[item.id] ? 'Added!' : 'Add to Cart'}</span>
                                                 </button>
                                             </div>
                                         </div>

@@ -14,16 +14,19 @@ import {
     Avatar,
     Divider
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { 
     Menu as MenuIcon,
     Person as PersonIcon,
     LocationOn as LocationIcon,
     ShoppingBag as OrdersIcon,
-    Logout as LogoutIcon
+    Logout as LogoutIcon,
+    ShoppingCart as CartIcon
 } from '@mui/icons-material';
 import BranchSelector from '../../pages/Customer/components/BranchSelector';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 import { getPublicBranches } from '../../services/api';
 
 const CustomerHeader = ({ onBranchSelect }) => {
@@ -33,6 +36,7 @@ const CustomerHeader = ({ onBranchSelect }) => {
     const navigate = useNavigate();
     const theme = useTheme();
     const { user, logout } = useAuth();
+    const { cart } = useCart();
 
     useEffect(() => {
         const fetchBranches = async () => {
@@ -72,16 +76,6 @@ const CustomerHeader = ({ onBranchSelect }) => {
             <AppBar position="fixed" sx={{ backgroundColor: 'white', boxShadow: 1 }}>
                 <Container maxWidth="xl">
                     <Toolbar disableGutters>
-                        <IconButton
-                            size="large"
-                            edge="start"
-                            color="primary"
-                            aria-label="menu"
-                            sx={{ mr: 2 }}
-                        >
-                            <MenuIcon />
-                        </IconButton>
-
                         <Typography
                             variant="h6"
                             noWrap
@@ -98,6 +92,42 @@ const CustomerHeader = ({ onBranchSelect }) => {
                         </Typography>
 
                         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                            <Button
+                                variant="outlined"
+                                color="primary"
+                                onClick={() => navigate('/cart')}
+                                startIcon={<CartIcon />}
+                                sx={{
+                                    position: 'relative',
+                                    '&:hover': {
+                                        backgroundColor: alpha(theme.palette.primary.main, 0.04)
+                                    }
+                                }}
+                            >
+                                Cart
+                                {cart.items.length > 0 && (
+                                    <Box
+                                        sx={{
+                                            position: 'absolute',
+                                            top: -8,
+                                            right: -8,
+                                            backgroundColor: theme.palette.error.main,
+                                            color: 'white',
+                                            borderRadius: '50%',
+                                            width: 20,
+                                            height: 20,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 'bold',
+                                            boxShadow: theme.shadows[2]
+                                        }}
+                                    >
+                                        {cart.items.length}
+                                    </Box>
+                                )}
+                            </Button>
                             <Button
                                 variant="outlined"
                                 color="primary"

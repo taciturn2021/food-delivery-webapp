@@ -20,6 +20,7 @@ import LandingPage from './pages/Customer/LandingPage';
 import CustomerRegister from './pages/Customer/components/CustomerRegister';
 import CustomerProfile from './pages/Customer/components/CustomerProfile';
 import CustomerEditProfile from './pages/Customer/components/CustomerEditProfile';
+import Cart from './pages/Customer/components/Cart';
 import Login from './pages/Login';
 
 const theme = createTheme({
@@ -228,6 +229,7 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<CustomerRegister />} />
               <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/cart" element={<Cart />} />
 
               {/* Protected Customer Routes */}
               <Route
