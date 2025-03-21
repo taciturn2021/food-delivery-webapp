@@ -1,37 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-    Box,
-    Container,
-    Paper,
-    Typography,
-    Button,
-    Grid,
-    TextField,
-    Alert,
-    Snackbar,
-    Divider,
-    IconButton,
-    InputAdornment,
-    CircularProgress,
-    useTheme,
-    alpha,
-    FormHelperText
-} from '@mui/material';
-import {
-    Visibility as VisibilityIcon,
-    VisibilityOff as VisibilityOffIcon,
-    ArrowBack as ArrowBackIcon,
-    Check as CheckIcon,
-    Close as CloseIcon
-} from '@mui/icons-material';
 import { useAuth } from '../../../context/AuthContext';
 import { getProfile, updateProfile, updatePassword } from '../../../services/api';
+import { ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Button } from '../../../components/ui/button';
+import { Input } from '../../../components/ui/input';
+import { Alert, AlertDescription } from '../../../components/ui/alert';
 import CustomerHeader from '../../../components/customer/CustomerHeader';
 
 const CustomerEditProfile = () => {
     const navigate = useNavigate();
-    const theme = useTheme();
     const { user } = useAuth();
     
     const [profileData, setProfileData] = useState({
@@ -83,7 +61,6 @@ const CustomerEditProfile = () => {
         loadUserProfile();
     }, []);
 
-    // Check password matching as user types
     useEffect(() => {
         if (passwordData.newPassword || passwordData.confirmPassword) {
             setPasswordMatch({
@@ -126,12 +103,11 @@ const CustomerEditProfile = () => {
         try {
             await updateProfile(profileData);
             setSuccessMessage('Profile updated successfully');
+            setTimeout(() => setSuccessMessage(''), 3000);
             
             // Refresh user data in localStorage
             const response = await getProfile();
             localStorage.setItem('user', JSON.stringify(response.data));
-            // Note: We don't have direct setUser in context, but localStorage update
-            // will be picked up on next page load or app refresh
         } catch (error) {
             setProfileError(error.response?.data?.message || 'Failed to update profile');
             console.error('Error updating profile:', error);
@@ -142,31 +118,29 @@ const CustomerEditProfile = () => {
 
     const handlePasswordSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
-        setPasswordError('');
-        
         if (passwordData.newPassword !== passwordData.confirmPassword) {
             setPasswordError('Passwords do not match');
-            setLoading(false);
             return;
         }
         
+        setLoading(true);
+        setPasswordError('');
+
         try {
             await updatePassword({
                 currentPassword: passwordData.currentPassword,
                 newPassword: passwordData.newPassword
             });
             setSuccessMessage('Password updated successfully');
+            setTimeout(() => setSuccessMessage(''), 3000);
             setPasswordData({
                 currentPassword: '',
                 newPassword: '',
                 confirmPassword: ''
             });
-            // Reset password matching state
             setPasswordMatch({ match: true, touched: false });
         } catch (error) {
             setPasswordError(error.response?.data?.message || 'Failed to update password');
-            console.error('Error updating password:', error);
         } finally {
             setLoading(false);
         }
@@ -175,241 +149,225 @@ const CustomerEditProfile = () => {
     return (
         <>
             <CustomerHeader />
-            <Box
-                sx={{
-                    minHeight: '100vh',
-                    background: `linear-gradient(${alpha(theme.palette.primary.main, 0.05)}, ${alpha(theme.palette.primary.main, 0.1)})`,
-                    py: 8,
-                    mt: 8
-                }}
-            >
-                <Container maxWidth="lg">
-                    <Paper sx={{ p: 4 }}>
-                        <Box sx={{ mb: 4, display: 'flex', alignItems: 'center' }}>
-                            <IconButton sx={{ mr: 1 }} onClick={() => navigate(-1)}>
-                                <ArrowBackIcon />
-                            </IconButton>
-                            <Typography variant="h4" component="h1">
-                                Edit Profile
-                            </Typography>
-                        </Box>
+            <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 pt-16">
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-red-500/20"></div>
+                <div className="container mx-auto px-4 py-8 relative z-10">
+                    <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-orange-100 p-6">
+                        <div className="flex items-center gap-2 mb-6">
+                            <button 
+                                onClick={() => navigate(-1)}
+                                className="hover:bg-orange-100 p-2 rounded-full transition-colors text-orange-600"
+                            >
+                                <ArrowLeft className="h-5 w-5" />
+                            </button>
+                            <h1 className="text-2xl font-semibold text-orange-900">Edit Profile</h1>
+                        </div>
 
-                        <Grid container spacing={4}>
+                        <div className="grid md:grid-cols-2 gap-8">
                             {/* Profile Information Section */}
-                            <Grid item xs={12} md={6}>
-                                <Typography variant="h6" gutterBottom>
-                                    Profile Information
-                                </Typography>
+                            <div>
+                                <h2 className="text-xl font-semibold text-orange-900 mb-4">Profile Information</h2>
                                 {profileError && (
-                                    <Alert severity="error" sx={{ mb: 2 }}>
-                                        {profileError}
+                                    <Alert variant="destructive" className="mb-4">
+                                        <AlertDescription>{profileError}</AlertDescription>
                                     </Alert>
                                 )}
-                                <Box component="form" onSubmit={handleProfileSubmit}>
-                                    <Grid container spacing={2}>
-                                        <Grid item xs={12}>
-                                            <TextField
-                                                fullWidth
-                                                label="Username"
-                                                name="username"
-                                                value={profileData.username}
-                                                onChange={handleProfileChange}
-                                                disabled
-                                                helperText="Username cannot be changed"
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12}>
-                                            <TextField
-                                                fullWidth
-                                                label="Email"
-                                                name="email"
-                                                type="email"
-                                                value={profileData.email}
-                                                onChange={handleProfileChange}
-                                                disabled
-                                                helperText="Email cannot be changed"
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                fullWidth
-                                                label="First Name"
-                                                name="firstName"
-                                                value={profileData.firstName}
-                                                onChange={handleProfileChange}
-                                                required
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                fullWidth
-                                                label="Last Name"
-                                                name="lastName"
-                                                value={profileData.lastName}
-                                                onChange={handleProfileChange}
-                                                required
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12}>
-                                            <TextField
-                                                fullWidth
-                                                label="Phone Number"
-                                                name="phone"
-                                                value={profileData.phone}
-                                                onChange={handleProfileChange}
-                                                required
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12}>
-                                            <Button
-                                                type="submit"
-                                                variant="contained"
-                                                color="primary"
-                                                fullWidth
-                                                disabled={loading}
-                                            >
-                                                {loading ? <CircularProgress size={24} /> : 'Update Profile'}
-                                            </Button>
-                                        </Grid>
-                                    </Grid>
-                                </Box>
-                            </Grid>
+
+                                <form onSubmit={handleProfileSubmit} className="space-y-4">
+                                    <div>
+                                        <Input
+                                            name="username"
+                                            value={profileData.username}
+                                            onChange={handleProfileChange}
+                                            disabled
+                                            placeholder="Username"
+                                            className="border-orange-200 bg-orange-50/50"
+                                        />
+                                        <p className="text-sm text-orange-600/70 mt-1">Username cannot be changed</p>
+                                    </div>
+                                    
+                                    <div>
+                                        <Input
+                                            type="email"
+                                            name="email"
+                                            value={profileData.email}
+                                            onChange={handleProfileChange}
+                                            disabled
+                                            placeholder="Email"
+                                            className="border-orange-200 bg-orange-50/50"
+                                        />
+                                        <p className="text-sm text-orange-600/70 mt-1">Email cannot be changed</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Input
+                                            name="firstName"
+                                            value={profileData.firstName}
+                                            onChange={handleProfileChange}
+                                            placeholder="First Name"
+                                            required
+                                            className="border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+                                        />
+                                        <Input
+                                            name="lastName"
+                                            value={profileData.lastName}
+                                            onChange={handleProfileChange}
+                                            placeholder="Last Name"
+                                            required
+                                            className="border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <Input
+                                            name="phone"
+                                            value={profileData.phone}
+                                            onChange={handleProfileChange}
+                                            placeholder="Phone Number"
+                                            required
+                                            className="border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+                                        />
+                                    </div>
+
+                                    <Button 
+                                        type="submit" 
+                                        disabled={loading}
+                                        className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30"
+                                    >
+                                        {loading ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Updating...
+                                            </>
+                                        ) : (
+                                            'Update Profile'
+                                        )}
+                                    </Button>
+                                </form>
+                            </div>
 
                             {/* Change Password Section */}
-                            <Grid item xs={12} md={6}>
-                                <Typography variant="h6" gutterBottom>
-                                    Change Password
-                                </Typography>
+                            <div>
+                                <h2 className="text-xl font-semibold text-orange-900 mb-4">Change Password</h2>
                                 {passwordError && (
-                                    <Alert severity="error" sx={{ mb: 2 }}>
-                                        {passwordError}
+                                    <Alert variant="destructive" className="mb-4">
+                                        <AlertDescription>{passwordError}</AlertDescription>
                                     </Alert>
                                 )}
-                                <Box component="form" onSubmit={handlePasswordSubmit}>
-                                    <Grid container spacing={2}>
-                                        <Grid item xs={12}>
-                                            <TextField
-                                                fullWidth
-                                                label="Current Password"
-                                                name="currentPassword"
-                                                type={showPassword.currentPassword ? 'text' : 'password'}
-                                                value={passwordData.currentPassword}
-                                                onChange={handlePasswordChange}
-                                                required
-                                                InputProps={{
-                                                    endAdornment: (
-                                                        <InputAdornment position="end">
-                                                            <IconButton
-                                                                onClick={() => togglePasswordVisibility('currentPassword')}
-                                                                edge="end"
-                                                            >
-                                                                {showPassword.currentPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                                                            </IconButton>
-                                                        </InputAdornment>
-                                                    )
-                                                }}
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12}>
-                                            <TextField
-                                                fullWidth
-                                                label="New Password"
-                                                name="newPassword"
-                                                type={showPassword.newPassword ? 'text' : 'password'}
-                                                value={passwordData.newPassword}
-                                                onChange={handlePasswordChange}
-                                                required
-                                                InputProps={{
-                                                    endAdornment: (
-                                                        <InputAdornment position="end">
-                                                            <IconButton
-                                                                onClick={() => togglePasswordVisibility('newPassword')}
-                                                                edge="end"
-                                                            >
-                                                                {showPassword.newPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                                                            </IconButton>
-                                                        </InputAdornment>
-                                                    )
-                                                }}
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12}>
-                                            <TextField
-                                                fullWidth
-                                                label="Confirm New Password"
-                                                name="confirmPassword"
-                                                type={showPassword.confirmPassword ? 'text' : 'password'}
-                                                value={passwordData.confirmPassword}
-                                                onChange={handlePasswordChange}
-                                                required
-                                                error={passwordMatch.touched && !passwordMatch.match}
-                                                InputProps={{
-                                                    endAdornment: (
-                                                        <InputAdornment position="end">
-                                                            {passwordMatch.touched && (
-                                                                passwordMatch.match 
-                                                                    ? <CheckIcon style={{ color: 'green' }} /> 
-                                                                    : <CloseIcon color="error" />
-                                                            )}
-                                                            <IconButton
-                                                                onClick={() => togglePasswordVisibility('confirmPassword')}
-                                                                edge="end"
-                                                            >
-                                                                {showPassword.confirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                                                            </IconButton>
-                                                        </InputAdornment>
-                                                    )
-                                                }}
-                                            />
-                                            {passwordMatch.touched && !passwordMatch.match && (
-                                                <FormHelperText error>
-                                                    Passwords don't match
-                                                </FormHelperText>
-                                            )}
-                                        </Grid>
-                                        <Grid item xs={12}>
-                                            <Button
-                                                type="submit"
-                                                variant="contained"
-                                                color="primary"
-                                                fullWidth
-                                                disabled={loading || (passwordMatch.touched && !passwordMatch.match)}
-                                            >
-                                                {loading ? <CircularProgress size={24} /> : 'Update Password'}
-                                            </Button>
-                                        </Grid>
-                                    </Grid>
-                                </Box>
-                            </Grid>
-                        </Grid>
 
-                        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
-                            <Button
-                                variant="outlined"
-                                color="primary"
+                                <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                                    <div className="relative">
+                                        <Input
+                                            type={showPassword.currentPassword ? 'text' : 'password'}
+                                            name="currentPassword"
+                                            value={passwordData.currentPassword}
+                                            onChange={handlePasswordChange}
+                                            placeholder="Current Password"
+                                            required
+                                            className="border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => togglePasswordVisibility('currentPassword')}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-600 hover:text-orange-700"
+                                        >
+                                            {showPassword.currentPassword ? (
+                                                <EyeOff className="h-4 w-4" />
+                                            ) : (
+                                                <Eye className="h-4 w-4" />
+                                            )}
+                                        </button>
+                                    </div>
+
+                                    <div className="relative">
+                                        <Input
+                                            type={showPassword.newPassword ? 'text' : 'password'}
+                                            name="newPassword"
+                                            value={passwordData.newPassword}
+                                            onChange={handlePasswordChange}
+                                            placeholder="New Password"
+                                            required
+                                            className="border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => togglePasswordVisibility('newPassword')}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-600 hover:text-orange-700"
+                                        >
+                                            {showPassword.newPassword ? (
+                                                <EyeOff className="h-4 w-4" />
+                                            ) : (
+                                                <Eye className="h-4 w-4" />
+                                            )}
+                                        </button>
+                                    </div>
+
+                                    <div className="relative">
+                                        <Input
+                                            type={showPassword.confirmPassword ? 'text' : 'password'}
+                                            name="confirmPassword"
+                                            value={passwordData.confirmPassword}
+                                            onChange={handlePasswordChange}
+                                            placeholder="Confirm New Password"
+                                            required
+                                            className={
+                                                passwordMatch.touched && !passwordMatch.match
+                                                    ? 'border-red-500 focus-visible:ring-red-500'
+                                                    : 'border-orange-200 focus:border-orange-500 focus:ring-orange-500'
+                                            }
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => togglePasswordVisibility('confirmPassword')}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-600 hover:text-orange-700"
+                                        >
+                                            {showPassword.confirmPassword ? (
+                                                <EyeOff className="h-4 w-4" />
+                                            ) : (
+                                                <Eye className="h-4 w-4" />
+                                            )}
+                                        </button>
+                                        {passwordMatch.touched && !passwordMatch.match && (
+                                            <p className="text-sm text-red-500 mt-1">Passwords don't match</p>
+                                        )}
+                                    </div>
+
+                                    <Button
+                                        type="submit"
+                                        disabled={loading || (passwordMatch.touched && !passwordMatch.match)}
+                                        className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30"
+                                    >
+                                        {loading ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Updating...
+                                            </>
+                                        ) : (
+                                            'Update Password'
+                                        )}
+                                    </Button>
+                                </form>
+                            </div>
+                        </div>
+
+                        {successMessage && (
+                            <Alert className="mt-6 bg-green-50 text-green-700 border-green-200">
+                                <AlertDescription>{successMessage}</AlertDescription>
+                            </Alert>
+                        )}
+
+                        <div className="mt-8 flex justify-center">
+                            <Button 
+                                variant="outline" 
                                 onClick={() => navigate('/customer/addresses')}
+                                className="border-orange-200 text-orange-700 hover:bg-orange-50"
                             >
                                 Manage Addresses
                             </Button>
-                        </Box>
-                    </Paper>
-                </Container>
-                
-                <Snackbar
-                    open={!!successMessage}
-                    autoHideDuration={6000}
-                    onClose={() => setSuccessMessage('')}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                >
-                    <Alert 
-                        onClose={() => setSuccessMessage('')} 
-                        severity="success"
-                        sx={{ width: '100%' }}
-                    >
-                        {successMessage}
-                    </Alert>
-                </Snackbar>
-            </Box>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </>
     );
 };

@@ -2,19 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { login as loginApi } from '../services/api';
-import {
-    Box,
-    Container,
-    Typography,
-    TextField,
-    Button,
-    Alert,
-    Paper,
-    Avatar,
-    CircularProgress,
-    Link
-} from '@mui/material';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
+import { Alert, AlertDescription } from '../components/ui/alert';
+import { Loader2, UtensilsCrossed } from 'lucide-react';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -66,136 +57,97 @@ const Login = () => {
     };
 
     return (
-        <Box
-            sx={{
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                background: 'linear-gradient(45deg, #FF5F6D 30%, #FFC371 90%)',
-                py: 12,
-                px: 2
-            }}
-        >
-            <Container maxWidth="sm">
-                <Paper 
-                    elevation={6} 
-                    sx={{
-                        p: 4,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)'
-                    }}
-                >
-                    <Avatar sx={{ 
-                        m: 1, 
-                        bgcolor: 'secondary.main',
-                        width: 56,
-                        height: 56
-                    }}>
-                        <LockOutlinedIcon fontSize="large" />
-                    </Avatar>
-
-                    <Typography
-                        component="h1"
-                        variant="h4"
-                        align="center"
-                        gutterBottom
-                        sx={{ 
-                            mb: 3,
-                            fontWeight: 600,
-                            color: 'primary.main'
-                        }}
+        <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 py-12 px-4 relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-red-500/20"></div>
+            <div className="container mx-auto max-w-md relative z-10">
+                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-orange-100">
+                    <button
+                        type="button"
+                        onClick={() => navigate('/')}
+                        className="absolute top-4 left-4 text-orange-600 hover:text-orange-700"
                     >
-                        Welcome Back
-                    </Typography>
+                        ← Back to Menu
+                    </button>
+                    
+                    <div className="flex flex-col items-center mb-8">
+                        <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center mb-4 transform hover:rotate-12 transition-transform">
+                            <UtensilsCrossed className="w-8 h-8 text-orange-600" />
+                        </div>
+                        <h1 className="text-3xl font-bold text-center text-orange-900 mb-2">
+                            Welcome Back!
+                        </h1>
+                        <p className="text-orange-600 text-center">
+                            Ready to order your favorite dishes?
+                        </p>
+                    </div>
 
                     {error && (
-                        <Alert 
-                            severity="error" 
-                            sx={{ 
-                                mb: 3,
-                                width: '100%'
-                            }}
-                        >
-                            {error}
+                        <Alert variant="destructive" className="mb-6">
+                            <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     )}
 
-                    <Box 
-                        component="form" 
-                        onSubmit={handleSubmit} 
-                        noValidate 
-                        sx={{ 
-                            width: '100%',
-                            mt: 1
-                        }}
-                    >
-                        <TextField
-                            margin="normal"
-                            required
-                            fullWidth
-                            id="email"
-                            label="Email Address"
-                            name="email"
-                            autoComplete="email"
-                            autoFocus
-                            value={formData.email}
-                            onChange={(e) => setFormData({...formData, email: e.target.value})}
-                            sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    '&:hover fieldset': {
-                                        borderColor: 'primary.main',
-                                    },
-                                },
-                            }}
-                        />
-                        <TextField
-                            margin="normal"
-                            required
-                            fullWidth
-                            name="password"
-                            label="Password"
-                            type="password"
-                            id="password"
-                            autoComplete="current-password"
-                            value={formData.password}
-                            onChange={(e) => setFormData({...formData, password: e.target.value})}
-                            sx={{
-                                '& .MuiOutlinedInput-root': {
-                                    '&:hover fieldset': {
-                                        borderColor: 'primary.main',
-                                    },
-                                },
-                            }}
-                        />
-                        <Button
-                            type="submit"
-                            fullWidth
-                            variant="contained"
-                            sx={{ 
-                                mt: 3, 
-                                mb: 2,
-                                py: 1.5,
-                                fontSize: '1.1rem'
-                            }}
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div>
+                            <Input
+                                type="email"
+                                placeholder="Email Address"
+                                name="email"
+                                autoComplete="email"
+                                value={formData.email}
+                                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                required
+                                className="border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+                            />
+                        </div>
+                        <div>
+                            <Input
+                                type="password"
+                                placeholder="Password"
+                                name="password"
+                                autoComplete="current-password"
+                                value={formData.password}
+                                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                                required
+                                className="border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+                            />
+                        </div>
+
+                        <Button 
+                            type="submit" 
+                            className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30"
                             disabled={loading}
                         >
-                            {loading ? <CircularProgress size={24} /> : 'Sign In'}
+                            {loading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Cooking up...
+                                </>
+                            ) : (
+                                'Let\'s Eat!'
+                            )}
                         </Button>
-                        
-                        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
-                            <Link href="/register" variant="body2" sx={{ color: 'primary.main' }}>
-                                {"Don't have an account? Sign Up"}
-                            </Link>
-                            <Link href="/admin/login" variant="body2" sx={{ color: 'text.secondary' }}>
-                                Staff Login
-                            </Link>
-                        </Box>
-                    </Box>
-                </Paper>
-            </Container>
-        </Box>
+                    </form>
+
+                    <div className="mt-8 flex justify-between text-sm">
+                        <button
+                            type="button"
+                            onClick={() => navigate('/register')}
+                            className="text-orange-700 hover:text-orange-500 font-medium"
+                        >
+                            New here? Join the feast!
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/admin/login')}
+                            className="text-gray-600 hover:text-gray-800"
+                        >
+                            Staff Login
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 };
 

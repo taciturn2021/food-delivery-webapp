@@ -1,25 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-    Container,
-    Dialog,
-    Box,
-    CircularProgress,
-    Grid,
-    Alert,
-    Card,
-    CardContent,
-    CardMedia,
-    Typography,
-    Button,
-    Chip
-} from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart } from '@mui/icons-material';
 import CustomerHeader from '../../components/customer/CustomerHeader';
 import BranchSelector from './components/BranchSelector';
+import CustomerMenu from './components/CustomerMenu';
 import { getPublicBranches } from '../../services/api';
-import CustomerMenu from './components/CustomerMenu';  // Imported CustomerMenu
+import { Dialog, DialogContent } from '../../components/ui/dialog';
+import { useCart } from '../../context/CartContext';
 
 const IntegratedLanding = () => {
     const [branches, setBranches] = useState([]);
@@ -28,6 +15,7 @@ const IntegratedLanding = () => {
     const [error, setError] = useState(null);
     const [branchDialogOpen, setBranchDialogOpen] = useState(true);
     const navigate = useNavigate();
+    const { cart, setBranch } = useCart();
 
     useEffect(() => {
         const fetchBranches = async () => {
@@ -37,13 +25,31 @@ const IntegratedLanding = () => {
                 setBranches(activeBranches);
                 setError(null);
 
-                // Check for previously selected branch
-                const savedBranchId = localStorage.getItem('selectedBranch');
-                if (savedBranchId) {
-                    const savedBranch = activeBranches.find(branch => branch.id === parseInt(savedBranchId));
-                    if (savedBranch) {
-                        setSelectedBranch(savedBranch);
+                // If there's a branch in cart, use that
+                if (cart.branchId) {
+                    const cartBranch = activeBranches.find(branch => branch.id === cart.branchId);
+                    if (cartBranch) {
+                        setSelectedBranch(cartBranch);
                         setBranchDialogOpen(false);
+                    } else {
+                        // If cart branch not found in active branches, clear selection
+                        setSelectedBranch(null);
+                        setBranchDialogOpen(true);
+                    }
+                } else {
+                    // If no branch in cart, check localStorage
+                    const savedBranchId = localStorage.getItem('selectedBranch');
+                    if (savedBranchId) {
+                        const savedBranch = activeBranches.find(branch => branch.id === parseInt(savedBranchId));
+                        if (savedBranch) {
+                            setSelectedBranch(savedBranch);
+                            setBranchDialogOpen(false);
+                        } else {
+                            // If saved branch not found in active branches, clear selection
+                            localStorage.removeItem('selectedBranch');
+                            setSelectedBranch(null);
+                            setBranchDialogOpen(true);
+                        }
                     }
                 }
             } catch (error) {
@@ -54,29 +60,33 @@ const IntegratedLanding = () => {
             }
         };
         fetchBranches();
-    }, []);
+    }, [cart.branchId]);
 
     const handleBranchSelect = (branchId) => {
         const selected = branches.find(branch => branch.id === branchId);
-        setSelectedBranch(selected);
-        localStorage.setItem('selectedBranch', branchId);
-        setBranchDialogOpen(false);
+        if (selected) {
+            setSelectedBranch(selected);
+            setBranch(branchId);
+            setBranchDialogOpen(false);
+        }
     };
 
     return (
-        <Box sx={{ minHeight: '100vh' }}>
+        <div className="min-h-screen bg-slate-50">
             <CustomerHeader onBranchSelect={handleBranchSelect} />
-            {/* Spacer for fixed AppBar */}
-            <Box sx={{ height: 64 }} />
+            {/* Spacer for fixed header */}
+            <div className="h-16"></div>
 
             {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-                    <CircularProgress />
-                </Box>
+                <div className="flex justify-center items-center min-h-[60vh]">
+                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
             ) : error ? (
-                <Container maxWidth="lg" sx={{ py: 8 }}>
-                    <Alert severity="error">{error}</Alert>
-                </Container>
+                <div className="container mx-auto px-4 py-8">
+                    <div className="bg-red-100 border-l-4 border-red-500 p-4 rounded text-red-700">
+                        {error}
+                    </div>
+                </div>
             ) : (
                 <>
                     {selectedBranch && (
@@ -87,20 +97,20 @@ const IntegratedLanding = () => {
 
             <Dialog
                 open={branchDialogOpen}
-                onClose={() => {
-                    if (selectedBranch) setBranchDialogOpen(false);
+                onOpenChange={(open) => {
+                    if (selectedBranch) setBranchDialogOpen(open);
                 }}
-                maxWidth="md"
-                fullWidth
-                disableEscapeKeyDown={!selectedBranch}
             >
-                <BranchSelector
-                    branches={branches}
-                    onBranchSelect={handleBranchSelect}
-                    isDialog={true}
-                />
+                <DialogContent className="sm:max-w-[725px] p-0">
+                    <BranchSelector
+                        branches={branches}
+                        onBranchSelect={handleBranchSelect}
+                        isDialog={true}
+                        currentBranchId={selectedBranch?.id || cart.branchId}
+                    />
+                </DialogContent>
             </Dialog>
-        </Box>
+        </div>
     );
 };
 

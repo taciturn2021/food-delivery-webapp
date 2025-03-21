@@ -5,11 +5,23 @@ const CartContext = createContext();
 export const CartProvider = ({ children }) => {
     const [cart, setCart] = useState(() => {
         const savedCart = localStorage.getItem('cart');
-        return savedCart ? JSON.parse(savedCart) : { items: [], branchId: null };
+        const parsedCart = savedCart ? JSON.parse(savedCart) : { items: [], branchId: null };
+        // Synchronize with localStorage selectedBranch on initial load
+        const savedBranchId = localStorage.getItem('selectedBranch');
+        if (savedBranchId && !parsedCart.branchId) {
+            parsedCart.branchId = parseInt(savedBranchId);
+        }
+        return parsedCart;
     });
 
     useEffect(() => {
         localStorage.setItem('cart', JSON.stringify(cart));
+        // Keep selectedBranch in sync with cart.branchId
+        if (cart.branchId) {
+            localStorage.setItem('selectedBranch', cart.branchId.toString());
+        } else {
+            localStorage.removeItem('selectedBranch');
+        }
     }, [cart]);
 
     const addToCart = (item, quantity = 1) => {
@@ -65,6 +77,14 @@ export const CartProvider = ({ children }) => {
 
     const clearCart = () => {
         setCart({ items: [], branchId: null });
+        localStorage.removeItem('selectedBranch'); // Also clear selectedBranch when clearing cart
+    };
+
+    const setBranch = (branchId) => {
+        setCart(prevCart => ({
+            items: [],
+            branchId: branchId
+        }));
     };
 
     const getTotal = () => {
@@ -81,6 +101,7 @@ export const CartProvider = ({ children }) => {
             removeFromCart,
             updateQuantity,
             clearCart,
+            setBranch,
             getTotal
         }}>
             {children}

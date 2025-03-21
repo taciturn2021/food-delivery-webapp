@@ -1,42 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import {
-    AppBar,
-    Toolbar,
-    Typography,
-    Button,
-    Container,
-    Dialog,
-    IconButton,
-    Box,
-    useTheme,
-    Menu,
-    MenuItem,
-    Avatar,
-    Divider
-} from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
-import { 
-    Menu as MenuIcon,
-    Person as PersonIcon,
-    LocationOn as LocationIcon,
-    ShoppingBag as OrdersIcon,
-    Logout as LogoutIcon,
-    ShoppingCart as CartIcon
-} from '@mui/icons-material';
-import BranchSelector from '../../pages/Customer/components/BranchSelector';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { getPublicBranches } from '../../services/api';
+import { 
+  ShoppingCart, 
+  MapPin, 
+  User, 
+  Package, 
+  LogOut, 
+  Menu as MenuIcon 
+} from 'lucide-react';
+import BranchSelector from '../../pages/Customer/components/BranchSelector';
+import { Button } from '../ui/button';
+import { Dialog, DialogContent } from '../ui/dialog';
 
 const CustomerHeader = ({ onBranchSelect }) => {
     const [branchDialogOpen, setBranchDialogOpen] = useState(false);
-    const [anchorEl, setAnchorEl] = useState(null);
+    const [profileOpen, setProfileOpen] = useState(false);
     const [branches, setBranches] = useState([]);
     const navigate = useNavigate();
-    const theme = useTheme();
     const { user, logout } = useAuth();
-    const { cart } = useCart();
+    const { cart, clearCart, setBranch } = useCart();
 
     useEffect(() => {
         const fetchBranches = async () => {
@@ -52,191 +37,152 @@ const CustomerHeader = ({ onBranchSelect }) => {
     }, []);
 
     const handleBranchSelect = (branchId) => {
+        if (cart.branchId !== branchId) {
+            clearCart();
+            setBranch(branchId);
+            navigate('/');
+        }
         if (onBranchSelect) {
             onBranchSelect(branchId);
         }
         setBranchDialogOpen(false);
     };
 
-    const handleMenu = (event) => {
-        setAnchorEl(event.currentTarget);
-    };
-
-    const handleClose = () => {
-        setAnchorEl(null);
-    };
-
     const handleLogout = () => {
         logout();
         navigate('/login');
+        setProfileOpen(false);
     };
 
     return (
         <>
-            <AppBar position="fixed" sx={{ backgroundColor: 'white', boxShadow: 1 }}>
-                <Container maxWidth="xl">
-                    <Toolbar disableGutters>
-                        <Typography
-                            variant="h6"
-                            noWrap
-                            component="div"
-                            sx={{
-                                flexGrow: 1,
-                                color: theme.palette.primary.main,
-                                fontWeight: 600,
-                                cursor: 'pointer'
-                            }}
+            <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-orange-100 shadow-lg">
+                <div className="container mx-auto px-4">
+                    <div className="h-16 flex items-center justify-between">
+                        <h1 
+                            className="text-xl font-semibold text-orange-600 cursor-pointer hover:text-orange-700 transition-colors flex items-center gap-2" 
                             onClick={() => navigate('/')}
                         >
+                            <span className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
+                                🍽️
+                            </span>
                             FoodDelivery
-                        </Typography>
+                        </h1>
 
-                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                            <Button
-                                variant="outlined"
-                                color="primary"
+                        <div className="flex items-center space-x-3">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
                                 onClick={() => navigate('/cart')}
-                                startIcon={<CartIcon />}
-                                sx={{
-                                    position: 'relative',
-                                    '&:hover': {
-                                        backgroundColor: alpha(theme.palette.primary.main, 0.04)
-                                    }
-                                }}
+                                className="relative border-orange-200 text-orange-700 hover:bg-orange-50"
                             >
+                                <ShoppingCart className="mr-2 h-4 w-4" />
                                 Cart
                                 {cart.items.length > 0 && (
-                                    <Box
-                                        sx={{
-                                            position: 'absolute',
-                                            top: -8,
-                                            right: -8,
-                                            backgroundColor: theme.palette.error.main,
-                                            color: 'white',
-                                            borderRadius: '50%',
-                                            width: 20,
-                                            height: 20,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 'bold',
-                                            boxShadow: theme.shadows[2]
-                                        }}
-                                    >
+                                    <span className="absolute -top-2 -right-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center shadow-lg">
                                         {cart.items.length}
-                                    </Box>
+                                    </span>
                                 )}
                             </Button>
-                            <Button
-                                variant="outlined"
-                                color="primary"
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
                                 onClick={() => setBranchDialogOpen(true)}
-                                startIcon={<LocationIcon />}
+                                className="border-orange-200 text-orange-700 hover:bg-orange-50"
                             >
+                                <MapPin className="mr-2 h-4 w-4" />
                                 Select Branch
                             </Button>
                             
                             {user ? (
-                                <>
-                                    <IconButton
-                                        onClick={handleMenu}
-                                        sx={{ 
-                                            ml: 2,
-                                            '&:hover': { backgroundColor: 'rgba(25, 118, 210, 0.04)' }
-                                        }}
+                                <div className="relative">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="relative p-0 w-9 h-9 rounded-full"
+                                        onClick={() => setProfileOpen(!profileOpen)}
                                     >
-                                        <Avatar 
-                                            sx={{ 
-                                                width: 35, 
-                                                height: 35,
-                                                bgcolor: theme.palette.primary.main
-                                            }}
-                                        >
+                                        <div className="w-9 h-9 rounded-full bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center text-white font-semibold shadow-md">
                                             {user.username?.[0]?.toUpperCase()}
-                                        </Avatar>
-                                    </IconButton>
-                                    <Menu
-                                        anchorEl={anchorEl}
-                                        open={Boolean(anchorEl)}
-                                        onClose={handleClose}
-                                        anchorOrigin={{
-                                            vertical: 'bottom',
-                                            horizontal: 'right',
-                                        }}
-                                        transformOrigin={{
-                                            vertical: 'top',
-                                            horizontal: 'right',
-                                        }}
-                                        PaperProps={{
-                                            elevation: 3,
-                                            sx: { minWidth: 200 }
-                                        }}
-                                    >
-                                        <Box sx={{ px: 2, py: 1 }}>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-                                                {user.username}
-                                            </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {user.email}
-                                            </Typography>
-                                        </Box>
-                                        <Divider />
-                                        <MenuItem onClick={() => { 
-                                            handleClose(); 
-                                            navigate('/customer/profile/edit');
-                                        }}>
-                                            <PersonIcon sx={{ mr: 2 }} /> Edit Profile
-                                        </MenuItem>
-                                        <MenuItem onClick={() => { 
-                                            handleClose(); 
-                                            navigate('/customer/addresses');
-                                        }}>
-                                            <LocationIcon sx={{ mr: 2 }} /> Manage Addresses
-                                        </MenuItem>
-                                        <MenuItem onClick={() => { handleClose(); }}>
-                                            <OrdersIcon sx={{ mr: 2 }} /> View Orders
-                                        </MenuItem>
-                                        <Divider />
-                                        <MenuItem onClick={handleLogout}>
-                                            <LogoutIcon sx={{ mr: 2 }} /> Logout
-                                        </MenuItem>
-                                    </Menu>
-                                </>
+                                        </div>
+                                    </Button>
+                                    
+                                    {profileOpen && (
+                                        <div className="absolute right-0 mt-2 w-60 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl py-2 border border-orange-100 z-50">
+                                            <div className="px-4 py-2">
+                                                <p className="text-sm font-medium text-orange-900">{user.username}</p>
+                                                <p className="text-xs text-orange-600">{user.email}</p>
+                                            </div>
+                                            <div className="border-t border-orange-100 my-1"></div>
+                                            <button 
+                                                className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 flex items-center text-orange-900" 
+                                                onClick={() => {
+                                                    setProfileOpen(false);
+                                                    navigate('/customer/profile/edit');
+                                                }}
+                                            >
+                                                <User className="mr-2 h-4 w-4 text-orange-600" /> Edit Profile
+                                            </button>
+                                            <button 
+                                                className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 flex items-center text-orange-900"
+                                                onClick={() => {
+                                                    setProfileOpen(false);
+                                                    navigate('/customer/addresses');
+                                                }}
+                                            >
+                                                <MapPin className="mr-2 h-4 w-4 text-orange-600" /> Manage Addresses
+                                            </button>
+                                            <button 
+                                                className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 flex items-center text-orange-900"
+                                                onClick={() => {
+                                                    setProfileOpen(false);
+                                                }}
+                                            >
+                                                <Package className="mr-2 h-4 w-4 text-orange-600" /> View Orders
+                                            </button>
+                                            <div className="border-t border-orange-100 my-1"></div>
+                                            <button 
+                                                className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 flex items-center text-red-600" 
+                                                onClick={handleLogout}
+                                            >
+                                                <LogOut className="mr-2 h-4 w-4" /> Logout
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             ) : (
                                 <>
                                     <Button
-                                        color="inherit"
+                                        variant="ghost"
+                                        size="sm"
                                         onClick={() => navigate('/login')}
-                                        sx={{ color: theme.palette.primary.main }}
+                                        className="text-orange-700 hover:bg-orange-50"
                                     >
                                         Sign In
                                     </Button>
                                     <Button
-                                        variant="contained"
-                                        color="primary"
+                                        size="sm"
                                         onClick={() => navigate('/register')}
+                                        className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30"
                                     >
                                         Register
                                     </Button>
                                 </>
                             )}
-                        </Box>
-                    </Toolbar>
-                </Container>
-            </AppBar>
+                        </div>
+                    </div>
+                </div>
+            </header>
 
-            <Dialog
-                open={branchDialogOpen}
-                onClose={() => setBranchDialogOpen(false)}
-                maxWidth="md"
-                fullWidth
-            >
-                <BranchSelector
-                    branches={branches}
-                    onBranchSelect={handleBranchSelect}
-                    isDialog={true}
-                />
+            <Dialog open={branchDialogOpen} onOpenChange={setBranchDialogOpen}>
+                <DialogContent className="sm:max-w-[725px] p-0">
+                    <BranchSelector
+                        branches={branches}
+                        onBranchSelect={handleBranchSelect}
+                        isDialog={true}
+                        currentBranchId={cart.branchId}
+                    />
+                </DialogContent>
             </Dialog>
         </>
     );

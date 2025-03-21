@@ -1,27 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-    Box,
-    Container,
-    Typography,
-    Button,
-    Grid,
-    Card,
-    CardContent,
-    IconButton,
-    Divider,
-    CircularProgress,
-    Alert,
-} from '@mui/material';
-import {
-    Add as AddIcon,
-    Remove as RemoveIcon,
-    Delete as DeleteIcon,
-    ArrowBack as ArrowBackIcon,
-    LocationOn as LocationIcon,
-} from '@mui/icons-material';
 import { useCart } from '../../../context/CartContext';
 import { getCustomerAddresses } from '../../../services/api';
+import { ArrowLeft, Plus, Minus, ShoppingCart, Trash2, MapPin, Loader2 } from 'lucide-react';
+import { Button } from '../../../components/ui/button';
+import { Card, CardContent } from '../../../components/ui/card';
+import { Alert, AlertDescription } from '../../../components/ui/alert';
+import CustomerHeader from '../../../components/customer/CustomerHeader';
 
 const Cart = () => {
     const navigate = useNavigate();
@@ -57,213 +42,174 @@ const Cart = () => {
 
     if (cart.items.length === 0) {
         return (
-            <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-                <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
-                    <Typography variant="h5">Your cart is empty</Typography>
-                    <Button
-                        variant="contained"
-                        onClick={() => navigate(-1)}
-                        startIcon={<ArrowBackIcon />}
-                    >
-                        Continue Shopping
-                    </Button>
-                </Box>
-            </Container>
+            <>
+                <CustomerHeader />
+                <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 pt-16">
+                    <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-red-500/20"></div>
+                    <div className="container mx-auto px-4 py-8 relative z-10">
+                        <div className="text-center">
+                            <ShoppingCart className="mx-auto h-12 w-12 text-orange-600 mb-4" />
+                            <h2 className="text-2xl font-semibold text-orange-900 mb-4">Your cart is empty</h2>
+                            <Button onClick={() => navigate(-1)} className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white">
+                                <ArrowLeft className="mr-2 h-4 w-4" />
+                                Continue Shopping
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </>
         );
     }
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-                <IconButton
-                    onClick={() => navigate(-1)}
-                    sx={{ bgcolor: 'background.paper', '&:hover': { bgcolor: 'action.hover' } }}
-                >
-                    <ArrowBackIcon />
-                </IconButton>
-                <Typography variant="h4" component="h1">
-                    Shopping Cart
-                </Typography>
-            </Box>
-            <Grid container spacing={4}>
-                {/* Cart Items */}
-                <Grid item xs={12} md={8}>
-                    <Card>
-                        <CardContent>
-                            <Typography variant="h5" gutterBottom>
-                                Shopping Cart
-                            </Typography>
-                            <Divider sx={{ mb: 2 }} />
+        <>
+            <CustomerHeader />
+            <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 pt-16">
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-red-500/20"></div>
+                <div className="container mx-auto px-4 py-8 relative z-10">
+                    <div className="flex items-center gap-2 mb-6">
+                        <button 
+                            onClick={() => navigate(-1)}
+                            className="hover:bg-orange-100 p-2 rounded-full transition-colors text-orange-600"
+                        >
+                            <ArrowLeft className="h-5 w-5" />
+                        </button>
+                        <h1 className="text-2xl font-semibold text-orange-900">Shopping Cart</h1>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {/* Cart Items */}
+                        <div className="md:col-span-2 space-y-4">
                             {cart.items.map((item) => (
-                                <Box
-                                    key={item.id}
-                                    sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        mb: 2,
-                                        p: 2,
-                                        bgcolor: 'background.paper',
-                                        borderRadius: 1,
-                                    }}
-                                >
-                                    <Box>
-                                        <Typography variant="subtitle1">
-                                            {item.name}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            ${formatPrice((item.branch_price || item.price) * item.quantity)}
-                                        </Typography>
-                                    </Box>
-                                    <Box display="flex" alignItems="center" gap={1}>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                        >
-                                            <RemoveIcon />
-                                        </IconButton>
-                                        <Typography>{item.quantity}</Typography>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                        >
-                                            <AddIcon />
-                                        </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            color="error"
-                                            onClick={() => removeFromCart(item.id)}
-                                        >
-                                            <DeleteIcon />
-                                        </IconButton>
-                                    </Box>
-                                </Box>
-                            ))}
-                        </CardContent>
-                    </Card>
-                </Grid>
-
-                {/* Order Summary and Address Selection */}
-                <Grid item xs={12} md={4}>
-                    <Card>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom>
-                                Order Summary
-                            </Typography>
-                            <Divider sx={{ mb: 2 }} />
-                            <Box display="flex" justifyContent="space-between" mb={2}>
-                                <Typography>Subtotal:</Typography>
-                                <Typography>${formatPrice(getTotal())}</Typography>
-                            </Box>
-
-                            <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-                                Delivery Address
-                            </Typography>
-                            <Divider sx={{ mb: 2 }} />
-
-                            {loading ? (
-                                <Box display="flex" justifyContent="center" my={2}>
-                                    <CircularProgress />
-                                </Box>
-                            ) : error ? (
-                                <Alert severity="error" sx={{ mb: 2 }}>
-                                    {error}
-                                </Alert>
-                            ) : addresses.length === 0 ? (
-                                <Box textAlign="center" my={2}>
-                                    <Typography color="text.secondary" gutterBottom>
-                                        No addresses found for this branch
-                                    </Typography>
-                                    <Button
-                                        variant="contained"
-                                        startIcon={<LocationIcon />}
-                                        onClick={() => navigate('/customer/addresses')}
-                                        sx={{ mt: 1 }}
-                                    >
-                                        Add New Address
-                                    </Button>
-                                </Box>
-                            ) : (
-                                <>
-                                    <Grid container spacing={2}>
-                                        {addresses.map((address) => (
-                                            <Grid item xs={12} key={address.id}>
-                                                <Card
-                                                    variant="outlined"
-                                                    sx={{
-                                                        cursor: 'pointer',
-                                                        bgcolor: selectedAddress?.id === address.id
-                                                            ? 'action.selected'
-                                                            : 'background.paper',
-                                                    }}
-                                                    onClick={() => setSelectedAddress(address)}
+                                <Card key={item.id} className="bg-white/95 backdrop-blur-sm border-orange-100">
+                                    <CardContent className="p-4">
+                                        <div className="flex justify-between">
+                                            <div>
+                                                <h3 className="text-lg font-medium text-orange-900">{item.name}</h3>
+                                                <p className="text-orange-600">
+                                                    ${formatPrice((item.branch_price || item.price) * item.quantity)}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                                                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
                                                 >
-                                                    <CardContent>
-                                                        <Typography variant="body2">
-                                                            {address.street}
-                                                        </Typography>
-                                                        <Typography variant="body2" color="text.secondary">
+                                                    <Minus className="h-4 w-4" />
+                                                </Button>
+                                                <span className="w-8 text-center text-orange-900">{item.quantity}</span>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                                                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                    onClick={() => removeFromCart(item.id)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+
+                        {/* Order Summary */}
+                        <div>
+                            <Card className="bg-white/95 backdrop-blur-sm border-orange-100">
+                                <CardContent className="p-6">
+                                    <h2 className="text-lg font-semibold text-orange-900 mb-4">Order Summary</h2>
+                                    <div className="flex justify-between mb-4">
+                                        <span className="text-orange-700">Subtotal:</span>
+                                        <span className="font-medium text-orange-900">${formatPrice(getTotal())}</span>
+                                    </div>
+
+                                    <div className="border-t border-orange-100 my-4" />
+
+                                    <h3 className="text-lg font-semibold text-orange-900 mb-4">Delivery Address</h3>
+                                    
+                                    {loading ? (
+                                        <div className="flex justify-center py-4">
+                                            <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
+                                        </div>
+                                    ) : error ? (
+                                        <Alert variant="destructive" className="mb-4">
+                                            <AlertDescription>{error}</AlertDescription>
+                                        </Alert>
+                                    ) : addresses.length === 0 ? (
+                                        <div className="text-center py-4">
+                                            <p className="text-orange-700 mb-4">
+                                                No addresses found for this branch
+                                            </p>
+                                            <Button onClick={() => navigate('/customer/addresses')} className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white">
+                                                <MapPin className="mr-2 h-4 w-4" />
+                                                Add New Address
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="space-y-3 mb-4">
+                                                {addresses.map((address) => (
+                                                    <div
+                                                        key={address.id}
+                                                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                                                            selectedAddress?.id === address.id
+                                                                ? 'border-orange-500 bg-orange-50'
+                                                                : 'border-orange-200 hover:border-orange-500'
+                                                        }`}
+                                                        onClick={() => setSelectedAddress(address)}
+                                                    >
+                                                        <p className="font-medium text-orange-900">{address.street}</p>
+                                                        <p className="text-sm text-orange-700">
                                                             {address.city}, {address.state} {address.zipCode}
-                                                        </Typography>
-                                                    </CardContent>
-                                                </Card>
-                                            </Grid>
-                                        ))}
-                                    </Grid>
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                className="w-full border-orange-200 text-orange-700 hover:bg-orange-50"
+                                                onClick={() => navigate('/customer/addresses')}
+                                            >
+                                                <MapPin className="mr-2 h-4 w-4" />
+                                                Add New Address
+                                            </Button>
+                                        </>
+                                    )}
+
+                                    <div className="border-t border-orange-100 my-4" />
+
+                                    <h3 className="text-lg font-semibold text-orange-900 mb-4">Payment Method</h3>
+                                    <div className="p-3 border border-orange-200 rounded-lg bg-orange-50">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-medium text-orange-900">Cash on Delivery</span>
+                                            <span className="text-sm text-orange-700">Pay when you receive</span>
+                                        </div>
+                                    </div>
+
                                     <Button
-                                        fullWidth
-                                        variant="outlined"
-                                        startIcon={<LocationIcon />}
-                                        onClick={() => navigate('/customer/addresses')}
-                                        sx={{ mt: 2 }}
+                                        className="w-full mt-6 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30"
+                                        size="lg"
+                                        disabled={!selectedAddress || cart.items.length === 0}
                                     >
-                                        Add New Address
+                                        Place Order
                                     </Button>
-                                </>
-                            )}
-
-                            <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-                                Payment Method
-                            </Typography>
-                            <Divider sx={{ mb: 2 }} />
-                            <Box
-                                sx={{
-                                    p: 2,
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    borderRadius: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 2,
-                                    mb: 2
-                                }}
-                            >
-                                <Typography variant="body1">
-                                    Cash on Delivery
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
-                                    Pay when you receive
-                                </Typography>
-                            </Box>
-
-                            <Button
-                                fullWidth
-                                variant="contained"
-                                size="large"
-                                disabled={!selectedAddress || cart.items.length === 0}
-                                sx={{ mt: 2 }}
-                                onClick={() => {
-                                    // Place order logic will be implemented later
-                                    console.log('Order placed with address:', selectedAddress);
-                                }}
-                            >
-                                Place Order
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
-        </Container>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </>
     );
 };
 
