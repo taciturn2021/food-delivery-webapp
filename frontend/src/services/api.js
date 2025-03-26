@@ -82,11 +82,14 @@ export const deleteAddress = (id) => api.delete(`/customers/addresses/${id}`);
 
 // Order APIs
 export const createOrder = (orderData) => api.post('/orders', orderData);
+export const getOrders = (params) => api.get('/orders', { params });
 export const getCustomerActiveOrders = () => api.get('/orders/customer/active');
 export const getCustomerOrderHistory = (page = 1, limit = 10) => 
     api.get('/orders/customer/history', { params: { page, limit } });
 export const getOrderById = (id) => api.get(`/orders/${id}`);
 export const cancelOrder = (id) => api.put(`/orders/${id}/cancel`);
+export const assignOrderToRider = (orderId, riderId) => api.put(`/orders/${orderId}/assign-rider`, { rider_id: riderId });
+export const updateOrderStatus = (id, status) => api.put(`/orders/${id}/status`, { status });
 
 // Menu Management APIs
 export const createMenuItem = (data) => api.post('/menu', data);
@@ -128,7 +131,6 @@ export const createRider = (data) => api.post('/riders', data);
 export const getBranchRiders = (branchId) => api.get(`/riders/branch/${branchId}`);
 export const updateRider = (id, data) => api.put(`/riders/${id}`, data);
 export const getRiderDetails = (userId) => api.get(`/riders/${userId}`);  // Changed to getRiderDetails for clarity
-export const assignOrderToRider = (data) => api.post('/riders/assign-order', data);
 export const getRiderOrders = (riderId) => api.get(`/riders/${riderId}/orders`);
 export const updateDeliveryStatus = (orderId, assignmentId, status) => 
     api.put(`/riders/orders/${orderId}/status`, { assignmentId, status });

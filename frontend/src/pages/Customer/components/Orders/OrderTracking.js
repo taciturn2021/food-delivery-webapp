@@ -29,25 +29,13 @@ const orderStatusConfig = {
     textColor: 'text-yellow-500',
     icon: <Clock className="h-5 w-5" />
   },
-  'confirmed': { 
-    label: 'Order Confirmed', 
-    color: 'bg-blue-500',
-    textColor: 'text-blue-500',
-    icon: <Check className="h-5 w-5" />
-  },
   'preparing': { 
     label: 'Preparing', 
     color: 'bg-indigo-500',
     textColor: 'text-indigo-500',
     icon: <ShoppingBag className="h-5 w-5" />
   },
-  'ready': { 
-    label: 'Ready for Pickup', 
-    color: 'bg-purple-500',
-    textColor: 'text-purple-500',
-    icon: <Store className="h-5 w-5" />
-  },
-  'out_for_delivery': { 
+  'delivering': { 
     label: 'Out for Delivery', 
     color: 'bg-orange-500',
     textColor: 'text-orange-500',
@@ -130,7 +118,7 @@ const OrderTracking = () => {
     }
   };
 
-  const canCancel = order && ['pending', 'confirmed'].includes(order.status);
+  const canCancel = order && ['pending', 'preparing'].includes(order.status);
 
   return (
     <>
@@ -200,10 +188,10 @@ const OrderTracking = () => {
                     <h2 className="text-lg font-semibold text-orange-900 mb-4">Order Status</h2>
                     <div className="relative">
                       <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-orange-100"></div>
-                      {['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'].map((status, index) => {
+                      {['pending', 'preparing', 'delivering', 'delivered'].map((status, index) => {
                         const isCompleted = ['cancelled', 'delivered'].includes(order.status) 
-                          ? order.status === 'delivered' && ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'].indexOf(status) <= ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'].indexOf(order.status)
-                          : ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery'].indexOf(status) <= ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery'].indexOf(order.status);
+                          ? order.status === 'delivered' && ['pending', 'preparing', 'delivering', 'delivered'].indexOf(status) <= ['pending', 'preparing', 'delivering', 'delivered'].indexOf(order.status)
+                          : ['pending', 'preparing', 'delivering'].indexOf(status) <= ['pending', 'preparing', 'delivering'].indexOf(order.status);
                         
                         const isCurrent = order.status === status;
                         return (
@@ -223,10 +211,8 @@ const OrderTracking = () => {
                               {isCurrent && (
                                 <p className="text-sm text-orange-600">
                                   {status === 'pending' && 'Waiting for restaurant to confirm your order'}
-                                  {status === 'confirmed' && 'Your order has been confirmed by the restaurant'}
                                   {status === 'preparing' && 'The restaurant is preparing your food'}
-                                  {status === 'ready' && 'Your food is ready for pickup by a delivery rider'}
-                                  {status === 'out_for_delivery' && 'Your food is on the way!'}
+                                  {status === 'delivering' && 'Your food is on the way!'}
                                   {status === 'delivered' && 'Enjoy your meal!'}
                                 </p>
                               )}
@@ -338,41 +324,76 @@ const OrderTracking = () => {
                   <CardContent className="p-6">
                     <h2 className="text-lg font-semibold text-orange-900 mb-4">Delivery Tracking</h2>
                     <div style={{ height: '300px', width: '100%' }}>
-                      {(order.delivery_address?.latitude && order.delivery_address?.longitude) ? (
-                        <MapContainer
-                          center={[order.delivery_address.latitude, order.delivery_address.longitude]}
-                          zoom={13}
-                          style={{ height: '100%', width: '100%' }}
-                        >
-                          <TileLayer
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                          />
-                          
-                          {/* Customer location marker */}
-                          <Marker position={[order.delivery_address.latitude, order.delivery_address.longitude]}>
-                            <Popup>Delivery Location</Popup>
-                          </Marker>
-                          
-                          {/* Branch location marker */}
-                          {order.branch_latitude && order.branch_longitude && (
-                            <Marker position={[order.branch_latitude, order.branch_longitude]}>
-                              <Popup>{order.branch_name}</Popup>
-                            </Marker>
-                          )}
-                          
-                          {/* Rider location marker */}
-                          {order.rider_latitude && order.rider_longitude && (
-                            <Marker position={[order.rider_latitude, order.rider_longitude]}>
-                              <Popup>{order.rider_first_name} {order.rider_last_name} (Rider)</Popup>
-                            </Marker>
-                          )}
-                        </MapContainer>
-                      ) : (
-                        <div className="h-full flex items-center justify-center bg-orange-50 rounded border border-orange-200">
-                          <p className="text-orange-600">Map data unavailable</p>
-                        </div>
-                      )}
+                      {(() => {
+                        // Parse delivery address if it's a string
+                        let deliveryAddress = order.delivery_address;
+                        if (typeof deliveryAddress === 'string') {
+                          try {
+                            deliveryAddress = JSON.parse(deliveryAddress);
+                          } catch (e) {
+                            console.error('Error parsing delivery address:', e);
+                          }
+                        }
+                        
+                        // Check if we have valid location data
+                        const hasCustomerLocation = deliveryAddress?.latitude && deliveryAddress?.longitude;
+                        const hasBranchLocation = order.branch_latitude && order.branch_longitude;
+                        const hasRiderLocation = order.rider_latitude && order.rider_longitude;
+                        
+                        // Determine center coordinates for the map
+                        let center = [0, 0];
+                        if (hasCustomerLocation) {
+                          center = [parseFloat(deliveryAddress.latitude), parseFloat(deliveryAddress.longitude)];
+                        } else if (hasBranchLocation) {
+                          center = [parseFloat(order.branch_latitude), parseFloat(order.branch_longitude)];
+                        } else if (hasRiderLocation) {
+                          center = [parseFloat(order.rider_latitude), parseFloat(order.rider_longitude)];
+                        }
+                        
+                        if (hasCustomerLocation || hasBranchLocation || hasRiderLocation) {
+                          return (
+                            <MapContainer
+                              center={center}
+                              zoom={13}
+                              style={{ height: '100%', width: '100%' }}
+                            >
+                              <TileLayer
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                              />
+                              
+                              {/* Customer location marker */}
+                              {hasCustomerLocation && (
+                                <Marker position={[parseFloat(deliveryAddress.latitude), parseFloat(deliveryAddress.longitude)]}>
+                                  <Popup>Delivery Location</Popup>
+                                </Marker>
+                              )}
+                              
+                              {/* Branch location marker */}
+                              {hasBranchLocation && (
+                                <Marker position={[parseFloat(order.branch_latitude), parseFloat(order.branch_longitude)]}>
+                                  <Popup>{order.branch_name}</Popup>
+                                </Marker>
+                              )}
+                              
+                              {/* Rider location marker */}
+                              {hasRiderLocation && (
+                                <Marker position={[parseFloat(order.rider_latitude), parseFloat(order.rider_longitude)]}>
+                                  <Popup>{order.rider_first_name} {order.rider_last_name} (Rider)</Popup>
+                                </Marker>
+                              )}
+                            </MapContainer>
+                          );
+                        } else {
+                          return (
+                            <div className="h-full flex flex-col items-center justify-center bg-orange-50 rounded border border-orange-200 p-4">
+                              <AlertTriangle className="h-6 w-6 text-orange-500 mb-2" />
+                              <p className="text-orange-600 text-center">Location data unavailable</p>
+                              <p className="text-orange-400 text-sm text-center mt-1">The delivery locations couldn't be loaded</p>
+                            </div>
+                          );
+                        }
+                      })()}
                     </div>
                   </CardContent>
                 </Card>

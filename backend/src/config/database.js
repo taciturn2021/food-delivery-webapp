@@ -123,7 +123,7 @@ const initializeDatabase = async () => {
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id),
                 branch_id INTEGER REFERENCES branches(id),
-                status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'confirmed', 'preparing', 'delivering', 'delivered', 'cancelled')),
+                status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'preparing', 'delivering', 'delivered', 'cancelled')),
                 total_amount DECIMAL(10,2) NOT NULL,
                 delivery_address TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

@@ -3,7 +3,6 @@ import {
     createRider,
     getBranchRiders,
     updateRider,
-    assignOrderToRider,
     getRiderOrders,
     updateDeliveryStatus,
     updateRiderLocation,
@@ -25,7 +24,6 @@ const router = express.Router();
 // Branch manager and admin routes
 router.post('/', protect, isAdminOrManager, createRider);
 router.get('/branch/:branch_id', protect, isAdminOrManager, getBranchRiders);
-router.post('/assign-order', protect, isAdminOrManager, assignOrderToRider);
 router.get('/branch/:branchId/rider-statuses', protect, isAdminOrManager, getBranchRiderStatuses);
 
 // Routes that allow both admin/manager and self-update for riders

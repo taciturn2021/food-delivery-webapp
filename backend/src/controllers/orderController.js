@@ -136,9 +136,9 @@ export const getOrderById = async (req, res) => {
 
 export const updateOrderStatus = async (req, res) => {
     const { id } = req.params;
-    const { status } = req.body;
+    const  status  = req.body.status.status;
     const client = await pool.connect();
-
+    console.log(req.body)
     try {
         await client.query('BEGIN');
 
@@ -153,13 +153,11 @@ export const updateOrderStatus = async (req, res) => {
         }
 
         const order = orderCheck.rows[0];
-
-        // Only allow status updates in valid sequence
+        console.log(status);
         const validTransitions = {
-            pending: ['confirmed', 'cancelled'],
-            confirmed: ['preparing', 'cancelled'],
+            pending: ['preparing', 'cancelled'],
             preparing: ['delivering', 'cancelled'],
-            delivering: ['delivered', 'cancelled'],
+            delivering: ['delivered'],
             delivered: [],
             cancelled: []
         };
@@ -167,6 +165,7 @@ export const updateOrderStatus = async (req, res) => {
         if (!validTransitions[order.status].includes(status)) {
             throw new Error(`Cannot transition from ${order.status} to ${status}`);
         }
+
 
         const result = await client.query(
             'UPDATE orders SET status = $1 WHERE id = $2 RETURNING *',

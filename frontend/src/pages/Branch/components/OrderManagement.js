@@ -39,13 +39,23 @@ import {
     DeliveryDining as RiderIcon,
     MyLocation as TrackIcon
 } from '@mui/icons-material';
-import { assignOrderToRider, getBranchRiders } from '../../../services/api';
+import { 
+    assignOrderToRider, 
+    getBranchRiders,
+    getBranchMenu,
+    cancelOrder,
+    updateDeliveryStatus,
+    getOrderById,
+    updateOrderStatus,
+    getOrders
+} from '../../../services/api';
 import DeliveryTracker from './DeliveryTracker';
+import { useAuth } from '../../../context/AuthContext';
 
 const statusColors = {
     pending: 'warning',
     preparing: 'info',
-    ready: 'secondary',
+    delivering: 'primary',
     delivered: 'success',
     cancelled: 'error',
 };
@@ -54,9 +64,15 @@ const StatusBadge = ({ status }) => {
     const theme = useTheme();
     const color = statusColors[status] || 'default';
     
+    const formatStatus = (status) => {
+        return status.split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+    };
+    
     return (
         <Chip
-            label={status.charAt(0).toUpperCase() + status.slice(1)}
+            label={formatStatus(status)}
             color={color}
             size="small"
             sx={{
@@ -209,10 +225,10 @@ const OrderCard = ({ order, onStatusChange, onView, onAssignRider }) => {
                                 color="primary"
                                 size="small"
                                 startIcon={<DiningIcon />}
-                                onClick={() => onStatusChange(order.id, 'ready')}
+                                onClick={() => onStatusChange(order.id, 'delivering')}
                                 fullWidth
                             >
-                                Mark Ready
+                                Start Delivery
                             </Button>
                         )}
 
@@ -264,6 +280,35 @@ const OrderCard = ({ order, onStatusChange, onView, onAssignRider }) => {
     );
 };
 
+const formatAddress = (address) => {
+    if (!address) return 'No address provided';
+    
+    try {
+        // Check if address is a string that needs to be parsed
+        if (typeof address === 'string') {
+            try {
+                address = JSON.parse(address);
+            } catch (e) {
+                // If it's not valid JSON, return as is
+                return address;
+            }
+        }
+        
+        // Now handle it as an object
+        if (typeof address === 'object') {
+            return `${address.street || ''}, 
+                    ${address.city || ''} 
+                    ${address.state || ''} 
+                    ${address.zipCode || ''}`.replace(/\s+/g, ' ').trim();
+        }
+        
+        return String(address);
+    } catch (error) {
+        console.error('Error formatting address:', error);
+        return 'Error displaying address';
+    }
+};
+
 const OrderDetails = ({ order, onClose, onStatusChange }) => {
     if (!order) return null;
 
@@ -292,7 +337,7 @@ const OrderDetails = ({ order, onClose, onStatusChange }) => {
                         </Typography>
                         <Typography variant="body1">{order.customerName}</Typography>
                         <Typography variant="body2" color="text.secondary">{order.phone}</Typography>
-                        <Typography variant="body2" color="text.secondary">{order.address}</Typography>
+                        <Typography variant="body2" color="text.secondary">{formatAddress(order.address)}</Typography>
                     </Grid>
 
                     <Grid item xs={12} md={6}>
@@ -340,10 +385,10 @@ const OrderDetails = ({ order, onClose, onStatusChange }) => {
                                             <TableCell>{item.name}</TableCell>
                                             <TableCell align="right">{item.quantity}</TableCell>
                                             <TableCell align="right">
-                                                ${item.price.toFixed(2)}
+                                                ${(item.price_at_time || 0).toFixed(2)}
                                             </TableCell>
                                             <TableCell align="right">
-                                                ${(item.quantity * item.price).toFixed(2)}
+                                                ${((item.price_at_time || 0) * item.quantity).toFixed(2)}
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -415,14 +460,14 @@ const OrderDetails = ({ order, onClose, onStatusChange }) => {
                         color="primary"
                         startIcon={<DiningIcon />}
                         onClick={() => {
-                            onStatusChange(order.id, 'ready');
+                            onStatusChange(order.id, 'delivering');
                             onClose();
                         }}
                     >
-                        Mark as Ready
+                        Start Delivery
                     </Button>
                 )}
-                {order.status === 'ready' && (
+                {order.status === 'delivering' && (
                     <Button
                         variant="contained"
                         color="success"
@@ -450,89 +495,120 @@ const OrderManagement = () => {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [selectedOrderForAssignment, setSelectedOrderForAssignment] = useState(null);
+    const { user } = useAuth();
 
-    // Add actual branch ID from context when available
-    const branchId = 1;
+    // Get branch ID from authenticated user
+    const branchId = user?.branchId;
 
     useEffect(() => {
-        loadOrders();
-        loadRiders();
-    }, []);
+        if (branchId) {
+            loadOrders();
+            loadRiders();
+        }
+    }, [branchId]);
 
     const loadOrders = async () => {
         try {
-            // TODO: Replace with actual API call when ready
-            setOrders([
-                {
-                    id: '1234',
-                    customerName: 'John Doe',
-                    items: [
-                        { name: 'Chicken Burger', quantity: 2, price: 12.99 },
-                        { name: 'Fries', quantity: 1, price: 4.99 },
-                    ],
-                    total: 30.97,
-                    status: 'pending',
-                    time: '2024-02-10 14:30',
-                    address: '123 Main St, City',
-                    phone: '(555) 123-4567',
-                },
-                // ... other sample orders ...
-            ]);
+            setLoading(true);
+            // Use the getOrders API endpoint with branch_id filter
+            const response = await getOrders({ branch_id: branchId });
+            
+            if (response && response.data) {
+                // For each order, fetch complete details including items
+                const ordersWithDetails = await Promise.all(
+                    response.data.map(async (order) => {
+                        try {
+                            // Fetch detailed order info including items
+                            const detailedOrder = await getOrderById(order.id);
+                            return {
+                                id: order.id,
+                                customerName: order.customer_name,
+                                status: order.status,
+                                total: parseFloat(order.total_amount),
+                                items: detailedOrder.data.items || [],
+                                time: new Date(order.created_at).toLocaleString(),
+                                phone: order.customer_phone,
+                                address: order.delivery_address,
+                                rider_id: order.rider_id,
+                                assignment_id: order.assignment_id
+                            };
+                        } catch (err) {
+                            console.error(`Error fetching details for order ${order.id}:`, err);
+                            return {
+                                id: order.id,
+                                customerName: order.customer_name,
+                                status: order.status,
+                                total: parseFloat(order.total_amount),
+                                items: [], // Empty array if fetch fails
+                                time: new Date(order.created_at).toLocaleString(),
+                                phone: order.customer_phone,
+                                address: order.delivery_address,
+                                rider_id: order.rider_id,
+                                assignment_id: order.assignment_id
+                            };
+                        }
+                    })
+                );
+                
+                setOrders(ordersWithDetails);
+                setError(null);
+            }
         } catch (error) {
-            setError('Failed to load orders');
+            console.error("Error loading orders:", error);
+            setError('Failed to load orders: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setLoading(false);
         }
     };
 
     const loadRiders = async () => {
         try {
             const response = await getBranchRiders(branchId);
-            setRiders(response.data);
+            if (response && response.data) {
+                setRiders(response.data);
+            }
         } catch (error) {
-            setError('Failed to load riders');
-        } finally {
-            setLoading(false);
+            console.error("Error loading riders:", error);
+            setError('Failed to load riders: ' + (error.response?.data?.message || error.message));
         }
     };
 
     const handleStatusChange = async (orderId, newStatus) => {
         try {
-            // TODO: Replace with actual API call when ready
+            // Pass the status as an object with the status property, as expected by the API
+            await updateOrderStatus(orderId, { status: newStatus });
+            
+            // Update the order in local state
             setOrders(orders.map(order =>
                 order.id === orderId
                     ? { ...order, status: newStatus }
                     : order
             ));
+            
             setSuccessMessage(`Order #${orderId} status updated to ${newStatus}`);
             setTimeout(() => setSuccessMessage(''), 3000);
         } catch (error) {
-            setError('Failed to update order status');
+            console.error("Error updating order status:", error);
+            setError('Failed to update order status: ' + (error.response?.data?.message || error.message));
         }
     };
 
     const handleAssignRider = async (riderId) => {
         try {
-            await assignOrderToRider({
-                order_id: selectedOrderForAssignment.id,
-                rider_id: riderId
-            });
+            // Use the updated API function with corrected parameters
+            await assignOrderToRider(selectedOrderForAssignment.id, riderId);
             
-            // Update local state
-            setOrders(orders.map(order =>
-                order.id === selectedOrderForAssignment.id
-                    ? { ...order, status: 'out_for_delivery', assigned_rider_id: riderId }
-                    : order
-            ));
-            
-            // Update riders list
-            await loadRiders();
+            // Refresh data after assignment
+            await loadOrders();
             
             setSuccessMessage(`Order assigned to rider successfully`);
             setTimeout(() => setSuccessMessage(''), 3000);
-            
+        } catch (error) {
+            console.error("Error assigning rider:", error);
+            setError('Failed to assign rider: ' + (error.response?.data?.message || error.message));
+        } finally {
             setAssignDialogOpen(false);
             setSelectedOrderForAssignment(null);
-        } catch (error) {
-            setError('Failed to assign rider');
         }
     };
 
@@ -540,7 +616,18 @@ const OrderManagement = () => {
         ? orders
         : orders.filter(order => order.status === statusFilter);
 
-    if (loading) return <Box>Loading...</Box>;
+    const statusCounts = orders.reduce((acc, order) => {
+        acc[order.status] = (acc[order.status] || 0) + 1;
+        return acc;
+    }, {});
+
+    if (loading && orders.length === 0) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+                <Typography>Loading orders...</Typography>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ py: 3 }}>
@@ -561,8 +648,15 @@ const OrderManagement = () => {
                 <Typography variant="h4">
                     Order Management
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                    {['all', 'pending', 'preparing', 'ready', 'out_for_delivery', 'delivered'].map((status) => (
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    <Button
+                        variant={statusFilter === 'all' ? 'contained' : 'outlined'}
+                        size="small"
+                        onClick={() => setStatusFilter('all')}
+                    >
+                        All
+                    </Button>
+                    {['pending', 'preparing', 'delivering', 'delivered', 'cancelled'].map((status) => (
                         <Button
                             key={status}
                             variant={statusFilter === status ? 'contained' : 'outlined'}
@@ -570,11 +664,11 @@ const OrderManagement = () => {
                             onClick={() => setStatusFilter(status)}
                             startIcon={status === 'pending' ? <TimerIcon /> : null}
                         >
-                            {status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                            {status === 'pending' && orders.filter(o => o.status === 'pending').length > 0 && (
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                            {statusCounts[status] > 0 && (
                                 <Badge
                                     color="error"
-                                    badgeContent={orders.filter(o => o.status === 'pending').length}
+                                    badgeContent={statusCounts[status]}
                                     sx={{ ml: 1 }}
                                 />
                             )}
@@ -583,22 +677,39 @@ const OrderManagement = () => {
                 </Box>
             </Box>
 
+            {/* Refresh button */}
+            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
+                <Button 
+                    variant="outlined" 
+                    onClick={loadOrders}
+                    disabled={loading}
+                >
+                    {loading ? 'Refreshing...' : 'Refresh Orders'}
+                </Button>
+            </Box>
+
             {/* Orders grid */}
-            <Grid container spacing={3}>
-                {filteredOrders.map((order) => (
-                    <Grid item xs={12} sm={6} md={4} key={order.id}>
-                        <OrderCard
-                            order={order}
-                            onStatusChange={handleStatusChange}
-                            onView={() => setSelectedOrder(order)}
-                            onAssignRider={() => {
-                                setSelectedOrderForAssignment(order);
-                                setAssignDialogOpen(true);
-                            }}
-                        />
-                    </Grid>
-                ))}
-            </Grid>
+            {filteredOrders.length === 0 ? (
+                <Alert severity="info">
+                    No orders found in "{statusFilter === 'all' ? 'any' : statusFilter}" status
+                </Alert>
+            ) : (
+                <Grid container spacing={3}>
+                    {filteredOrders.map((order) => (
+                        <Grid item xs={12} sm={6} md={4} key={order.id}>
+                            <OrderCard
+                                order={order}
+                                onStatusChange={handleStatusChange}
+                                onView={() => setSelectedOrder(order)}
+                                onAssignRider={() => {
+                                    setSelectedOrderForAssignment(order);
+                                    setAssignDialogOpen(true);
+                                }}
+                            />
+                        </Grid>
+                    ))}
+                </Grid>
+            )}
 
             {/* Order details dialog */}
             <OrderDetails
@@ -615,7 +726,7 @@ const OrderManagement = () => {
                     setSelectedOrderForAssignment(null);
                 }}
                 order={selectedOrderForAssignment}
-                riders={riders.filter(r => r.status === 'active')}
+                riders={riders}
                 onAssign={handleAssignRider}
             />
         </Box>

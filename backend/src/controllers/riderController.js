@@ -163,60 +163,7 @@ export const updateRider = async (req, res) => {
     }
 };
 
-export const assignOrderToRider = async (req, res) => {
-    const { order_id, rider_id } = req.body;
-    const client = await pool.connect();
 
-    try {
-        await client.query('BEGIN');
-
-        // Verify order exists and is ready for delivery
-        const orderCheck = await client.query(
-            'SELECT * FROM orders WHERE id = $1 AND status = $2',
-            [order_id, 'ready']
-        );
-
-        if (orderCheck.rows.length === 0) {
-            throw new Error('Order not found or not ready for delivery');
-        }
-
-        // Verify rider is available
-        const riderCheck = await client.query(
-            'SELECT * FROM riders WHERE id = $1 AND status = $2',
-            [rider_id, 'active']
-        );
-
-        if (riderCheck.rows.length === 0) {
-            throw new Error('Rider not found or not available');
-        }
-
-        // Create assignment
-        await client.query(
-            'INSERT INTO order_assignments (order_id, rider_id) VALUES ($1, $2)',
-            [order_id, rider_id]
-        );
-
-        // Update rider status
-        await client.query(
-            'UPDATE riders SET status = $1 WHERE id = $2',
-            ['busy', rider_id]
-        );
-
-        // Update order status
-        await client.query(
-            'UPDATE orders SET status = $1 WHERE id = $2',
-            ['out_for_delivery', order_id]
-        );
-
-        await client.query('COMMIT');
-        res.json({ message: 'Order assigned successfully' });
-    } catch (error) {
-        await client.query('ROLLBACK');
-        res.status(400).json({ message: error.message });
-    } finally {
-        client.release();
-    }
-};
 
 export const getRiderOrders = async (req, res) => {
     const { rider_id } = req.params;
