@@ -1,20 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../../context/CartContext';
-import { getCustomerAddresses } from '../../../services/api';
+import { getCustomerAddresses, createOrder } from '../../../services/api';
 import { ArrowLeft, Plus, Minus, ShoppingCart, Trash2, MapPin, Loader2 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Alert, AlertDescription } from '../../../components/ui/alert';
+import { useToast } from '../../../components/ui/use-toast';
 import CustomerHeader from '../../../components/customer/CustomerHeader';
 
 const Cart = () => {
     const navigate = useNavigate();
-    const { cart, updateQuantity, removeFromCart, getTotal } = useCart();
+    const { cart, updateQuantity, removeFromCart, getTotal, clearCart } = useCart();
     const [addresses, setAddresses] = useState([]);
     const [selectedAddress, setSelectedAddress] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [placingOrder, setPlacingOrder] = useState(false);
+    const { toast } = useToast();
 
     useEffect(() => {
         const fetchAddresses = async () => {
@@ -25,6 +28,12 @@ const Cart = () => {
                     address => address.branchId === cart.branchId
                 );
                 setAddresses(branchAddresses);
+                
+                // If there's only one address, select it automatically
+                if (branchAddresses.length === 1) {
+                    setSelectedAddress(branchAddresses[0]);
+                }
+                
                 setError(null);
             } catch (err) {
                 setError('Failed to load addresses. Please try again.');
@@ -38,6 +47,67 @@ const Cart = () => {
 
     const formatPrice = (price) => {
         return typeof price === 'number' ? price.toFixed(2) : '0.00';
+    };
+
+    const handlePlaceOrder = async () => {
+        if (!selectedAddress) {
+            toast({
+                title: "No address selected",
+                description: "Please select a delivery address",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        try {
+            setPlacingOrder(true);
+
+            // Create order payload
+            const orderItems = cart.items.map(item => ({
+                menu_item_id: item.id,
+                quantity: item.quantity,
+                special_instructions: item.specialInstructions || ""
+            }));
+
+            const orderData = {
+                branch_id: cart.branchId,
+                items: orderItems,
+                delivery_address: {
+                    street: selectedAddress.street,
+                    city: selectedAddress.city,
+                    state: selectedAddress.state,
+                    zipCode: selectedAddress.zipCode,
+                    latitude: selectedAddress.latitude,
+                    longitude: selectedAddress.longitude
+                }
+            };
+
+            // Send order to API
+            const response = await createOrder(orderData);
+            
+            // After successful order creation, clear the cart
+            clearCart();
+            
+            // Show success toast
+            toast({
+                title: "Order placed successfully!",
+                description: "Your order has been received and is being processed.",
+                variant: "success"
+            });
+            
+            // Navigate to the order tracking page
+            navigate(`/customer/orders/${response.data.id}`);
+            
+        } catch (error) {
+            console.error('Error placing order:', error);
+            toast({
+                title: "Failed to place order",
+                description: error.response?.data?.message || "Something went wrong. Please try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setPlacingOrder(false);
+        }
     };
 
     if (cart.items.length === 0) {
@@ -199,9 +269,17 @@ const Cart = () => {
                                     <Button
                                         className="w-full mt-6 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30"
                                         size="lg"
-                                        disabled={!selectedAddress || cart.items.length === 0}
+                                        disabled={!selectedAddress || cart.items.length === 0 || placingOrder}
+                                        onClick={handlePlaceOrder}
                                     >
-                                        Place Order
+                                        {placingOrder ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Processing...
+                                            </>
+                                        ) : (
+                                            'Place Order'
+                                        )}
                                     </Button>
                                 </CardContent>
                             </Card>

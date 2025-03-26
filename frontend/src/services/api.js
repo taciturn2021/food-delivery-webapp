@@ -80,6 +80,14 @@ export const addAddress = (addressData) => api.post('/customers/addresses', addr
 export const updateAddress = (id, addressData) => api.put(`/customers/addresses/${id}`, addressData);
 export const deleteAddress = (id) => api.delete(`/customers/addresses/${id}`);
 
+// Order APIs
+export const createOrder = (orderData) => api.post('/orders', orderData);
+export const getCustomerActiveOrders = () => api.get('/orders/customer/active');
+export const getCustomerOrderHistory = (page = 1, limit = 10) => 
+    api.get('/orders/customer/history', { params: { page, limit } });
+export const getOrderById = (id) => api.get(`/orders/${id}`);
+export const cancelOrder = (id) => api.put(`/orders/${id}/cancel`);
+
 // Menu Management APIs
 export const createMenuItem = (data) => api.post('/menu', data);
 export const getAllMenuItems = () => api.get('/menu');

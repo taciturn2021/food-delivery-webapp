@@ -136,9 +136,10 @@ const CustomerHeader = ({ onBranchSelect }) => {
                                                 className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 flex items-center text-orange-900"
                                                 onClick={() => {
                                                     setProfileOpen(false);
+                                                    navigate('/customer/orders');
                                                 }}
                                             >
-                                                <Package className="mr-2 h-4 w-4 text-orange-600" /> View Orders
+                                                <Package className="mr-2 h-4 w-4 text-orange-600" /> My Orders
                                             </button>
                                             <div className="border-t border-orange-100 my-1"></div>
                                             <button 

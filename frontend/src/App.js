@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import { ToastProvider } from './components/ui/use-toast';
 
 // Admin Routes
 import AdminDashboard from './pages/Admin/Dashboard';
@@ -22,6 +23,11 @@ import CustomerProfile from './pages/Customer/components/CustomerProfile';
 import CustomerEditProfile from './pages/Customer/components/CustomerEditProfile';
 import Cart from './pages/Customer/components/Cart';
 import Login from './pages/Login';
+
+// Import order components
+import OrderTracking from './pages/Customer/components/Orders/OrderTracking';
+import ActiveOrders from './pages/Customer/components/Orders/ActiveOrders';
+import OrderHistory from './pages/Customer/components/Orders/OrderHistory';
 
 const theme = createTheme({
     palette: {
@@ -222,64 +228,92 @@ const App = () => {
       <CssBaseline />
       <AuthProvider>
         <CartProvider>
-          <Router>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<CustomerRegister />} />
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/cart" element={<Cart />} />
+          <ToastProvider>
+            <Router>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<CustomerRegister />} />
+                <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/cart" element={<Cart />} />
 
-              {/* Protected Customer Routes */}
-              <Route
-                path="/customer/profile/edit"
-                element={
-                  <ProtectedRoute allowedRoles={['customer']}>
-                    <CustomerEditProfile />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/customer/addresses"
-                element={
-                  <ProtectedRoute allowedRoles={['customer']}>
-                    <CustomerProfile />
-                  </ProtectedRoute>
-                }
-              />
+                {/* Order routes */}
+                <Route
+                  path="/customer/orders"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer']}>
+                      <ActiveOrders />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/customer/orders/history"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer']}>
+                      <OrderHistory />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/customer/orders/:id"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer']}>
+                      <OrderTracking />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Protected Admin Routes */}
-              <Route
-                path="/admin/*"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                }
-              />
+                {/* Protected Customer Routes */}
+                <Route
+                  path="/customer/profile/edit"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer']}>
+                      <CustomerEditProfile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/customer/addresses"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer']}>
+                      <CustomerProfile />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Protected Branch Routes */}
-              <Route
-                path="/branch/*"
-                element={
-                  <ProtectedRoute allowedRoles={['branch_manager']}>
-                    <BranchDashboard />
-                  </ProtectedRoute>
-                }
-              />
+                {/* Protected Admin Routes */}
+                <Route
+                  path="/admin/*"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  }
+                />
 
-              {/* Protected Rider Routes */}
-              <Route
-                path="/rider/*"
-                element={
-                  <ProtectedRoute allowedRoles={['rider']}>
-                    <RiderDashboard />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </Router>
+                {/* Protected Branch Routes */}
+                <Route
+                  path="/branch/*"
+                  element={
+                    <ProtectedRoute allowedRoles={['branch_manager']}>
+                      <BranchDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Protected Rider Routes */}
+                <Route
+                  path="/rider/*"
+                  element={
+                    <ProtectedRoute allowedRoles={['rider']}>
+                      <RiderDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </Router>
+          </ToastProvider>
         </CartProvider>
       </AuthProvider>
     </ThemeProvider>
