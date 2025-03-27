@@ -103,6 +103,7 @@ const BranchMenu = () => {
     const handleEditSave = async () => {
         try {
             const branchId = user.branchId;
+            console.log('Edit Item:', editItem);
             await assignMenuItemToBranch({
                 branch_id: branchId,
                 menu_item_id: editItem.id,
@@ -123,7 +124,8 @@ const BranchMenu = () => {
             await assignMenuItemToBranch({
                 branch_id: branchId,
                 menu_item_id: itemId,
-                is_available: newValue
+                is_available: newValue,
+                price: menuItems.find(item => item.id === itemId).branch_price || menuItems.find(item => item.id === itemId).price
             });
             loadBranchMenu();
         } catch (error) {
