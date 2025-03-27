@@ -1,5 +1,11 @@
 # Food Delivery Web Application (Work In Progress)
 
+## TO-DO
+- Fix bugs
+- security testing on backend endpoints
+- remove placeholders and add QOL features for branch and admin panels
+
+
 A comprehensive multi-tier restaurant management and food delivery system that supports multiple branches, administrative controls, and real-time order tracking.
 
 ## 🚀 Features
