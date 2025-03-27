@@ -263,14 +263,14 @@ const initializeDatabase = async () => {
             // Update existing admin's password
             await client.query(
                 'UPDATE users SET password = $1 WHERE email = $2 RETURNING id, email, role',
-                [hashedPassword, 'admin@example.com']
+                [hashedPassword, email]
             );
             console.log('Updated existing admin user password');
         } else {
             // Create new admin user
             await client.query(
                 'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, email, role',
-                ['admin', 'admin@example.com', hashedPassword, 'admin']
+                ['admin', email, hashedPassword, 'admin']
             );
             console.log('Created new admin user');
         }
