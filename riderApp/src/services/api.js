@@ -124,34 +124,38 @@ const apiService = {
   
   updateRiderAvailability: (userId, isAvailable) => {
     console.log(`Updating rider availability for user ID: ${userId} to: ${isAvailable ? 'active' : 'inactive'}`);
-    return api.put(`/riders/${userId}`, { status: isAvailable ? 'active' : 'inactive' });
+    return api.put(`/riders/${userId}/availability`, { isAvailable });
   },
   
-  getRiderDeliveryHistory: (userId, dateRange) => api.get(`/riders/${userId}/history`, { params: dateRange }),
-  
-  // Orders and Deliveries
+  // Updated order endpoints
   getRiderOrders: (userId) => {
-    console.log(`Fetching orders for user ID: ${userId}`);
+    console.log('Fetching assigned orders for rider');
     return api.get(`/riders/${userId}/orders`);
   },
   
-  updateDeliveryStatus: (orderId, assignmentId, status) => 
-    api.put(`/riders/orders/${orderId}/status`, { assignmentId, status }),
-  startDelivery: (orderId) => api.post(`/riders/delivery/${orderId}/start`),
-  completeDelivery: (orderId) => api.post(`/riders/delivery/${orderId}/complete`),
-  submitDeliveryRating: (orderId, rating, feedback) => 
-    api.post(`/riders/delivery/${orderId}/rate`, { rating, feedback }),
-
-  // Location Services
-  updateLocation: (location) => api.post('/riders/location', location),
-  getDeliveryLocation: (assignmentId) => api.get(`/riders/delivery/${assignmentId}/location`),
-
-  // Metrics
-  getRiderMetrics: (userId) => api.get(`/riders/${userId}/metrics`, {
-    headers: {
-      'Authorization': `Bearer ${api.defaults.headers.common['Authorization']}`
+  getOrderById: (orderId) => {
+    console.log(`Fetching order details for order ID: ${orderId}`);
+    return api.get(`/orders/${orderId}`);
+  },
+  
+  getDeliveryInformation: (orderId) => {
+    if (!orderId) {
+      console.error('Error: No order ID provided to getDeliveryInformation');
+      return Promise.reject(new Error('No order ID provided'));
     }
-  }),
+    console.log(`Fetching delivery information for order IDHA: ${orderId}`);
+    return api.get(`/riders/delivery/${orderId}`);
+  },
+  
+  updateRiderLocation: (location) => {
+    console.log('Updating rider location:', location);
+    return api.post('/riders/location', location);
+  },
+  
+  updateOrderStatus: (orderId, status) => {
+    console.log(`Updating order ${orderId} status to ${status}`);
+    return api.put(`/orders/${orderId}/rider-status`, { status });
+  },
   
   // Core request methods with offline support
   async get(url, config = {}) {

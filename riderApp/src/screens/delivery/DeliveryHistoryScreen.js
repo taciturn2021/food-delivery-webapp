@@ -19,12 +19,32 @@ const DeliveryHistoryScreen = ({ navigation }) => {
     error, 
     refreshing, 
     handleRefresh, 
-    fetchActiveDeliveries
+    fetchDeliveries
   } = useDelivery();
 
   useEffect(() => {
-    fetchActiveDeliveries();
+    fetchDeliveries();
   }, []);
+
+  // Helper function to parse address JSON
+  const parseDeliveryAddress = (addressJson) => {
+    try {
+      if (typeof addressJson === 'string') {
+        const address = JSON.parse(addressJson);
+        return {
+          street: address.street || '',
+          city: address.city || '',
+          state: address.state || '',
+          zipCode: address.zipCode || '',
+          formatted: `${address.street}, ${address.city}, ${address.state} ${address.zipCode}`
+        };
+      }
+      return { formatted: 'Address not available' };
+    } catch (error) {
+      console.error('Error parsing address:', error);
+      return { formatted: addressJson || 'Address not available' };
+    }
+  };
 
   const formatTime = (dateString) => {
     if (!dateString) return 'N/A';
@@ -37,39 +57,77 @@ const DeliveryHistoryScreen = ({ navigation }) => {
     });
   };
 
-  const renderHistoryItem = ({ item: delivery }) => (
-    <TouchableOpacity
-      style={styles.historyItem}
-      onPress={() => {}}
-    >
-      <View style={styles.deliveryHeader}>
-        <Text style={styles.deliveryId}>Order #{delivery.id}</Text>
-        <View style={styles.deliveredBadge}>
-          <Text style={styles.statusText}>Delivered</Text>
-        </View>
-      </View>
+  const formatAddress = (addressJson) => {
+    const address = parseDeliveryAddress(addressJson);
+    return address.formatted;
+  };
+
+  const renderHistoryItem = ({ item: order }) => {
+    // Get the formatted address
+    const formattedAddress = formatAddress(order.delivery_address);
+    
+    // Choose badge color based on status
+    const badgeStyle = order.status === 'delivered' 
+      ? [styles.deliveredBadge, { backgroundColor: '#d4edda' }]
+      : [styles.deliveredBadge, { backgroundColor: '#f8d7da' }];
       
-      <Text style={styles.deliveryAddress} numberOfLines={2}>
-        {delivery.delivery_address}
-      </Text>
-      
-      <View style={styles.deliveryDates}>
-        <View style={styles.dateItem}>
-          <Ionicons name="calendar-outline" size={16} color="#777" />
-          <Text style={styles.dateText}>
-            Assigned: {formatTime(delivery.assigned_at)}
-          </Text>
+    const statusTextStyle = order.status === 'delivered'
+      ? [styles.statusText, { color: '#155724' }]
+      : [styles.statusText, { color: '#721c24' }];
+
+    return (
+      <TouchableOpacity
+        style={styles.historyItem}
+        onPress={() => {
+          // Add logging to debug the orderId
+          
+          navigation.navigate('DeliveryDetails', { delivery: order });
+        }}
+      >
+        <View style={styles.deliveryHeader}>
+          <Text style={styles.deliveryId}>Order #{order.id}</Text>
+          <View style={badgeStyle}>
+            <Text style={statusTextStyle}>
+              {order.status === 'delivered' ? 'Delivered' : 'Cancelled'}
+            </Text>
+          </View>
         </View>
         
-        <View style={styles.dateItem}>
-          <Ionicons name="checkmark-circle-outline" size={16} color="#28a745" />
-          <Text style={styles.dateText}>
-            Completed: {formatTime(delivery.completed_at)}
-          </Text>
+        <Text style={styles.deliveryAddress} numberOfLines={2}>
+          {formattedAddress}
+        </Text>
+        
+        <View style={styles.deliveryDates}>
+          <View style={styles.dateItem}>
+            <Ionicons name="calendar-outline" size={16} color="#777" />
+            <Text style={styles.dateText}>
+              Created: {formatTime(order.created_at)}
+            </Text>
+          </View>
+          
+          <View style={styles.dateItem}>
+            <Ionicons 
+              name={order.status === 'delivered' ? "checkmark-circle-outline" : "close-circle-outline"} 
+              size={16} 
+              color={order.status === 'delivered' ? "#28a745" : "#dc3545"} 
+            />
+            <Text style={styles.dateText}>
+              {order.status === 'delivered' ? 'Completed: ' : 'Cancelled: '}
+              {formatTime(order.completed_at)}
+            </Text>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+        
+        {order.branch_name && (
+          <View style={styles.branchInfo}>
+            <Ionicons name="restaurant-outline" size={16} color="#777" />
+            <Text style={styles.branchText}>{order.branch_name}</Text>
+            <Text style={styles.priceText}>${parseFloat(order.total_amount).toFixed(2)}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
@@ -90,7 +148,7 @@ const DeliveryHistoryScreen = ({ navigation }) => {
       {error && (
         <ErrorMessage 
           message={error} 
-          onRetry={fetchActiveDeliveries} 
+          onRetry={fetchDeliveries} 
         />
       )}
       
@@ -162,7 +220,8 @@ const styles = StyleSheet.create({
   deliveryDates: {
     borderTopWidth: 1,
     borderTopColor: '#eee',
-    paddingTop: 12
+    paddingTop: 12,
+    marginBottom: 8
   },
   dateItem: {
     flexDirection: 'row',
@@ -173,6 +232,22 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontSize: 14,
     color: '#666'
+  },
+  branchInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4
+  },
+  branchText: {
+    marginLeft: 6,
+    fontSize: 14,
+    color: '#666',
+    flex: 1
+  },
+  priceText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#28a745'
   },
   emptyContainer: {
     flex: 1,

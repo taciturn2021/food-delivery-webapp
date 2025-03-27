@@ -4,13 +4,8 @@ import {
     getBranchRiders,
     updateRider,
     getRiderOrders,
-    updateDeliveryStatus,
     updateRiderLocation,
-    getDeliveryLocation,
-    startDelivery,
-    completeDelivery,
-    submitDeliveryRating,
-    getRiderMetrics,
+    getDeliveryInformation,
     getRiderStatus,
     getBranchRiderStatuses,
     getRiderSettings,
@@ -30,17 +25,12 @@ router.get('/branch/:branchId/rider-statuses', protect, isAdminOrManager, getBra
 router.put('/:id', protect, isAdminOrManagerOrSelfRider, updateRider);
 
 // Rider routes
-router.get('/:id', protect, getRiderStatus);  // Changed from /:riderId/status to /:id
-router.get('/:rider_id/orders', protect, isRider, getRiderOrders);
-router.put('/orders/:orderId/status', protect, isRider, isRiderForOrder, updateDeliveryStatus);
+router.get('/:id', protect, getRiderStatus);  
+router.get('/:userId/orders', protect, isRider, getRiderOrders);
 router.post('/location', protect, isRider, updateRiderLocation);
-router.get('/delivery/:assignment_id/location', protect, getDeliveryLocation);
+router.get('/delivery/:order_id', protect, isRiderForOrder, getDeliveryInformation);
 
-// Delivery metrics routes
-router.post('/delivery/:orderId/start', protect, isRider, startDelivery);
-router.post('/delivery/:orderId/complete', protect, isRider, completeDelivery);
-router.post('/delivery/:orderId/rate', protect, submitDeliveryRating);
-router.get('/:rider_id/metrics', protect, isAdminOrManager, getRiderMetrics);
+
 
 // New settings routes
 router.get('/:rider_id/settings', protect, getRiderSettings);

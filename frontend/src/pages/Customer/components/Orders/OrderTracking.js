@@ -67,7 +67,7 @@ const OrderTracking = () => {
   const [refreshInterval, setRefreshInterval] = useState(null);
 
   const formatPrice = (price) => {
-    return typeof price === 'number' ? price.toFixed(2) : '0.00';
+    return typeof price === 'string' ? parseFloat(price).toFixed(2) : '0.00';
   };
 
   const fetchOrder = useCallback(async () => {
@@ -250,7 +250,7 @@ const OrderTracking = () => {
                               <p className="text-xs text-gray-500 mt-1">Note: {item.special_instructions}</p>
                             )}
                           </div>
-                          <p className="font-medium text-orange-900">${formatPrice(item.price_at_time * item.quantity)}</p>
+                          <p className="font-medium text-orange-900">${formatPrice(item.price_at_time) * item.quantity}</p>
                         </div>
                       ))}
                     </div>

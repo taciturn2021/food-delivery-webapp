@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js';
 import bcrypt from 'bcryptjs';
+import { getOrderWithItems } from './orderController.js';
 
 export const createRider = async (req, res) => {
     const {
@@ -166,60 +167,32 @@ export const updateRider = async (req, res) => {
 
 
 export const getRiderOrders = async (req, res) => {
-    const { rider_id } = req.params;
     try {
+        
+        const riderId = req.user.riderId;
+
         const result = await pool.query(
-            `SELECT o.*, oa.status as delivery_status, oa.assigned_at, oa.completed_at
+            `SELECT o.* 
              FROM orders o
-             JOIN order_assignments oa ON o.id = oa.order_id
-             WHERE oa.rider_id = $1
-             ORDER BY oa.assigned_at DESC`,
-            [rider_id]
+             WHERE o.rider_id = $1
+             ORDER BY o.created_at DESC`,
+            [riderId]
         );
         res.json(result.rows);
     } catch (error) {
+        console.error('Error in getRiderOrders:', error);
         res.status(500).json({ message: 'Error fetching rider orders', error: error.message });
-    }
-};
-
-export const updateDeliveryStatus = async (req, res) => {
-    const { orderId } = req.params;
-    const { assignmentId, status } = req.body;
-    const client = await pool.connect();
-
-    try {
-        await client.query('BEGIN');
-
-        await client.query(
-            'UPDATE order_assignments SET status = $1 WHERE id = $2',
-            [status, assignmentId]
-        );
-
-        if (status === 'delivered') {
-            await client.query(
-                'UPDATE orders SET status = $1 WHERE id = $2',
-                ['delivered', orderId]
-            );
-        }
-
-        await client.query('COMMIT');
-        res.json({ message: 'Delivery status updated successfully' });
-    } catch (error) {
-        await client.query('ROLLBACK');
-        res.status(500).json({ message: 'Error updating delivery status', error: error.message });
-    } finally {
-        client.release();
     }
 };
 
 export const updateRiderLocation = async (req, res) => {
     const { latitude, longitude } = req.body;
     try {
-        console.log('Location update request received:', {
-            userId: req.user.userId,
-            time: new Date().toISOString(),
-            coordinates: { latitude, longitude }
-        });
+        // console.log('Location update request received:', {
+        //     userId: req.user.userId,
+        //     time: new Date().toISOString(),
+        //     coordinates: { latitude, longitude }
+        // });
         
         // First get the rider ID from user_id
         const riderQuery = await pool.query(
@@ -233,11 +206,7 @@ export const updateRiderLocation = async (req, res) => {
         }
 
         const riderId = riderQuery.rows[0].id;
-        console.log('Found rider:', {
-            riderId,
-            name: riderQuery.rows[0].full_name,
-            previousData: await getCurrentLocation(riderId)
-        });
+    
 
         // Use UPSERT to update or insert the location and return the updated data
         const result = await pool.query(
@@ -252,11 +221,7 @@ export const updateRiderLocation = async (req, res) => {
             [riderId, latitude, longitude]
         );
         
-        console.log('Location updated successfully:', {
-            riderId,
-            newLocation: result.rows[0],
-            timestamp: new Date().toISOString()
-        });
+        
         
         res.json({
             message: 'Location updated successfully',
@@ -287,49 +252,7 @@ const getCurrentLocation = async (riderId) => {
     }
 };
 
-export const getDeliveryLocation = async (req, res) => {
-    const { assignment_id } = req.params;
-    try {
-        const result = await pool.query(
-            `SELECT rl.* FROM rider_locations rl
-             JOIN order_assignments oa ON oa.rider_id = rl.rider_id
-             WHERE oa.id = $1`,
-            [assignment_id]
-        );
-        res.json(result.rows[0] || null);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching location', error: error.message });
-    }
-};
 
-export const startDelivery = async (req, res) => {
-    const { orderId } = req.params;
-    const client = await pool.connect();
-
-    try {
-        await client.query('BEGIN');
-        
-        await client.query(
-            `UPDATE order_assignments 
-             SET started_at = CURRENT_TIMESTAMP, status = 'in_progress'
-             WHERE order_id = $1`,
-            [orderId]
-        );
-
-        await client.query(
-            'UPDATE orders SET status = $1 WHERE id = $2',
-            ['in_delivery', orderId]
-        );
-
-        await client.query('COMMIT');
-        res.json({ message: 'Delivery started successfully' });
-    } catch (error) {
-        await client.query('ROLLBACK');
-        res.status(500).json({ message: 'Error starting delivery', error: error.message });
-    } finally {
-        client.release();
-    }
-};
 
 export const completeDelivery = async (req, res) => {
     const { orderId } = req.params;
@@ -387,25 +310,7 @@ export const submitDeliveryRating = async (req, res) => {
     }
 };
 
-export const getRiderMetrics = async (req, res) => {
-    const { rider_id } = req.params;
 
-    try {
-        const result = await pool.query(
-            `SELECT 
-                COUNT(*) as total_deliveries,
-                AVG(rating) as average_rating,
-                COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_deliveries,
-                COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_deliveries
-             FROM order_assignments
-             WHERE rider_id = $1`,
-            [rider_id]
-        );
-        res.json(result.rows[0]);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching metrics', error: error.message });
-    }
-};
 
 export const getRiderStatus = async (req, res) => {
     const { id } = req.params;
@@ -490,6 +395,48 @@ export const updateRiderSettings = async (req, res) => {
         res.status(500).json({ message: 'Error updating rider settings', error: error.message });
     }
 };
+
+export const getDeliveryInformation = async (req, res) => {
+    console.log('API order id :', req.params);
+    const order_id = req.params.order_id;
+    try{ 
+        console.log(`Fetching delivery information for order ID: ${order_id}`);
+        
+        // Get the order with its items
+        const orderResult = await getOrderWithItems(order_id);
+        if (!orderResult) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+
+        // If we need customer information, fetch it
+        let customerData = null;
+        if (orderResult.user_id) {
+            const customerResult = await pool.query(
+                `SELECT c.*
+                FROM customers c 
+                JOIN users u ON c.user_id = u.id 
+                WHERE c.user_id = $1`,
+                [orderResult.user_id]
+            );
+            
+            if (customerResult.rows.length > 0) {
+                customerData = customerResult.rows[0];
+            }
+        }
+
+        // Combine order and customer data
+        const result = {
+            ...orderResult,
+            customer: customerData
+        };
+        
+        console.log(`Successfully retrieved delivery information for order ID: ${order_id}`);
+        res.json(result);
+    } catch(error){
+        console.error('Error in getDeliveryInformation:', error);
+        res.status(500).json({ message: 'Error fetching delivery information', error: error.message });
+    }
+}
 
 export const updateRiderAvailability = async (req, res) => {
     const { rider_id } = req.params;

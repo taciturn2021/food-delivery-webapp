@@ -128,7 +128,7 @@ const AssignRiderDialog = ({ open, onClose, order, riders, onAssign }) => {
 const OrderCard = ({ order, onStatusChange, onView, onAssignRider }) => {
     const [anchorEl, setAnchorEl] = useState(null);
     const [showTracker, setShowTracker] = useState(false);
-
+    
     const handleMenuOpen = (event) => {
         setAnchorEl(event.currentTarget);
     };
@@ -232,7 +232,7 @@ const OrderCard = ({ order, onStatusChange, onView, onAssignRider }) => {
                             </Button>
                         )}
 
-                        {order.status === 'ready' && !order.assigned_rider_id && (
+                        {order.status === 'preparing' && !order.rider_id && (
                             <Button
                                 variant="contained"
                                 color="primary"
@@ -245,7 +245,7 @@ const OrderCard = ({ order, onStatusChange, onView, onAssignRider }) => {
                             </Button>
                         )}
 
-                        {order.status === 'ready' && order.assigned_rider_id && (
+                        {order.status === 'preparing' && order.rider_id && (
                             <Chip
                                 icon={<DeliveryIcon />}
                                 label="Rider Assigned"
@@ -254,7 +254,7 @@ const OrderCard = ({ order, onStatusChange, onView, onAssignRider }) => {
                             />
                         )}
 
-                        {order.status === 'out_for_delivery' && order.assignment_id && (
+                        {order.status === 'delivering' && order.assignment_id && (
                             <Button
                                 variant="outlined"
                                 color="info"
@@ -309,8 +309,25 @@ const formatAddress = (address) => {
     }
 };
 
-const OrderDetails = ({ order, onClose, onStatusChange }) => {
+const OrderDetails = ({ order, onClose, onStatusChange, onAssignRider }) => {
     if (!order) return null;
+
+    // Helper function to safely format price and parse string prices
+    const formatPrice = (price) => {
+        const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
+        return typeof numericPrice === 'number' && !isNaN(numericPrice) ? numericPrice.toFixed(2) : '0.00';
+    };
+
+    // Parse address if it's a string
+    const parseAddress = (addressStr) => {
+        try {
+            return typeof addressStr === 'string' ? JSON.parse(addressStr) : addressStr;
+        } catch (e) {
+            return null;
+        }
+    };
+
+    const address = parseAddress(order.address);
 
     return (
         <Dialog
@@ -362,6 +379,33 @@ const OrderDetails = ({ order, onClose, onStatusChange }) => {
                                 </Typography>
                             </Box>
                         </Box>
+                        
+                        {!order.rider_id && (order.status === 'preparing') && (
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                startIcon={<RiderIcon />}
+                                onClick={onAssignRider}
+                                sx={{ mt: 2 }}
+                                fullWidth
+                            >
+                                Assign Rider
+                            </Button>
+                        )}
+
+                        {order.rider_id && (
+                            <Box sx={{ mt: 2 }}>
+                                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                                    Assigned Rider
+                                </Typography>
+                                <Typography variant="body1">
+                                ID: {order.rider_id}  Name: {order.rider_name} 
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    Phone: {order.rider_phone}
+                                </Typography>
+                            </Box>
+                        )}
                     </Grid>
 
                     <Grid item xs={12}>
@@ -380,15 +424,15 @@ const OrderDetails = ({ order, onClose, onStatusChange }) => {
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {order.items.map((item, index) => (
+                                    {order.items?.map((item, index) => (
                                         <TableRow key={index}>
                                             <TableCell>{item.name}</TableCell>
                                             <TableCell align="right">{item.quantity}</TableCell>
                                             <TableCell align="right">
-                                                ${(item.price_at_time || 0).toFixed(2)}
+                                                ${formatPrice(item.price_at_time)}
                                             </TableCell>
                                             <TableCell align="right">
-                                                ${((item.price_at_time || 0) * item.quantity).toFixed(2)}
+                                                ${formatPrice(parseFloat(item.price_at_time) * item.quantity)}
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -397,25 +441,13 @@ const OrderDetails = ({ order, onClose, onStatusChange }) => {
                                             <strong>Total</strong>
                                         </TableCell>
                                         <TableCell align="right">
-                                            <strong>${order.total.toFixed(2)}</strong>
+                                            <strong>${formatPrice(order.total)}</strong>
                                         </TableCell>
                                     </TableRow>
                                 </TableBody>
                             </Table>
                         </TableContainer>
                     </Grid>
-
-                    {order.status === 'preparing' && (
-                        <Grid item xs={12}>
-                            <TextField
-                                fullWidth
-                                label="Preparation Time (minutes)"
-                                type="number"
-                                defaultValue={30}
-                                InputProps={{ inputProps: { min: 5 } }}
-                            />
-                        </Grid>
-                    )}
                 </Grid>
             </DialogContent>
 
@@ -454,30 +486,17 @@ const OrderDetails = ({ order, onClose, onStatusChange }) => {
                         </Button>
                     </>
                 )}
-                {order.status === 'preparing' && (
+                {order.status === 'preparing' && (order.rider_id !== null)  && (
                     <Button
                         variant="contained"
                         color="primary"
-                        startIcon={<DiningIcon />}
+                        startIcon={<DeliveryIcon />}
                         onClick={() => {
                             onStatusChange(order.id, 'delivering');
                             onClose();
                         }}
                     >
                         Start Delivery
-                    </Button>
-                )}
-                {order.status === 'delivering' && (
-                    <Button
-                        variant="contained"
-                        color="success"
-                        startIcon={<DeliveryIcon />}
-                        onClick={() => {
-                            onStatusChange(order.id, 'delivered');
-                            onClose();
-                        }}
-                    >
-                        Mark as Delivered
                     </Button>
                 )}
             </DialogActions>
@@ -520,6 +539,7 @@ const OrderManagement = () => {
                         try {
                             // Fetch detailed order info including items
                             const detailedOrder = await getOrderById(order.id);
+                            
                             return {
                                 id: order.id,
                                 customerName: order.customer_name,
@@ -527,25 +547,14 @@ const OrderManagement = () => {
                                 total: parseFloat(order.total_amount),
                                 items: detailedOrder.data.items || [],
                                 time: new Date(order.created_at).toLocaleString(),
-                                phone: order.customer_phone,
                                 address: order.delivery_address,
+                                phone: detailedOrder.data.phone,
                                 rider_id: order.rider_id,
-                                assignment_id: order.assignment_id
+                                rider_name: detailedOrder.data.rider_first_name,
+                                rider_phone: detailedOrder.data.rider_phone
                             };
                         } catch (err) {
                             console.error(`Error fetching details for order ${order.id}:`, err);
-                            return {
-                                id: order.id,
-                                customerName: order.customer_name,
-                                status: order.status,
-                                total: parseFloat(order.total_amount),
-                                items: [], // Empty array if fetch fails
-                                time: new Date(order.created_at).toLocaleString(),
-                                phone: order.customer_phone,
-                                address: order.delivery_address,
-                                rider_id: order.rider_id,
-                                assignment_id: order.assignment_id
-                            };
                         }
                     })
                 );
@@ -716,6 +725,10 @@ const OrderManagement = () => {
                 order={selectedOrder}
                 onClose={() => setSelectedOrder(null)}
                 onStatusChange={handleStatusChange}
+                onAssignRider={() => {
+                    setSelectedOrderForAssignment(selectedOrder);
+                    setAssignDialogOpen(true);
+                }}
             />
 
             {/* Rider assignment dialog */}

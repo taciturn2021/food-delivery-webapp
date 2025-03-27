@@ -108,7 +108,6 @@ export const getOrders = async (req, res) => {
 export const getOrderById = async (req, res) => {
     try {
         const { id } = req.params;
-        console.log(`Fetching order with ID: ${id}`);
         
         // Check if id is valid
         if (!id || isNaN(parseInt(id))) {
@@ -116,7 +115,6 @@ export const getOrderById = async (req, res) => {
         }
         
         const order = await getOrderWithItems(id);
-        console.log('Order fetched:', order ? 'Found' : 'Not found');
 
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
@@ -126,7 +124,6 @@ export const getOrderById = async (req, res) => {
         if (req.user.role === 'customer' && order.user_id !== req.user.userId) {
             return res.status(403).json({ message: 'Access denied' });
         }
-
         res.json(order);
     } catch (error) {
         console.error('Error in getOrderById:', error.message, error.stack);
@@ -138,7 +135,6 @@ export const updateOrderStatus = async (req, res) => {
     const { id } = req.params;
     const  status  = req.body.status.status;
     const client = await pool.connect();
-    console.log(req.body)
     try {
         await client.query('BEGIN');
 
@@ -153,7 +149,6 @@ export const updateOrderStatus = async (req, res) => {
         }
 
         const order = orderCheck.rows[0];
-        console.log(status);
         const validTransitions = {
             pending: ['preparing', 'cancelled'],
             preparing: ['delivering', 'cancelled'],
@@ -165,6 +160,9 @@ export const updateOrderStatus = async (req, res) => {
         if (!validTransitions[order.status].includes(status)) {
             throw new Error(`Cannot transition from ${order.status} to ${status}`);
         }
+        if(order.status === 'preparing' && !order.rider_id){
+            throw new Error('Cannot change status to delivering without assigning a rider first');
+        } 
 
 
         const result = await client.query(
@@ -353,8 +351,8 @@ export const assignRiderToOrder = async (req, res) => {
 
         // Verify rider exists and is active
         const riderCheck = await client.query(
-            'SELECT * FROM riders WHERE id = $1 AND is_active = true',
-            [rider_id]
+            'SELECT * FROM riders WHERE id = $1 AND status = $2',
+            [rider_id, 'active']
         );
 
         if (riderCheck.rows.length === 0) {
@@ -426,79 +424,11 @@ export const getBranchPendingOrders = async (req, res) => {
     }
 };
 
-// Rider-related functions
-export const getRiderAssignedOrders = async (req, res) => {
-    try {
-        const { status } = req.query;
-        let query = `
-            SELECT o.*, 
-                   u.username as customer_name,
-                   u.phone as customer_phone,
-                   b.name as branch_name,
-                   b.address as branch_address,
-                   b.latitude as branch_latitude,
-                   b.longitude as branch_longitude
-            FROM orders o
-            LEFT JOIN users u ON o.user_id = u.id
-            LEFT JOIN branches b ON o.branch_id = b.id
-            WHERE o.rider_id = $1
-        `;
-        
-        const queryParams = [req.user.riderId];
 
-        // Filter by status if provided
-        if (status) {
-            query += ` AND o.status = $2`;
-            queryParams.push(status);
-        } else {
-            // Default to active orders (not delivered or cancelled)
-            query += ` AND o.status NOT IN ('delivered', 'cancelled')`;
-        }
-
-        query += ` ORDER BY o.created_at ASC`;
-
-        const result = await pool.query(query, queryParams);
-
-        // Get items for each order
-        const orders = await Promise.all(
-            result.rows.map(async (order) => {
-                const itemsResult = await pool.query(`
-                    SELECT oi.*, mi.name, mi.description, mi.category
-                    FROM order_items oi
-                    JOIN menu_items mi ON oi.menu_item_id = mi.id
-                    WHERE oi.order_id = $1
-                `, [order.id]);
-                
-                return {
-                    ...order,
-                    items: itemsResult.rows
-                };
-            })
-        );
-
-        res.json(orders);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching assigned orders', error: error.message });
-    }
-};
-
-export const updateRiderLocation = async (req, res) => {
-    const { latitude, longitude } = req.body;
-    
-    try {
-        // Update rider's current location
-        await pool.query(
-            'UPDATE riders SET current_latitude = $1, current_longitude = $2, location_updated_at = NOW() WHERE id = $3',
-            [latitude, longitude, req.user.riderId]
-        );
-
-        res.json({ success: true });
-    } catch (error) {
-        res.status(500).json({ message: 'Error updating location', error: error.message });
-    }
-};
 
 export const riderUpdateOrderStatus = async (req, res) => {
+    console.log(req.params);
+    console.log(req.body.status);
     const { id } = req.params;
     const { status } = req.body;
     const client = await pool.connect();
@@ -508,25 +438,24 @@ export const riderUpdateOrderStatus = async (req, res) => {
 
         // Verify order exists and is assigned to this rider
         const orderCheck = await client.query(
-            'SELECT * FROM orders WHERE id = $1 AND rider_id = $2',
-            [id, req.user.riderId]
+            'SELECT * FROM orders WHERE id = $1',
+            [id]
         );
 
         if (orderCheck.rows.length === 0) {
-            throw new Error('Order not found or not assigned to you');
+            throw new Error('Order not found');
         }
 
         const order = orderCheck.rows[0];
 
-        // Riders should only be able to update to out_for_delivery or delivered
-        if (!['out_for_delivery', 'delivered'].includes(status)) {
-            throw new Error(`Riders can only update to out_for_delivery or delivered status`);
+        // Riders should only be able to update to delivered
+        if (!['delivered'].includes(status)) {
+            throw new Error(`Riders can only update to delivered status`);
         }
 
         // Validate status transition
         const validTransitions = {
-            ready: ['out_for_delivery'],
-            out_for_delivery: ['delivered']
+            delivering: ['delivered']
         };
 
         if (!validTransitions[order.status]?.includes(status)) {
@@ -549,51 +478,48 @@ export const riderUpdateOrderStatus = async (req, res) => {
 };
 
 // Helper function to get complete order with items
-async function getOrderWithItems(orderId) {
+export async function getOrderWithItems(orderId) {
     try {
-        // Check if the orders table has a rider_id column
-        const columnCheckResult = await pool.query(`
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name='orders' AND column_name='rider_id'
-        `);
-        
-        const hasRiderIdColumn = columnCheckResult.rows.length > 0;
-        
-        // Use a query that works whether rider_id exists or not
-        let orderQuery = `
+        const riderIDCheck = await pool.query(`
+            SELECT rider_id FROM orders WHERE id = $1
+        `, [orderId]);
+        let orderQuery;
+        if(riderIDCheck.rows[0].rider_id){
+        orderQuery = `
             SELECT o.*, 
                    u.username as customer_name,
+                   c.phone as phone,
                    b.name as branch_name,
                    b.latitude as branch_latitude,
-                   b.longitude as branch_longitude
-        `;
-        
-        // Only add rider-related columns if rider_id column exists
-        if (hasRiderIdColumn) {
-            orderQuery += `,
+                   b.longitude as branch_longitude,
                    r.id as rider_id,
-                   r.first_name as rider_first_name,
-                   r.last_name as rider_last_name,
-                   r.phone as rider_phone,
-                   r.current_latitude as rider_latitude,
-                   r.current_longitude as rider_longitude
-            `;
-        }
-        
-        orderQuery += `
+                   r.full_name as rider_first_name,
+                   r.contact_number as rider_phone,
+                   rl.latitude as rider_latitude,
+                   rl.longitude as rider_longitude
             FROM orders o
             LEFT JOIN users u ON o.user_id = u.id
             LEFT JOIN branches b ON o.branch_id = b.id
+            LEFT JOIN riders r ON o.rider_id = r.id
+            LEFT JOIN rider_locations rl ON r.id = rl.rider_id
+            LEFT JOIN customers c ON o.user_id = c.user_id
+            WHERE o.id = $1
         `;
-        
-        // Only join riders table if rider_id column exists
-        if (hasRiderIdColumn) {
-            orderQuery += `LEFT JOIN riders r ON o.rider_id = r.id`;
+        } else{
+            orderQuery = `
+            SELECT o.*, 
+                   u.username as customer_name,
+                   c.phone as phone,
+                   b.name as branch_name,
+                   b.latitude as branch_latitude,
+                   b.longitude as branch_longitude
+            FROM orders o
+            LEFT JOIN users u ON o.user_id = u.id
+            LEFT JOIN branches b ON o.branch_id = b.id
+            LEFT JOIN customers c ON o.user_id = c.user_id
+            WHERE o.id = $1
+        `;
         }
-        
-        orderQuery += ` WHERE o.id = $1`;
-        
         const orderResult = await pool.query(orderQuery, [orderId]);
 
         if (orderResult.rows.length === 0) {

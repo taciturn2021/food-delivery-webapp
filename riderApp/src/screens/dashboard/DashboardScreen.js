@@ -37,7 +37,7 @@ const DashboardScreen = ({ navigation }) => {
     error,
     refreshing,
     handleRefresh,
-    fetchActiveDeliveries
+    fetchDeliveries
   } = useDelivery();
 
   const [statusLoading, setStatusLoading] = useState(false);
@@ -63,7 +63,7 @@ const DashboardScreen = ({ navigation }) => {
       }
       
       // Refresh deliveries after status check
-      await fetchActiveDeliveries();
+      await fetchDeliveries();
     } catch (error) {
       console.error('Error checking rider status:', error);
       setStatusCheckError('Failed to check rider status');

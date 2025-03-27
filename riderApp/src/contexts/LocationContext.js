@@ -26,7 +26,7 @@ export const LocationProvider = ({ children }) => {
     }
     
     try {
-      await api.updateLocation({ latitude, longitude });
+      await api.updateRiderLocation({ latitude, longitude });
       console.log('Location updated in backend:', { latitude, longitude });
     } catch (error) {
       console.error('Failed to update location in backend:', error);

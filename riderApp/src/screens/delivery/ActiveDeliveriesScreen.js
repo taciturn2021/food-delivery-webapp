@@ -6,7 +6,8 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Alert
+  Alert,
+  Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDelivery } from '../../contexts/DeliveryContext';
@@ -20,80 +21,67 @@ const ActiveDeliveriesScreen = ({ navigation }) => {
     error, 
     refreshing, 
     handleRefresh, 
-    fetchActiveDeliveries,
-    setDeliveryAsPicked,
-    setDeliveryAsDelivered
+    fetchDeliveries,
+    updateOrderStatus
   } = useDelivery();
 
   useEffect(() => {
-    fetchActiveDeliveries();
+    fetchDeliveries();
   }, []);
 
-  const handleStatusUpdate = async (delivery) => {
-    if (delivery.delivery_status === 'assigned') {
-      Alert.alert(
-        'Update Status',
-        'Are you ready to pick up this order?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel'
-          },
-          {
-            text: 'Mark as Picked Up',
-            onPress: () => setDeliveryAsPicked(delivery.id, delivery.assignment_id)
+  const handleMarkAsDelivered = (orderId) => {
+    Alert.alert(
+      'Confirm Delivery',
+      'Are you sure you want to mark this order as delivered?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Confirm',
+          style: 'default',
+          onPress: () => {
+            updateOrderStatus(orderId, 'delivered');
           }
-        ]
-      );
-    } else if (delivery.delivery_status === 'picked') {
-      Alert.alert(
-        'Update Status',
-        'Confirm delivery completion?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel'
-          },
-          {
-            text: 'Confirm Delivery',
-            style: 'default',
-            onPress: () => setDeliveryAsDelivered(delivery.id, delivery.assignment_id)
-          }
-        ]
-      );
-    }
+        }
+      ],
+      { cancelable: true }
+    );
   };
 
-  const renderDeliveryItem = ({ item: delivery }) => (
+  const renderDeliveryItem = ({ item: order }) => (
     <TouchableOpacity
       style={styles.deliveryItem}
-      onPress={() => navigation.navigate('DeliveryDetails', { deliveryId: delivery.id })}
+      onPress={() => navigation.navigate('DeliveryDetails', { orderId: order.id })}
     >
       <View style={styles.deliveryHeader}>
-        <Text style={styles.deliveryId}>Order #{delivery.id}</Text>
-        <View style={[
-          styles.statusBadge, 
-          delivery.delivery_status === 'picked' ? styles.pickedBadge : styles.assignedBadge
-        ]}>
-          <Text style={styles.statusText}>
-            {delivery.delivery_status === 'picked' ? 'In Transit' : 'Pickup'}
-          </Text>
+        <Text style={styles.deliveryId}>Order #{order.id}</Text>
+        <View style={styles.statusBadge}>
+          <Text style={styles.statusText}>Delivering</Text>
         </View>
       </View>
       
       <Text style={styles.deliveryAddress} numberOfLines={2}>
-        {delivery.delivery_address}
+        {order.delivery_address}
       </Text>
       
       <View style={styles.deliveryInfo}>
         <View style={styles.infoItem}>
           <Ionicons name="time-outline" size={16} color="#777" />
           <Text style={styles.infoText}>
-            Assigned: {new Date(delivery.assigned_at).toLocaleTimeString([], { 
+            Created: {new Date(order.created_at).toLocaleTimeString([], { 
               hour: '2-digit', 
               minute: '2-digit',
               hour12: true 
             })}
+          </Text>
+        </View>
+        
+        <View style={styles.infoItem}>
+          <Ionicons name="restaurant-outline" size={16} color="#777" />
+          <Text style={styles.infoText}>
+            From: {order.branch_name || 'Restaurant'}
           </Text>
         </View>
       </View>
@@ -102,9 +90,10 @@ const ActiveDeliveriesScreen = ({ navigation }) => {
         <TouchableOpacity
           style={styles.mapButton}
           onPress={() => navigation.navigate('DeliveryMapScreen', { 
-            latitude: delivery.latitude,
-            longitude: delivery.longitude,
-            address: delivery.delivery_address
+            latitude: order.branch_latitude,
+            longitude: order.branch_longitude,
+            address: order.delivery_address,
+            orderId: order.id
           })}
         >
           <Ionicons name="map-outline" size={16} color="#0066cc" />
@@ -112,15 +101,10 @@ const ActiveDeliveriesScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[
-            styles.actionButton,
-            delivery.delivery_status === 'picked' ? styles.deliverButton : styles.pickupButton
-          ]}
-          onPress={() => handleStatusUpdate(delivery)}
+          style={styles.deliverButton}
+          onPress={() => handleMarkAsDelivered(order.id)}
         >
-          <Text style={styles.actionButtonText}>
-            {delivery.delivery_status === 'picked' ? 'Mark as Delivered' : 'Mark as Picked'}
-          </Text>
+          <Text style={styles.actionButtonText}>Mark as Delivered</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -145,7 +129,7 @@ const ActiveDeliveriesScreen = ({ navigation }) => {
       {error && (
         <ErrorMessage 
           message={error} 
-          onRetry={fetchActiveDeliveries} 
+          onRetry={fetchDeliveries} 
         />
       )}
       
@@ -201,17 +185,13 @@ const styles = StyleSheet.create({
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 4
-  },
-  assignedBadge: {
-    backgroundColor: '#fff3cd'
-  },
-  pickedBadge: {
+    borderRadius: 4,
     backgroundColor: '#cce5ff'
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '600'
+    fontWeight: '600',
+    color: '#0066cc'
   },
   deliveryAddress: {
     fontSize: 16,
@@ -250,15 +230,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500'
   },
-  actionButton: {
+  deliverButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 4
-  },
-  pickupButton: {
-    backgroundColor: '#ffc107'
-  },
-  deliverButton: {
+    borderRadius: 4,
     backgroundColor: '#28a745'
   },
   actionButtonText: {

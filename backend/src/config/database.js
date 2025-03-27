@@ -126,7 +126,9 @@ const initializeDatabase = async () => {
                 status VARCHAR(20) NOT NULL CHECK (status IN ('pending', 'preparing', 'delivering', 'delivered', 'cancelled')),
                 total_amount DECIMAL(10,2) NOT NULL,
                 delivery_address TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                rider_id INTEGER REFERENCES riders(id),
+                assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
 
@@ -160,18 +162,8 @@ const initializeDatabase = async () => {
             )
         `);
 
-        // Create order_assignments table for tracking rider assignments
-        await createTableIfNotExists('order_assignments', `
-            CREATE TABLE IF NOT EXISTS order_assignments (
-                id SERIAL PRIMARY KEY,
-                order_id INTEGER REFERENCES orders(id),
-                rider_id INTEGER REFERENCES riders(id),
-                assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                completed_at TIMESTAMP,
-                status VARCHAR(20) DEFAULT 'assigned' CHECK (status IN ('assigned', 'picked', 'delivered', 'cancelled'))
-            )
-        `);
-
+        
+        
         // Create rider_locations table for tracking real-time locations
         await createTableIfNotExists('rider_locations', `
             CREATE TABLE IF NOT EXISTS rider_locations (
@@ -182,22 +174,7 @@ const initializeDatabase = async () => {
             )
         `);
 
-        // Create delivery_metrics table for tracking performance
-        await createTableIfNotExists('delivery_metrics', `
-            CREATE TABLE IF NOT EXISTS delivery_metrics (
-                id SERIAL PRIMARY KEY,
-                rider_id INTEGER REFERENCES riders(id),
-                order_id INTEGER REFERENCES orders(id),
-                assignment_id INTEGER REFERENCES order_assignments(id),
-                pickup_time TIMESTAMP,
-                delivery_time TIMESTAMP,
-                estimated_distance DECIMAL(10,2),
-                actual_distance DECIMAL(10,2),
-                customer_rating INTEGER CHECK (customer_rating BETWEEN 1 AND 5),
-                delivery_notes TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
+      
 
         // Create branch_settings table
         await createTableIfNotExists('branch_settings', `
@@ -259,12 +236,7 @@ const initializeDatabase = async () => {
             ALTER COLUMN status TYPE VARCHAR(20)
         `);
 
-        // Update order_assignments table constraints
-        await client.query(`
-            ALTER TABLE order_assignments
-            ALTER COLUMN status SET DEFAULT 'assigned',
-            ALTER COLUMN status TYPE VARCHAR(20)
-        `);
+        
 
         // Update riders table constraints
         await client.query(`

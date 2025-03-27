@@ -8,8 +8,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 const statusIcons = {
-  assigned: { name: 'bicycle-outline', color: '#F9A825' }, // Yellow for assigned
-  picked: { name: 'checkmark-circle-outline', color: '#42A5F5' }, // Blue for picked 
+  pending: { name: 'time-outline', color: '#F9A825' }, // Yellow for pending
+  preparing: { name: 'restaurant-outline', color: '#FB8C00' }, // Orange for preparing
+  delivering: { name: 'bicycle-outline', color: '#42A5F5' }, // Blue for delivering 
   delivered: { name: 'checkmark-done-circle-outline', color: '#66BB6A' }, // Green for delivered
   cancelled: { name: 'close-circle-outline', color: '#EF5350' }, // Red for cancelled
 };
@@ -23,25 +24,49 @@ const formatDeliveryTime = (timestamp) => {
 
 const getStatusText = (status) => {
   switch (status) {
-    case 'assigned': return 'Assigned to you';
-    case 'picked': return 'Picked up';
+    case 'pending': return 'Pending';
+    case 'preparing': return 'Preparing';
+    case 'delivering': return 'Delivering';
     case 'delivered': return 'Delivered';
     case 'cancelled': return 'Cancelled';
     default: return status;
   }
 };
 
+// Helper function to parse address JSON
+const parseDeliveryAddress = (addressJson) => {
+  try {
+    if (typeof addressJson === 'string') {
+      const address = JSON.parse(addressJson);
+      return {
+        street: address.street || '',
+        city: address.city || '',
+        state: address.state || '',
+        zipCode: address.zipCode || '',
+        formatted: `${address.street}, ${address.city}, ${address.state}`
+      };
+    }
+    return { formatted: 'Address not available' };
+  } catch (error) {
+    console.error('Error parsing address:', error);
+    return { formatted: addressJson || 'Address not available' };
+  }
+};
+
 const DeliveryCard = ({ delivery, onPress }) => {
   if (!delivery) return null;
   
-  const statusIcon = statusIcons[delivery.delivery_status] || { 
+  const statusIcon = statusIcons[delivery.status] || { 
     name: 'help-circle-outline', 
     color: '#757575' 
   };
+
+  // Parse the delivery address
+  const address = parseDeliveryAddress(delivery.delivery_address);
   
-  const truncateAddress = (address) => {
-    if (!address) return 'No address provided';
-    return address.length > 35 ? address.substring(0, 35) + '...' : address;
+  const truncateAddress = (addressText) => {
+    if (!addressText) return 'No address provided';
+    return addressText.length > 35 ? addressText.substring(0, 35) + '...' : addressText;
   };
   
   return (
@@ -60,23 +85,23 @@ const DeliveryCard = ({ delivery, onPress }) => {
         <View style={styles.headerRow}>
           <Text style={styles.orderIdText}>Order #{delivery.id}</Text>
           <Text style={[styles.statusText, { color: statusIcon.color }]}>
-            {getStatusText(delivery.delivery_status)}
+            {getStatusText(delivery.status)}
           </Text>
         </View>
         
         <Text style={styles.addressText} numberOfLines={2}>
-          {truncateAddress(delivery.delivery_address)}
+          {truncateAddress(address.formatted)}
         </Text>
         
         <View style={styles.footerRow}>
           <View style={styles.timeContainer}>
             <Ionicons name="time-outline" size={14} color="#666" />
-            <Text style={styles.timeText}>{formatDeliveryTime(delivery.assigned_at)}</Text>
+            <Text style={styles.timeText}>{formatDeliveryTime(delivery.created_at)}</Text>
           </View>
           
           <View style={styles.amountContainer}>
             <Text style={styles.amountText}>
-              ${Number(delivery.total_amount).toFixed(2)}
+              ${parseFloat(delivery.total_amount).toFixed(2)}
             </Text>
           </View>
         </View>

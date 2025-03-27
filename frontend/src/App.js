@@ -232,7 +232,11 @@ const App = () => {
             <Router>
               <Routes>
                 {/* Public Routes */}
-                <Route path="/" element={<LandingPage />} />
+                <Route path="/" element={
+                  <ProtectedRoute unAllowedRoles={['admin', 'branch_manager', 'rider']}>
+                    <LandingPage />
+                  </ProtectedRoute>
+                } />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<CustomerRegister />} />
                 <Route path="/admin/login" element={<AdminLogin />} />
@@ -320,14 +324,14 @@ const App = () => {
   );
 };
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const ProtectedRoute = ({ children, allowedRoles = [], unAllowedRoles = [] }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  if (!user || !allowedRoles.includes(user.role)) {
+  if (!user || !allowedRoles.includes(user.role) || (unAllowedRoles && unAllowedRoles.includes(user.role))) {
     return <Navigate to={user?.role === 'customer' ? '/' : '/admin/login'} />;
   }
 

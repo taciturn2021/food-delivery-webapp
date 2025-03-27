@@ -59,7 +59,7 @@ export const isAdmin = (req, res, next) => {
     next();
 };
 
-export const isRider = (req, res, next) => {
+export const isRider = async (req, res, next) => {
     if (req.user.role !== 'rider') {
         return res.status(403).json({ message: 'Access denied. Rider only.' });
     }
@@ -88,27 +88,26 @@ export const isRiderOrManager = (req, res, next) => {
 };
 
 export const isRiderForOrder = async (req, res, next) => {
-    const { orderId } = req.params;
-    const { assignmentId } = req.body;
-
+    const orderId = req.params.order_id || req.params.id; 
     try {
         // For managers and admins, allow access
         if (req.user.role === 'admin' || req.user.role === 'branch_manager') {
             return next();
         }
 
-        // For riders, verify assignment
+        // For riders, verify they are assigned to this order
+    
         const result = await pool.query(
-            'SELECT * FROM order_assignments oa JOIN riders r ON oa.rider_id = r.id WHERE oa.id = $1 AND r.user_id = $2',
-            [assignmentId, req.user.id]
+            'SELECT o.* FROM orders o WHERE o.id = $1 AND o.rider_id = $2',
+            [orderId, req.user.riderId]
         );
 
         if (result.rows.length === 0) {
             return res.status(403).json({ message: 'Access denied. Not assigned to this order.' });
         }
-
         next();
     } catch (error) {
+        console.error('Error verifying order assignment:', error);
         res.status(500).json({ message: 'Error verifying order assignment' });
     }
 };
