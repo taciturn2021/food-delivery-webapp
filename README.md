@@ -23,7 +23,7 @@ A comprehensive multi-tier restaurant management and food delivery system that s
   - Interactive cart and checkout system
   - Cash on delivery payment option
 
-- **Order Management**: ( To be Implemented)
+- **Order Management**: 
   - Real-time order status updates
   - Order cancellation (before confirmation)
   - Live tracking map showing:
@@ -35,7 +35,7 @@ A comprehensive multi-tier restaurant management and food delivery system that s
   - Mobile app for delivery personnel
   - Real-time location tracking
   - Order status management
-  - Delivery route optimization
+
 
 ## 🛠️ Technology Stack
 
