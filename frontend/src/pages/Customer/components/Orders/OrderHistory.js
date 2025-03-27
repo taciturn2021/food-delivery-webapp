@@ -92,7 +92,6 @@ const OrderHistory = () => {
       const response = await getCustomerOrderHistory(pageNumber);
       
       // Add debugging information
-      console.log('API Response:', response.data);
       
       // Check if orders array exists and is an array
       if (!response.data.orders || !Array.isArray(response.data.orders)) {

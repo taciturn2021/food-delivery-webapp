@@ -146,8 +146,6 @@ const AdminLogin = () => {
                             autoFocus
                             value={formData.email}
                             onChange={(e) => setFormData({...formData, email: e.target.value})}
-                            helperText={process.env.NODE_ENV === 'development' ? 
-                                "Default: admin@example.com / admin123" : ""}
                             sx={{
                                 '& .MuiOutlinedInput-root': {
                                     '&:hover fieldset': {

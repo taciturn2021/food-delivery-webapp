@@ -139,10 +139,10 @@ const Login = () => {
                         </button>
                         <button
                             type="button"
-                            onClick={() => navigate('/admin/login')}
-                            className="text-gray-600 hover:text-gray-800"
+                            onClick={() => navigate('')}
+                            className="text-orange-700 hover:text-orange-500 font-medium"
                         >
-                            Staff Login
+                            Forgot Password? (not implemented yet)
                         </button>
                     </div>
                 </div>

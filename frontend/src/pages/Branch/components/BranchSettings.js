@@ -63,7 +63,7 @@ const BranchSettings = () => {
     const loadBranchSettings = async () => {
         try {
             const response = await getBranchSettings(user.branchId);
-            console.log('Raw settings from server:', response.data);
+            
             
             // Transform the time fields to HH:mm format and handle null values
             const formattedData = {
@@ -92,7 +92,7 @@ const BranchSettings = () => {
                 } : null
             };
             
-            console.log('Formatted settings:', formattedData);
+        
             setSettings(formattedData);
             setError(null); // Clear any previous errors
         } catch (error) {
@@ -132,7 +132,7 @@ const BranchSettings = () => {
                 longitude: settings.location?.lng
             };
             
-            console.log('Sending basic info update:', basicInfoUpdate);
+           
             await updateBranch(user.branchId, basicInfoUpdate);
 
             // Then update settings - ensure all values are properly typed
@@ -148,7 +148,7 @@ const BranchSettings = () => {
                 automaticOrderAssignment: Boolean(settings.automaticOrderAssignment)
             };
             
-            console.log('Sending settings update:', settingsUpdate);
+            
             await updateBranchSettings(user.branchId, settingsUpdate);
 
             setShowSuccess(true);

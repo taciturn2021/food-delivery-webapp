@@ -46,7 +46,6 @@ export const DeliveryProvider = ({ children }) => {
       
       setActiveDeliveries(active);
       setDeliveryHistory(history);
-      console.log(`Fetched ${active.length} active deliveries and ${history.length} completed deliveries`);
     } catch (error) {
       console.error('Failed to fetch deliveries:', error);
       setError('Failed to load deliveries. Please try again.');
@@ -70,13 +69,11 @@ export const DeliveryProvider = ({ children }) => {
     }
     
     try {
-      console.log(`Fetching details for order ${orderId}`);
       const response = await api.getDeliveryInformation(orderId);
       
       if (!response.data) {
         throw new Error('No order data received');
       }
-      console.log(`Fetched details for order ${orderId}`, response.data);
 
       return response.data;
     } catch (error) {
@@ -93,7 +90,6 @@ export const DeliveryProvider = ({ children }) => {
     }
     
     try {
-      console.log(`Updating order ${orderId} status to ${status}`);
       await api.updateOrderStatus(orderId, status);
       
       // Update local state based on new status

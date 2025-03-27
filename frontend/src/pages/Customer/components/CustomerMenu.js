@@ -21,7 +21,6 @@ const CustomerMenu = ({ branchId: propBranchId }) => {
         const fetchMenu = async () => {
             try {
                 const response = await getPublicBranchMenu(branchId);
-                console.log('Menu items:', response.data); // Debug log
                 const availableItems = response.data.filter(item => item.branch_availability !== false);
                 // Ensure price values are numbers
                 const processedItems = availableItems.map(item => ({
