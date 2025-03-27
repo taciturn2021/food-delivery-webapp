@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../../../components/ui/use-toast';
 import { getOrderById, cancelOrder } from '../../../../services/api';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -12,7 +13,10 @@ import {
   AlertTriangle, 
   Check, 
   Loader2,
-  X
+  X,
+  Home,
+  Utensils,
+  Bike
 } from 'lucide-react';
 import CustomerHeader from '../../../../components/customer/CustomerHeader';
 import { Button } from '../../../../components/ui/button';
@@ -189,8 +193,8 @@ const OrderTracking = () => {
                     <div className="relative">
                       <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-orange-100"></div>
                       {['pending', 'preparing', 'delivering', 'delivered'].map((status, index) => {
-                        const isCompleted = ['cancelled', 'delivered'].includes(order.status) 
-                          ? order.status === 'delivered' && ['pending', 'preparing', 'delivering', 'delivered'].indexOf(status) <= ['pending', 'preparing', 'delivering', 'delivered'].indexOf(order.status)
+                        const isCompleted = order.status === 'delivered' 
+                          ? ['pending', 'preparing', 'delivering', 'delivered'].indexOf(status) <= ['pending', 'preparing', 'delivering', 'delivered'].indexOf(order.status)
                           : ['pending', 'preparing', 'delivering'].indexOf(status) <= ['pending', 'preparing', 'delivering'].indexOf(order.status);
                         
                         const isCurrent = order.status === status;
@@ -198,14 +202,14 @@ const OrderTracking = () => {
                           <div key={status} className="flex mb-6 items-center relative">
                             <div className={`z-10 flex items-center justify-center w-8 h-8 rounded-full 
                               ${isCompleted 
-                                ? orderStatusConfig[isCurrent ? status : 'delivered'].color
+                                ? orderStatusConfig[isCurrent ? status : status === 'delivered' ? 'delivered' : 'delivered'].color
                                 : 'bg-gray-200'} 
                               ${isCompleted ? 'text-white' : 'text-gray-500'}`}
                             >
-                              {isCompleted ? orderStatusConfig[isCurrent ? status : 'delivered'].icon : index + 1}
+                              {isCompleted ? orderStatusConfig[isCurrent ? status : status === 'delivered' ? 'delivered' : 'delivered'].icon : index + 1}
                             </div>
                             <div className="ml-4">
-                              <p className={`font-medium ${isCompleted ? orderStatusConfig[status].textColor : 'text-gray-500'}`}>
+                              <p className={`font-medium ${isCompleted && isCurrent ? orderStatusConfig[status].textColor : !isCompleted ? 'text-gray-500' : 'text-orange-600'}`}>
                                 {orderStatusConfig[status].label}
                               </p>
                               {isCurrent && (
@@ -351,6 +355,29 @@ const OrderTracking = () => {
                         }
                         
                         if (hasCustomerLocation || hasBranchLocation || hasRiderLocation) {
+                          // Custom icon creation
+                          const createCustomIcon = (IconComponent, color) => {
+                            // Create a DOM element to render the SVG
+                            const customIcon = L.divIcon({
+                              html: `<div style="color: ${color}; background: white; border-radius: 50%; padding: 4px; border: 2px solid ${color}; display: flex; align-items: center; justify-content: center;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                  ${IconComponent === Home ? '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' : ''}
+                                  ${IconComponent === Utensils ? '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2"/><path d="M18.5 15a2.5 2.5 0 0 0 0 5H23"/><path d="M21 22v-2"/>' : ''}
+                                  ${IconComponent === Bike ? '<circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5V14l-3-3 4-3 2 3h2"/>' : ''}
+                                </svg>
+                              </div>`,
+                              className: '',
+                              iconSize: [30, 30],
+                              iconAnchor: [15, 15]
+                            });
+                            return customIcon;
+                          };
+
+                          // Create the custom icons
+                          const customerIcon = createCustomIcon(Home, '#1E40AF'); // Blue
+                          const restaurantIcon = createCustomIcon(Utensils, '#9D174D'); // Pink/Purple
+                          const riderIcon = createCustomIcon(Bike, '#047857'); // Green
+
                           return (
                             <MapContainer
                               center={center}
@@ -362,23 +389,32 @@ const OrderTracking = () => {
                                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                               />
                               
-                              {/* Customer location marker */}
+                              {/* Customer location marker with custom icon */}
                               {hasCustomerLocation && (
-                                <Marker position={[parseFloat(deliveryAddress.latitude), parseFloat(deliveryAddress.longitude)]}>
+                                <Marker 
+                                  position={[parseFloat(deliveryAddress.latitude), parseFloat(deliveryAddress.longitude)]}
+                                  icon={customerIcon}
+                                >
                                   <Popup>Delivery Location</Popup>
                                 </Marker>
                               )}
                               
-                              {/* Branch location marker */}
+                              {/* Branch location marker with custom icon */}
                               {hasBranchLocation && (
-                                <Marker position={[parseFloat(order.branch_latitude), parseFloat(order.branch_longitude)]}>
+                                <Marker 
+                                  position={[parseFloat(order.branch_latitude), parseFloat(order.branch_longitude)]}
+                                  icon={restaurantIcon}
+                                >
                                   <Popup>{order.branch_name}</Popup>
                                 </Marker>
                               )}
                               
-                              {/* Rider location marker */}
+                              {/* Rider location marker with custom icon */}
                               {hasRiderLocation && (
-                                <Marker position={[parseFloat(order.rider_latitude), parseFloat(order.rider_longitude)]}>
+                                <Marker 
+                                  position={[parseFloat(order.rider_latitude), parseFloat(order.rider_longitude)]}
+                                  icon={riderIcon}
+                                >
                                   <Popup>{order.rider_first_name} {order.rider_last_name} (Rider)</Popup>
                                 </Marker>
                               )}
