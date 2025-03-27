@@ -247,14 +247,16 @@ const initializeDatabase = async () => {
 
         // Create default admin user with a fresh password hash
         const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash('admin123', salt);
+        const password = process.env.ADMIN_PASSWORD || 'admin123'; // Use environment variable or default password
+        const email = process.env.ADMIN_EMAIL || 'admin@example.com';
+        const hashedPassword = await bcrypt.hash(password, salt);
         
         console.log('Attempting to create/update default admin user...');
         
         // First, check if admin user exists
         const existingAdmin = await client.query(
             'SELECT id, email, password FROM users WHERE email = $1',
-            ['admin@example.com']
+            [email]
         );
 
         if (existingAdmin.rows.length > 0) {
