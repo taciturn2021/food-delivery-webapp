@@ -139,28 +139,6 @@ Note: The database tables will be automatically initialized on first startup of 
 
 The system uses JWT (JSON Web Tokens) for secure authentication with role-based access control (RBAC) for different user types.
 
-## 🌐 API Endpoints
-
-### Admin Routes
-- `POST /api/admin/branch` - Create new branch
-- `GET /api/admin/branches` - List all branches
-- `GET /api/admin/orders` - View all orders
-
-### Branch Routes
-- `PUT /api/branch/menu` - Update branch menu
-- `GET /api/branch/orders` - View branch orders
-- `PATCH /api/branch/order/:id` - Update order status
-
-### Rider Routes
-- `GET /api/rider/orders` - Get assigned orders
-- `PATCH /api/rider/location` - Update location
-- `PATCH /api/rider/order/:id` - Update delivery status
-
-### Customer Routes
-- `GET /api/branches` - List available branches
-- `POST /api/orders` - Place new order
-- `GET /api/orders/:id` - Track order status
-- `POST /api/addresses` - Add delivery address
 
 ## 📝 License
 
