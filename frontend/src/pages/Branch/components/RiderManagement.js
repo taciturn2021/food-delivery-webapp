@@ -31,14 +31,16 @@ import {
     DeliveryDining as DeliveryIcon,
 } from '@mui/icons-material';
 import { getBranchRiders, createRider, updateRider } from '../../../services/api';
+import { useAuth } from '../../../context/AuthContext';
 
-const RiderManagement = ({ branchId }) => {
+const RiderManagement = ({}) => {
     const [riders, setRiders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [open, setOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
+    const { user } = useAuth();
     const [formData, setFormData] = useState({
         full_name: '',
         email: '',
@@ -51,6 +53,7 @@ const RiderManagement = ({ branchId }) => {
         license_no: '',
         status: 'active'
     });
+    const branchId = user.branchId;
 
     useEffect(() => {
         loadRiders();
@@ -58,6 +61,7 @@ const RiderManagement = ({ branchId }) => {
 
     const loadRiders = async () => {
         try {
+            
             const response = await getBranchRiders(branchId);
             setRiders(response.data);
         } catch (error) {
