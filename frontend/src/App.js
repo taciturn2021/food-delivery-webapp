@@ -5,7 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { ToastProvider } from './components/ui/use-toast';
-
+import { Analytics } from "@vercel/analytics/react"
 // Admin Routes
 import AdminDashboard from './pages/Admin/Dashboard';
 import AdminLogin from './pages/Admin/AdminLogin';
@@ -225,6 +225,7 @@ const theme = createTheme({
 const App = () => {
   return (
     <ThemeProvider theme={theme}>
+      <Analytics />
       <CssBaseline />
       <AuthProvider>
         <CartProvider>
