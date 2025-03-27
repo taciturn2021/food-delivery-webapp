@@ -255,25 +255,24 @@ const initializeDatabase = async () => {
         
         // First, check if admin user exists
         const existingAdmin = await client.query(
-            'SELECT id, email, password FROM users WHERE email = $1',
-            [email]
+            'SELECT id, email, password FROM users WHERE username = $1',
+            ['admin']
         );
 
         if (existingAdmin.rows.length > 0) {
-            // Update existing admin's password
+            // Delete existing admin's password
             await client.query(
-                'UPDATE users SET password = $1 WHERE email = $2 RETURNING id, email, role',
-                [hashedPassword, email]
+                'DELETE FROM users WHERE username = $1',
+                ['admin']
             );
-            console.log('Updated existing admin user password');
-        } else {
-            // Create new admin user
+            console.log('Deleted existing admin user password');
+        } 
             await client.query(
                 'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, email, role',
                 ['admin', email, hashedPassword, 'admin']
             );
-            console.log('Created new admin user');
-        }
+            console.log('Created new admin user', email, 'with role admin', password);
+        
 
         // Verify admin user
         const verifyAdmin = await client.query(

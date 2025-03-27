@@ -27,7 +27,7 @@ export const login = async (req, res) => {
              LEFT JOIN branches b ON u.id = b.manager_id 
              LEFT JOIN riders r ON u.id = r.user_id 
              WHERE u.email = $1`,
-            [email.toLowerCase()]
+            [email]
         );
 
         console.log('Database query result:', { 
