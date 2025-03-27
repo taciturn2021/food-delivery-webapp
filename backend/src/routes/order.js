@@ -31,7 +31,7 @@ router.get('/branch/pending', protect, isAdminOrManager, getBranchPendingOrders)
 // ID-specific routes - Place these AFTER the more specific routes
 router.get('/:id', protect, getOrderById);
 router.put('/:id/status', protect, isAdminOrManager, updateOrderStatus);
-router.put('/:id/cancel', protect,isAdminOrManager, cancelOrder);
+router.put('/:id/cancel', protect, cancelOrder);
 router.put('/:id/assign-rider', protect, isAdminOrManager, assignRiderToOrder);
 
 // rider routes
