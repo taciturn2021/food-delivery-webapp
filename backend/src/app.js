@@ -22,6 +22,10 @@ dotenv.config();
 
 const app = express();
 
+// Trust proxy - required for Cloudflare tunnels or any proxy
+// This enables Express to trust the X-Forwarded-For header from a proxy
+app.set('trust proxy', true);
+
 // CORS configuration
 const corsOptions = {
     origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Frontend URL
