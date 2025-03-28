@@ -88,27 +88,41 @@ api.interceptors.response.use(
             }
         }
         
-        // For GET requests that fail, use cached data if available
+        // For GET requests that fail (including rate limits), use cached data if available
         if (originalRequest?.method?.toLowerCase() === 'get') {
             const cacheKey = getCacheKey(originalRequest);
             const cachedResponse = responseCache.get(cacheKey);
+            
+            // Check specifically for rate limit errors (429)
+            const isRateLimitError = error.response?.status === 429;
             
             // Only use cache if it exists and is not too old
             const isCacheValid = cachedResponse && 
                 (Date.now() - cachedResponse.timestamp < CACHE_MAX_AGE);
             
             if (isCacheValid) {
-                console.warn(`Using cached data for failed request to ${originalRequest.url}`);
+                // Log different messages depending on error type
+                if (isRateLimitError) {
+                    console.warn(`Rate limit exceeded for ${originalRequest.url}. Using cached data.`);
+                } else {
+                    console.warn(`Using cached data for failed request to ${originalRequest.url}`);
+                }
                 
                 // Return a successful response with cached data
                 return {
                     ...error.response,
                     data: cachedResponse.data,
                     status: 200,
-                    statusText: 'OK (Using cached data)',
+                    statusText: isRateLimitError ? 'OK (Rate limited, using cached data)' : 'OK (Using cached data)',
                     fromCache: true,
+                    rateLimited: isRateLimitError,
                     config: originalRequest
                 };
+            }
+            
+            // If we hit a rate limit but don't have cache, log this for debugging
+            if (isRateLimitError) {
+                console.error(`Rate limit exceeded for ${originalRequest.url} but no valid cache available`);
             }
         }
         
