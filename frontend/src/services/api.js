@@ -7,7 +7,7 @@ const responseCache = new Map();
 
 // Cache configuration
 const CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes in milliseconds
-const CACHE_MAX_SIZE = 10000; // Maximum number of cached responses
+const CACHE_MAX_SIZE = 100; // Maximum number of cached responses
 
 const api = axios.create({
     baseURL: API_URL,
@@ -40,23 +40,49 @@ api.interceptors.response.use(
         if (response.config.method?.toLowerCase() === 'get') {
             const cacheKey = getCacheKey(response.config);
             
-            // Limit cache size
-            if (responseCache.size >= CACHE_MAX_SIZE) {
-                const oldestKey = Array.from(responseCache.keys())[0];
-                responseCache.delete(oldestKey);
-            }
-            
+            // Store in cache
             responseCache.set(cacheKey, {
                 data: response.data,
                 timestamp: Date.now()
             });
+            
+            // Log cache operations in development
+            if (process.env.NODE_ENV === 'development') {
+                console.log(`Cached response for: ${response.config.url}`);
+            }
         }
         return response;
     },
     async (error) => {
         const originalRequest = error.config;
         
-        // If the error is 401 and it's not a profile request (to prevent loops)
+        // Handle 429 rate limit errors FIRST before other error handling
+        if (error.response?.status === 429 && originalRequest?.method?.toLowerCase() === 'get') {
+            console.warn(`Rate limit hit for ${originalRequest.url}, checking cache...`);
+            
+            const cacheKey = getCacheKey(originalRequest);
+            const cachedResponse = responseCache.get(cacheKey);
+            
+            // If we have valid cache, use it
+            if (cachedResponse && Date.now() - cachedResponse.timestamp < CACHE_MAX_AGE) {
+                console.log(`Using cached data for rate-limited request to ${originalRequest.url}`);
+                
+                // Return cached response with special flags
+                return Promise.resolve({
+                    data: cachedResponse.data,
+                    status: 200,
+                    statusText: 'OK (Using cached data)',
+                    headers: error.response.headers,
+                    config: originalRequest,
+                    fromCache: true,
+                    rateLimited: true
+                });
+            } else {
+                console.error(`No valid cache available for rate-limited request to ${originalRequest.url}`);
+            }
+        }
+        
+        // Handle 401 authentication errors
         if (error.response?.status === 401 && 
             !originalRequest._retry && 
             !originalRequest.url.endsWith('/auth/profile')) {
@@ -88,41 +114,24 @@ api.interceptors.response.use(
             }
         }
         
-        // For GET requests that fail (including rate limits), use cached data if available
+        // For all other GET request failures, check cache as fallback
         if (originalRequest?.method?.toLowerCase() === 'get') {
             const cacheKey = getCacheKey(originalRequest);
             const cachedResponse = responseCache.get(cacheKey);
             
-            // Check specifically for rate limit errors (429)
-            const isRateLimitError = error.response?.status === 429;
-            
             // Only use cache if it exists and is not too old
-            const isCacheValid = cachedResponse && 
-                (Date.now() - cachedResponse.timestamp < CACHE_MAX_AGE);
-            
-            if (isCacheValid) {
-                // Log different messages depending on error type
-                if (isRateLimitError) {
-                    console.warn(`Rate limit exceeded for ${originalRequest.url}. Using cached data.`);
-                } else {
-                    console.warn(`Using cached data for failed request to ${originalRequest.url}`);
-                }
+            if (cachedResponse && (Date.now() - cachedResponse.timestamp < CACHE_MAX_AGE)) {
+                console.warn(`Request failed, using cached data for ${originalRequest.url}`);
                 
                 // Return a successful response with cached data
-                return {
-                    ...error.response,
+                return Promise.resolve({
                     data: cachedResponse.data,
                     status: 200,
-                    statusText: isRateLimitError ? 'OK (Rate limited, using cached data)' : 'OK (Using cached data)',
-                    fromCache: true,
-                    rateLimited: isRateLimitError,
-                    config: originalRequest
-                };
-            }
-            
-            // If we hit a rate limit but don't have cache, log this for debugging
-            if (isRateLimitError) {
-                console.error(`Rate limit exceeded for ${originalRequest.url} but no valid cache available`);
+                    statusText: 'OK (Using cached data)',
+                    headers: error.response?.headers || {},
+                    config: originalRequest,
+                    fromCache: true
+                });
             }
         }
         
