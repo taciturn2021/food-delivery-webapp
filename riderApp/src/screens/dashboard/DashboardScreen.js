@@ -191,7 +191,7 @@ const DashboardScreen = ({ navigation }) => {
               <DeliveryCard
                 key={delivery.id}
                 delivery={delivery}
-                onPress={() => navigation.navigate('DeliveryDetails', { delivery })}
+                onPress={() => navigation.navigate('DeliveryDetails', { order: delivery})}
               />
             ))
           )}

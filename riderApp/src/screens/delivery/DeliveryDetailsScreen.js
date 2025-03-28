@@ -18,7 +18,7 @@ import ErrorMessage from '../../components/common/ErrorMessage';
 const DeliveryDetailsScreen = ({ route, navigation }) => {
   // Make sure we're safely extracting the orderId from route params
 
-  const orderId = route.params.delivery.id;
+  const orderId = route.params.order.id;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [orderDetails, setOrderDetails] = useState(null);
