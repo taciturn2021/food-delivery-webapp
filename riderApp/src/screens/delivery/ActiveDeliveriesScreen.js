@@ -82,6 +82,22 @@ const truncateAddress = (addressText) => {
     // Truncate the formatted address
     const displayAddress = truncateAddress(parsedAddress.formatted);
     
+    // Extract delivery coordinates from the delivery address
+    let deliveryCoordinates = { latitude: 0, longitude: 0 };
+    try {
+      if (typeof order.delivery_address === 'string') {
+        const addressObj = JSON.parse(order.delivery_address);
+        if (addressObj.latitude && addressObj.longitude) {
+          deliveryCoordinates = {
+            latitude: parseFloat(addressObj.latitude),
+            longitude: parseFloat(addressObj.longitude)
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing delivery coordinates:', error);
+    }
+    
     return (
       <TouchableOpacity
         style={styles.deliveryItem}
@@ -122,10 +138,15 @@ const truncateAddress = (addressText) => {
           <TouchableOpacity
             style={styles.mapButton}
             onPress={() => navigation.navigate('DeliveryMapScreen', { 
-              latitude: order.branch_latitude,
-              longitude: order.branch_longitude,
-              address: order.delivery_address,
-              orderId: order.id
+              orderId: order.id,
+              // Restaurant location
+              branchLatitude: order.branch_latitude,
+              branchLongitude: order.branch_longitude,
+              // Delivery location
+              deliveryLatitude: deliveryCoordinates.latitude,
+              deliveryLongitude: deliveryCoordinates.longitude,
+              // Formatted address string
+              address: parsedAddress.formatted
             })}
           >
             <Ionicons name="map-outline" size={16} color="#0066cc" />
