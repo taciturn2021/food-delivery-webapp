@@ -81,7 +81,7 @@ export const deleteMenuItem = async (req, res) => {
 
 export const assignMenuItemToBranch = async (req, res) => {
     const { branch_id, menu_item_id, price, is_available } = req.body;
-
+    
     try {
         const result = await pool.query(
             'INSERT INTO branch_menu_items (branch_id, menu_item_id, price, is_available) VALUES ($1, $2, $3, $4) ON CONFLICT (branch_id, menu_item_id) DO UPDATE SET price = $3, is_available = $4 RETURNING *',

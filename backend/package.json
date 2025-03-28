@@ -13,18 +13,18 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "cookie-parser": "^1.4.6",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "express-validator": "^7.2.1",
-    "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.0",
-    "pg": "^8.13.1"
+    "bcryptjs": "*",
+    "cookie-parser": "*",
+    "cors": "*",
+    "dotenv": "*",
+    "express": "*",
+    "express-validator": "*",
+    "jsonwebtoken": "*",
+    "morgan": "*",
+    "pg": "*"
   },
   "devDependencies": {
-    "axios": "^1.6.7",
-    "nodemon": "^3.1.9"
+    "axios": "*",
+    "nodemon": "*"
   }
 }
