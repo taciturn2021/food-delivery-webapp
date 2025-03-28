@@ -39,7 +39,7 @@ app.use(cookieParser());
 // Initialize database
 initializeDatabase().catch(console.error);
 
-// Routes
+// Routes - specific rate limiters are applied in each route file
 app.use('/api/auth', authRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/branches', branchRoutes);

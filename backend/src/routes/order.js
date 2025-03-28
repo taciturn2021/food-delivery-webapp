@@ -13,28 +13,28 @@ import {
 } from '../controllers/orderController.js';
 import { protect, isAdminOrManager, isRider, isRiderForOrder } from '../middleware/auth.js';
 import { isBranchActive } from '../middleware/orders.js';
+import { orderReadLimiter, orderWriteLimiter } from '../middleware/rateLimiter/index.js';
 
 const router = express.Router();
 
-// General order routes
-router.post('/', protect, isBranchActive, createOrder);
-router.get('/', protect, isAdminOrManager, getOrders);
+// General order routes with specific rate limiters
+router.post('/', protect, orderWriteLimiter, isBranchActive, createOrder);
+router.get('/', protect, orderReadLimiter, isAdminOrManager, getOrders);
 
-// Customer order routes - Place these BEFORE the /:id route to prevent conflicts
-router.get('/customer/active', protect, getCustomerActiveOrders);
-router.get('/customer/history', protect, getCustomerOrderHistory);
+// Customer order routes with read rate limiter
+router.get('/customer/active', protect, orderReadLimiter, getCustomerActiveOrders);
+router.get('/customer/history', protect, orderReadLimiter, getCustomerOrderHistory);
 
-// Branch order routes
-router.get('/branch/pending', protect, isAdminOrManager, getBranchPendingOrders);
+// Branch order routes with read rate limiter
+router.get('/branch/pending', protect, orderReadLimiter, isAdminOrManager, getBranchPendingOrders);
 
+// ID-specific routes
+router.get('/:id', protect, orderReadLimiter, getOrderById);
+router.put('/:id/status', protect, orderWriteLimiter, isAdminOrManager, updateOrderStatus);
+router.put('/:id/cancel', protect, orderWriteLimiter, cancelOrder);
+router.put('/:id/assign-rider', protect, orderWriteLimiter, isAdminOrManager, assignRiderToOrder);
 
-// ID-specific routes - Place these AFTER the more specific routes
-router.get('/:id', protect, getOrderById);
-router.put('/:id/status', protect, isAdminOrManager, updateOrderStatus);
-router.put('/:id/cancel', protect, cancelOrder);
-router.put('/:id/assign-rider', protect, isAdminOrManager, assignRiderToOrder);
-
-// rider routes
-router.put('/:id/rider-status', protect, isRiderForOrder, riderUpdateOrderStatus);
+// rider routes with write rate limiter
+router.put('/:id/rider-status', protect, orderWriteLimiter, isRiderForOrder, riderUpdateOrderStatus);
 
 export default router;

@@ -2,10 +2,22 @@ import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+// Response cache for GET requests
+const responseCache = new Map();
+
+// Cache configuration
+const CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes in milliseconds
+const CACHE_MAX_SIZE = 10000; // Maximum number of cached responses
+
 const api = axios.create({
     baseURL: API_URL,
     withCredentials: true
 });
+
+// Helper function to generate consistent cache key
+const getCacheKey = (config) => {
+    return `${config.url}${config.params ? JSON.stringify(config.params) : ''}`;
+};
 
 // Request interceptor for adding auth token
 api.interceptors.request.use(
@@ -21,9 +33,26 @@ api.interceptors.request.use(
     }
 );
 
-// Response interceptor for handling auth errors
+// Response interceptor for handling auth errors and caching GET responses
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        // Store successful GET responses in cache
+        if (response.config.method?.toLowerCase() === 'get') {
+            const cacheKey = getCacheKey(response.config);
+            
+            // Limit cache size
+            if (responseCache.size >= CACHE_MAX_SIZE) {
+                const oldestKey = Array.from(responseCache.keys())[0];
+                responseCache.delete(oldestKey);
+            }
+            
+            responseCache.set(cacheKey, {
+                data: response.data,
+                timestamp: Date.now()
+            });
+        }
+        return response;
+    },
     async (error) => {
         const originalRequest = error.config;
         
@@ -58,9 +87,44 @@ api.interceptors.response.use(
                 return Promise.reject(refreshError);
             }
         }
+        
+        // For GET requests that fail, use cached data if available
+        if (originalRequest?.method?.toLowerCase() === 'get') {
+            const cacheKey = getCacheKey(originalRequest);
+            const cachedResponse = responseCache.get(cacheKey);
+            
+            // Only use cache if it exists and is not too old
+            const isCacheValid = cachedResponse && 
+                (Date.now() - cachedResponse.timestamp < CACHE_MAX_AGE);
+            
+            if (isCacheValid) {
+                console.warn(`Using cached data for failed request to ${originalRequest.url}`);
+                
+                // Return a successful response with cached data
+                return {
+                    ...error.response,
+                    data: cachedResponse.data,
+                    status: 200,
+                    statusText: 'OK (Using cached data)',
+                    fromCache: true,
+                    config: originalRequest
+                };
+            }
+        }
+        
         return Promise.reject(error);
     }
 );
+
+// Clean up stale cache entries periodically
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of responseCache.entries()) {
+        if (now - value.timestamp > CACHE_MAX_AGE) {
+            responseCache.delete(key);
+        }
+    }
+}, 10 * 60 * 1000); // Run cleanup every 10 minutes
 
 // Public APIs (no auth required)
 export const getPublicBranches = () => api.get('/branches/public');
@@ -130,7 +194,7 @@ export const updateBranchSettings = (id, data) => api.put(`/branches/${id}/setti
 export const createRider = (data) => api.post('/riders', data);
 export const getBranchRiders = (branchId) => api.get(`/riders/branch/${branchId}`);
 export const updateRider = (id, data) => api.put(`/riders/${id}`, data);
-export const getRiderDetails = (userId) => api.get(`/riders/${userId}`);  // Changed to getRiderDetails for clarity
+export const getRiderDetails = (userId) => api.get(`/riders/${userId}`);
 export const getRiderOrders = (riderId) => api.get(`/riders/${riderId}/orders`);
 export const updateDeliveryStatus = (orderId, assignmentId, status) => 
     api.put(`/riders/orders/${orderId}/status`, { assignmentId, status });

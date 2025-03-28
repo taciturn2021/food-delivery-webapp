@@ -271,23 +271,12 @@ const initializeDatabase = async () => {
                 'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, email, role',
                 ['admin', email, hashedPassword, 'admin']
             );
-            console.log('Created new admin user', email, 'with role admin', password);
+            console.log('Created new admin user');
         
 
-        // Verify admin user
-        const verifyAdmin = await client.query(
-            'SELECT id, email, role, password FROM users WHERE email = $1',
-            ['admin@example.com']
-        );
         
-        if (verifyAdmin.rows.length > 0) {
-            console.log('Admin user verification:', {
-                id: verifyAdmin.rows[0].id,
-                email: verifyAdmin.rows[0].email,
-                role: verifyAdmin.rows[0].role,
-                passwordLength: verifyAdmin.rows[0].password.length
-            });
-        }
+        
+       
 
         await client.query('COMMIT');
         console.log('Database initialization completed successfully');
