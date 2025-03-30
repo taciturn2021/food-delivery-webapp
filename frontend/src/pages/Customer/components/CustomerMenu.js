@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getPublicBranchMenu } from '../../../services/api';
 import { useCart } from '../../../context/CartContext';
-import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, X } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent } from '../../../components/ui/card';
 
@@ -93,7 +93,7 @@ const CustomerMenu = ({ branchId: propBranchId }) => {
         <>
             <Button 
                 onClick={() => setCartOpen(true)}
-                className="fixed top-20 right-4 z-50 h-12 w-12 rounded-full shadow-lg hover:shadow-xl bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                className="fixed top-20 right-4 z-30 h-12 w-12 rounded-full shadow-lg hover:shadow-xl bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
             >
                 <div className="relative">
                     <ShoppingCart className="h-6 w-6 text-white" />
@@ -105,7 +105,7 @@ const CustomerMenu = ({ branchId: propBranchId }) => {
                 </div>
             </Button>
             
-            <div className="container mx-auto px-4 py-8">
+            <div className="container mx-auto px-4 py-6 sm:py-8">
                 <AnimatePresence>
                     {Object.entries(groupedItems).map(([category, items]) => (
                         <motion.div 
@@ -113,10 +113,10 @@ const CustomerMenu = ({ branchId: propBranchId }) => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0 }}
-                            className="mb-12"
+                            className="mb-8 sm:mb-12"
                         >
-                            <h2 className="text-3xl font-bold text-orange-900 mb-6">{category}</h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <h2 className="text-2xl sm:text-3xl font-bold text-orange-900 mb-4 sm:mb-6">{category}</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                                 {items.map((item) => (
                                     <motion.div 
                                         key={item.id}
@@ -124,7 +124,7 @@ const CustomerMenu = ({ branchId: propBranchId }) => {
                                     >
                                         <Card className="h-full overflow-hidden bg-white/95 backdrop-blur-sm border-orange-100">
                                             {item.image_url && (
-                                                <div className="relative h-48 w-full">
+                                                <div className="relative h-40 sm:h-48 w-full">
                                                     <img 
                                                         src={item.image_url}
                                                         alt={item.name}
@@ -132,21 +132,22 @@ const CustomerMenu = ({ branchId: propBranchId }) => {
                                                     />
                                                 </div>
                                             )}
-                                            <CardContent className="p-6">
-                                                <h3 className="text-xl font-semibold text-orange-900 mb-2">{item.name}</h3>
-                                                <p className="text-orange-700/80 mb-4">{item.description}</p>
+                                            <CardContent className="p-4 sm:p-6">
+                                                <h3 className="text-lg sm:text-xl font-semibold text-orange-900 mb-1 sm:mb-2">{item.name}</h3>
+                                                <p className="text-sm sm:text-base text-orange-700/80 mb-3 sm:mb-4 line-clamp-2">{item.description}</p>
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-2xl font-bold text-orange-600">
+                                                    <span className="text-xl sm:text-2xl font-bold text-orange-600">
                                                         ${formatPrice(item.branch_price || item.price)}
                                                     </span>
                                                     <Button 
                                                         variant={addedItems[item.id] ? "outline" : "default"}
+                                                        size="sm"
                                                         onClick={() => handleAddToCart(item)}
-                                                        className={addedItems[item.id] 
+                                                        className={`text-xs sm:text-sm ${addedItems[item.id] 
                                                             ? "border-green-600 text-green-600 hover:bg-green-50" 
-                                                            : "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"}
+                                                            : "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"}`}
                                                     >
-                                                        <Plus className="mr-2 h-4 w-4" />
+                                                        <Plus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                                                         {addedItems[item.id] ? 'Added!' : 'Add to Cart'}
                                                     </Button>
                                                 </div>
@@ -160,22 +161,28 @@ const CustomerMenu = ({ branchId: propBranchId }) => {
                 </AnimatePresence>
             </div>
 
+            {/* Cart Drawer Overlay */}
+            {cartOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/30 z-40"
+                    onClick={() => setCartOpen(false)}
+                ></div>
+            )}
+
             {/* Cart Drawer */}
             <div 
-                className={`fixed inset-y-0 right-0 w-96 bg-white/95 backdrop-blur-sm shadow-xl transform transition-transform duration-300 ease-in-out z-50 border-l border-orange-100 ${
+                className={`fixed inset-y-0 right-0 w-full sm:w-80 md:w-96 bg-white/95 backdrop-blur-sm shadow-xl transform transition-transform duration-300 ease-in-out z-50 border-l border-orange-100 ${
                     cartOpen ? 'translate-x-0' : 'translate-x-full'
                 }`}
             >
-                <div className="p-6 h-full flex flex-col">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-semibold text-orange-900">Your Cart</h2>
+                <div className="p-4 sm:p-6 h-full flex flex-col">
+                    <div className="flex justify-between items-center mb-4 sm:mb-6">
+                        <h2 className="text-xl sm:text-2xl font-semibold text-orange-900">Your Cart</h2>
                         <button 
                             onClick={() => setCartOpen(false)}
-                            className="text-orange-600 hover:text-orange-700"
+                            className="text-orange-600 hover:text-orange-700 p-1"
                         >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            <X className="w-5 h-5 sm:w-6 sm:h-6" />
                         </button>
                     </div>
                     
@@ -185,40 +192,40 @@ const CustomerMenu = ({ branchId: propBranchId }) => {
                         </div>
                     ) : (
                         <div className="flex-1 overflow-y-auto">
-                            <div className="space-y-4">
+                            <div className="space-y-3 sm:space-y-4">
                                 {cart.items.map((item) => (
                                     <Card key={item.id} className="overflow-hidden border-orange-100">
-                                        <CardContent className="p-4">
-                                            <div className="flex justify-between">
+                                        <CardContent className="p-3 sm:p-4">
+                                            <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
                                                 <div>
-                                                    <h3 className="font-medium text-orange-900">{item.name}</h3>
-                                                    <p className="text-orange-600">${formatPrice((item.branch_price || item.price) * item.quantity)}</p>
+                                                    <h3 className="font-medium text-orange-900 text-sm sm:text-base">{item.name}</h3>
+                                                    <p className="text-orange-600 text-sm sm:text-base">${formatPrice((item.branch_price || item.price) * item.quantity)}</p>
                                                 </div>
-                                                <div className="flex items-center space-x-2">
+                                                <div className="flex items-center justify-end sm:justify-start gap-1 sm:gap-2">
                                                     <Button 
                                                         variant="outline"
                                                         size="icon"
-                                                        className="h-8 w-8 border-orange-200 text-orange-600 hover:bg-orange-50"
+                                                        className="h-7 w-7 sm:h-8 sm:w-8 border-orange-200 text-orange-600 hover:bg-orange-50"
                                                         onClick={() => updateQuantity(item.id, item.quantity - 1)}
                                                     >
-                                                        <Minus className="h-4 w-4" />
+                                                        <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
                                                     </Button>
-                                                    <span className="w-8 text-center text-orange-900">{item.quantity}</span>
+                                                    <span className="w-6 sm:w-8 text-center text-orange-900 text-sm sm:text-base">{item.quantity}</span>
                                                     <Button 
                                                         variant="outline"
                                                         size="icon"
-                                                        className="h-8 w-8 border-orange-200 text-orange-600 hover:bg-orange-50"
+                                                        className="h-7 w-7 sm:h-8 sm:w-8 border-orange-200 text-orange-600 hover:bg-orange-50"
                                                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
                                                     >
-                                                        <Plus className="h-4 w-4" />
+                                                        <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                                                     </Button>
                                                     <Button 
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                        className="h-7 w-7 sm:h-8 sm:w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
                                                         onClick={() => removeFromCart(item.id)}
                                                     >
-                                                        <Trash2 className="h-4 w-4" />
+                                                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                                                     </Button>
                                                 </div>
                                             </div>
@@ -230,13 +237,13 @@ const CustomerMenu = ({ branchId: propBranchId }) => {
                     )}
                     
                     {cart.items.length > 0 && (
-                        <div className="mt-6 pt-6 border-t border-orange-100">
+                        <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-orange-100">
                             <div className="flex justify-between items-center mb-4">
-                                <span className="text-lg font-semibold text-orange-900">Total</span>
-                                <span className="text-2xl font-bold text-orange-600">${formatPrice(getTotal())}</span>
+                                <span className="text-base sm:text-lg font-semibold text-orange-900">Total</span>
+                                <span className="text-xl sm:text-2xl font-bold text-orange-600">${formatPrice(getTotal())}</span>
                             </div>
                             <Button 
-                                className="w-full py-5 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30"
+                                className="w-full py-4 sm:py-5 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30"
                                 onClick={() => {
                                     setCartOpen(false);
                                     navigate('/cart');

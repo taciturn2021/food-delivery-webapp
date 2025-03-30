@@ -57,37 +57,37 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 py-12 px-4 relative">
+        <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 py-8 sm:py-12 px-4 relative">
             <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-red-500/20"></div>
-            <div className="container mx-auto max-w-md relative z-10">
-                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-orange-100">
+            <div className="container mx-auto max-w-sm sm:max-w-md relative z-10">
+                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-6 sm:p-8 border border-orange-100">
                     <button
                         type="button"
                         onClick={() => navigate('/')}
-                        className="absolute top-4 left-4 text-orange-600 hover:text-orange-700"
+                        className="absolute top-3 sm:top-4 left-3 sm:left-4 text-orange-600 hover:text-orange-700"
                     >
                         ← Back to Menu
                     </button>
                     
-                    <div className="flex flex-col items-center mb-8">
-                        <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center mb-4 transform hover:rotate-12 transition-transform">
-                            <UtensilsCrossed className="w-8 h-8 text-orange-600" />
+                    <div className="flex flex-col items-center mb-6 sm:mb-8 mt-4 sm:mt-0">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-orange-100 flex items-center justify-center mb-3 sm:mb-4 transform hover:rotate-12 transition-transform">
+                            <UtensilsCrossed className="w-7 h-7 sm:w-8 sm:h-8 text-orange-600" />
                         </div>
-                        <h1 className="text-3xl font-bold text-center text-orange-900 mb-2">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-center text-orange-900 mb-1 sm:mb-2">
                             Welcome Back!
                         </h1>
-                        <p className="text-orange-600 text-center">
+                        <p className="text-sm sm:text-base text-orange-600 text-center">
                             Ready to order your favorite dishes?
                         </p>
                     </div>
 
                     {error && (
-                        <Alert variant="destructive" className="mb-6">
+                        <Alert variant="destructive" className="mb-4 sm:mb-6 text-sm sm:text-base">
                             <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
+                    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                         <div>
                             <Input
                                 type="email"
@@ -97,7 +97,7 @@ const Login = () => {
                                 value={formData.email}
                                 onChange={(e) => setFormData({...formData, email: e.target.value})}
                                 required
-                                className="border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+                                className="border-orange-200 focus:border-orange-500 focus:ring-orange-500 text-sm sm:text-base"
                             />
                         </div>
                         <div>
@@ -109,18 +109,18 @@ const Login = () => {
                                 value={formData.password}
                                 onChange={(e) => setFormData({...formData, password: e.target.value})}
                                 required
-                                className="border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+                                className="border-orange-200 focus:border-orange-500 focus:ring-orange-500 text-sm sm:text-base"
                             />
                         </div>
 
                         <Button 
                             type="submit" 
-                            className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30"
+                            className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30 text-sm sm:text-base py-2 sm:py-5"
                             disabled={loading}
                         >
                             {loading ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                                     Cooking up...
                                 </>
                             ) : (
@@ -129,7 +129,7 @@ const Login = () => {
                         </Button>
                     </form>
 
-                    <div className="mt-8 flex justify-between text-sm">
+                    <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:justify-between text-xs sm:text-sm gap-3 sm:gap-0">
                         <button
                             type="button"
                             onClick={() => navigate('/register')}
@@ -142,7 +142,7 @@ const Login = () => {
                             onClick={() => navigate('')}
                             className="text-orange-700 hover:text-orange-500 font-medium"
                         >
-                            Forgot Password? (not implemented yet)
+                            Forgot Password?
                         </button>
                     </div>
                 </div>

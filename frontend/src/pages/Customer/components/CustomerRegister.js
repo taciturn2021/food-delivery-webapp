@@ -103,13 +103,13 @@ const CustomerRegister = () => {
     };
 
     const renderStepContent = (step) => {
-        const inputClassName = "border-orange-200 focus:border-orange-500 focus:ring-orange-500";
-        const errorClassName = "text-sm text-red-500 mt-1";
+        const inputClassName = "border-orange-200 focus:border-orange-500 focus:ring-orange-500 text-sm sm:text-base";
+        const errorClassName = "text-xs sm:text-sm text-red-500 mt-1";
         
         switch (step) {
             case 0:
                 return (
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                         <div>
                             <Input
                                 placeholder="Username"
@@ -165,8 +165,8 @@ const CustomerRegister = () => {
                 );
             case 1:
                 return (
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3 sm:space-y-4">
+                        <div className="grid grid-cols-2 gap-2 sm:gap-4">
                             <div>
                                 <Input
                                     placeholder="First Name"
@@ -212,26 +212,26 @@ const CustomerRegister = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 py-12 px-4 relative">
+        <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 py-8 sm:py-12 px-4 relative">
             <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-red-500/20"></div>
-            <div className="container mx-auto max-w-md relative z-10">
-                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-orange-100">
+            <div className="container mx-auto max-w-sm sm:max-w-md relative z-10">
+                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-5 sm:p-8 border border-orange-100">
                     <button
                         type="button"
                         onClick={() => navigate('/')}
-                        className="absolute top-4 left-4 text-orange-600 hover:text-orange-700"
+                        className="absolute top-3 sm:top-4 left-3 sm:left-4 text-orange-600 hover:text-orange-700 text-sm sm:text-base"
                     >
                         ← Back to Menu
                     </button>
 
-                    <div className="flex flex-col items-center mb-6">
-                        <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center mb-4 transform hover:rotate-12 transition-transform">
-                            <UtensilsCrossed className="w-8 h-8 text-orange-600" />
+                    <div className="flex flex-col items-center mb-4 sm:mb-6 mt-4 sm:mt-0">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-orange-100 flex items-center justify-center mb-3 sm:mb-4 transform hover:rotate-12 transition-transform">
+                            <UtensilsCrossed className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
                         </div>
-                        <h1 className="text-3xl font-bold text-center text-orange-900 mb-2">
+                        <h1 className="text-xl sm:text-3xl font-bold text-center text-orange-900 mb-1 sm:mb-2">
                             Join Our Food Family!
                         </h1>
-                        <p className="text-orange-600 text-center">
+                        <p className="text-xs sm:text-base text-orange-600 text-center">
                             A world of delicious food awaits you
                         </p>
                     </div>
@@ -239,40 +239,40 @@ const CustomerRegister = () => {
                     <Stepper 
                         steps={steps} 
                         activeStep={activeStep} 
-                        className="mb-8"
+                        className="mb-5 sm:mb-8"
                         activeColor="rgb(249, 115, 22)"
                         inactiveColor="rgb(254, 215, 170)"
                     />
 
                     {error && (
-                        <Alert variant="destructive" className="mb-6">
-                            <AlertDescription>{error}</AlertDescription>
+                        <Alert variant="destructive" className="mb-4 sm:mb-6">
+                            <AlertDescription className="text-xs sm:text-sm">{error}</AlertDescription>
                         </Alert>
                     )}
 
-                    <form onSubmit={activeStep === steps.length - 1 ? handleSubmit : handleNext} className="space-y-4">
-                        <div className="space-y-4">
+                    <form onSubmit={activeStep === steps.length - 1 ? handleSubmit : handleNext} className="space-y-3 sm:space-y-4">
+                        <div className="space-y-3 sm:space-y-4">
                             {renderStepContent(activeStep)}
                         </div>
 
-                        <div className="flex justify-between mt-8 gap-4">
+                        <div className="flex justify-between mt-5 sm:mt-8 gap-2 sm:gap-4">
                             <Button
                                 type="button"
                                 variant="outline"
                                 onClick={handleBack}
                                 disabled={activeStep === 0 || loading}
-                                className="border-orange-200 text-orange-700 hover:bg-orange-50"
+                                className="border-orange-200 text-orange-700 hover:bg-orange-50 text-xs sm:text-sm py-1.5 sm:py-2.5"
                             >
                                 Back
                             </Button>
                             <Button 
                                 type="submit" 
                                 disabled={loading}
-                                className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30"
+                                className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30 text-xs sm:text-sm py-1.5 sm:py-2.5"
                             >
                                 {loading ? (
                                     <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                                         Preparing...
                                     </>
                                 ) : activeStep === steps.length - 1 ? (
@@ -284,11 +284,11 @@ const CustomerRegister = () => {
                         </div>
                     </form>
 
-                    <div className="mt-6 text-center">
+                    <div className="mt-4 sm:mt-6 text-center">
                         <button
                             type="button"
                             onClick={() => navigate('/login')}
-                            className="text-orange-700 hover:text-orange-500 font-medium"
+                            className="text-orange-700 hover:text-orange-500 font-medium text-xs sm:text-sm"
                         >
                             Already a foodie? Sign in!
                         </button>

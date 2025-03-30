@@ -151,29 +151,29 @@ const CustomerEditProfile = () => {
             <CustomerHeader />
             <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 pt-16">
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-red-500/20"></div>
-                <div className="container mx-auto px-4 py-8 relative z-10">
-                    <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-orange-100 p-6">
-                        <div className="flex items-center gap-2 mb-6">
+                <div className="container mx-auto px-4 py-6 sm:py-8 relative z-10">
+                    <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-orange-100 p-4 sm:p-6">
+                        <div className="flex items-center gap-2 mb-4 sm:mb-6">
                             <button 
                                 onClick={() => navigate(-1)}
                                 className="hover:bg-orange-100 p-2 rounded-full transition-colors text-orange-600"
                             >
                                 <ArrowLeft className="h-5 w-5" />
                             </button>
-                            <h1 className="text-2xl font-semibold text-orange-900">Edit Profile</h1>
+                            <h1 className="text-xl sm:text-2xl font-semibold text-orange-900">Edit Profile</h1>
                         </div>
 
-                        <div className="grid md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                             {/* Profile Information Section */}
                             <div>
-                                <h2 className="text-xl font-semibold text-orange-900 mb-4">Profile Information</h2>
+                                <h2 className="text-lg sm:text-xl font-semibold text-orange-900 mb-3 sm:mb-4">Profile Information</h2>
                                 {profileError && (
-                                    <Alert variant="destructive" className="mb-4">
-                                        <AlertDescription>{profileError}</AlertDescription>
+                                    <Alert variant="destructive" className="mb-3 sm:mb-4">
+                                        <AlertDescription className="text-xs sm:text-sm">{profileError}</AlertDescription>
                                     </Alert>
                                 )}
 
-                                <form onSubmit={handleProfileSubmit} className="space-y-4">
+                                <form onSubmit={handleProfileSubmit} className="space-y-3 sm:space-y-4">
                                     <div>
                                         <Input
                                             name="username"
@@ -181,9 +181,9 @@ const CustomerEditProfile = () => {
                                             onChange={handleProfileChange}
                                             disabled
                                             placeholder="Username"
-                                            className="border-orange-200 bg-orange-50/50"
+                                            className="border-orange-200 bg-orange-50/50 text-sm sm:text-base"
                                         />
-                                        <p className="text-sm text-orange-600/70 mt-1">Username cannot be changed</p>
+                                        <p className="text-xs sm:text-sm text-orange-600/70 mt-1">Username cannot be changed</p>
                                     </div>
                                     
                                     <div>
@@ -194,19 +194,19 @@ const CustomerEditProfile = () => {
                                             onChange={handleProfileChange}
                                             disabled
                                             placeholder="Email"
-                                            className="border-orange-200 bg-orange-50/50"
+                                            className="border-orange-200 bg-orange-50/50 text-sm sm:text-base"
                                         />
-                                        <p className="text-sm text-orange-600/70 mt-1">Email cannot be changed</p>
+                                        <p className="text-xs sm:text-sm text-orange-600/70 mt-1">Email cannot be changed</p>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
                                         <Input
                                             name="firstName"
                                             value={profileData.firstName}
                                             onChange={handleProfileChange}
                                             placeholder="First Name"
                                             required
-                                            className="border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+                                            className="border-orange-200 focus:border-orange-500 focus:ring-orange-500 text-sm sm:text-base"
                                         />
                                         <Input
                                             name="lastName"
@@ -214,7 +214,7 @@ const CustomerEditProfile = () => {
                                             onChange={handleProfileChange}
                                             placeholder="Last Name"
                                             required
-                                            className="border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+                                            className="border-orange-200 focus:border-orange-500 focus:ring-orange-500 text-sm sm:text-base"
                                         />
                                     </div>
 
@@ -225,18 +225,19 @@ const CustomerEditProfile = () => {
                                             onChange={handleProfileChange}
                                             placeholder="Phone Number"
                                             required
-                                            className="border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+                                            className="border-orange-200 focus:border-orange-500 focus:ring-orange-500 text-sm sm:text-base"
                                         />
                                     </div>
 
                                     <Button 
                                         type="submit" 
                                         disabled={loading}
-                                        className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30"
+                                        className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30 text-xs sm:text-sm py-1.5 sm:py-2.5"
+                                        size="sm"
                                     >
                                         {loading ? (
                                             <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                                                 Updating...
                                             </>
                                         ) : (
@@ -248,14 +249,14 @@ const CustomerEditProfile = () => {
 
                             {/* Change Password Section */}
                             <div>
-                                <h2 className="text-xl font-semibold text-orange-900 mb-4">Change Password</h2>
+                                <h2 className="text-lg sm:text-xl font-semibold text-orange-900 mb-3 sm:mb-4">Change Password</h2>
                                 {passwordError && (
-                                    <Alert variant="destructive" className="mb-4">
-                                        <AlertDescription>{passwordError}</AlertDescription>
+                                    <Alert variant="destructive" className="mb-3 sm:mb-4">
+                                        <AlertDescription className="text-xs sm:text-sm">{passwordError}</AlertDescription>
                                     </Alert>
                                 )}
 
-                                <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                                <form onSubmit={handlePasswordSubmit} className="space-y-3 sm:space-y-4">
                                     <div className="relative">
                                         <Input
                                             type={showPassword.currentPassword ? 'text' : 'password'}
@@ -264,7 +265,7 @@ const CustomerEditProfile = () => {
                                             onChange={handlePasswordChange}
                                             placeholder="Current Password"
                                             required
-                                            className="border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+                                            className="border-orange-200 focus:border-orange-500 focus:ring-orange-500 pr-9 text-sm sm:text-base"
                                         />
                                         <button
                                             type="button"
@@ -272,9 +273,9 @@ const CustomerEditProfile = () => {
                                             className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-600 hover:text-orange-700"
                                         >
                                             {showPassword.currentPassword ? (
-                                                <EyeOff className="h-4 w-4" />
+                                                <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
                                             ) : (
-                                                <Eye className="h-4 w-4" />
+                                                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                                             )}
                                         </button>
                                     </div>
@@ -287,7 +288,7 @@ const CustomerEditProfile = () => {
                                             onChange={handlePasswordChange}
                                             placeholder="New Password"
                                             required
-                                            className="border-orange-200 focus:border-orange-500 focus:ring-orange-500"
+                                            className="border-orange-200 focus:border-orange-500 focus:ring-orange-500 pr-9 text-sm sm:text-base"
                                         />
                                         <button
                                             type="button"
@@ -295,9 +296,9 @@ const CustomerEditProfile = () => {
                                             className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-600 hover:text-orange-700"
                                         >
                                             {showPassword.newPassword ? (
-                                                <EyeOff className="h-4 w-4" />
+                                                <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
                                             ) : (
-                                                <Eye className="h-4 w-4" />
+                                                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                                             )}
                                         </button>
                                     </div>
@@ -312,8 +313,8 @@ const CustomerEditProfile = () => {
                                             required
                                             className={
                                                 passwordMatch.touched && !passwordMatch.match
-                                                    ? 'border-red-500 focus-visible:ring-red-500'
-                                                    : 'border-orange-200 focus:border-orange-500 focus:ring-orange-500'
+                                                    ? 'border-red-500 focus-visible:ring-red-500 pr-9 text-sm sm:text-base'
+                                                    : 'border-orange-200 focus:border-orange-500 focus:ring-orange-500 pr-9 text-sm sm:text-base'
                                             }
                                         />
                                         <button
@@ -322,24 +323,25 @@ const CustomerEditProfile = () => {
                                             className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-600 hover:text-orange-700"
                                         >
                                             {showPassword.confirmPassword ? (
-                                                <EyeOff className="h-4 w-4" />
+                                                <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
                                             ) : (
-                                                <Eye className="h-4 w-4" />
+                                                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                                             )}
                                         </button>
                                         {passwordMatch.touched && !passwordMatch.match && (
-                                            <p className="text-sm text-red-500 mt-1">Passwords don't match</p>
+                                            <p className="text-xs sm:text-sm text-red-500 mt-1">Passwords don't match</p>
                                         )}
                                     </div>
 
                                     <Button
                                         type="submit"
                                         disabled={loading || (passwordMatch.touched && !passwordMatch.match)}
-                                        className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30"
+                                        className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30 text-xs sm:text-sm py-1.5 sm:py-2.5"
+                                        size="sm"
                                     >
                                         {loading ? (
                                             <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                                                 Updating...
                                             </>
                                         ) : (
@@ -351,16 +353,17 @@ const CustomerEditProfile = () => {
                         </div>
 
                         {successMessage && (
-                            <Alert className="mt-6 bg-green-50 text-green-700 border-green-200">
-                                <AlertDescription>{successMessage}</AlertDescription>
+                            <Alert className="mt-4 sm:mt-6 bg-green-50 text-green-700 border-green-200">
+                                <AlertDescription className="text-xs sm:text-sm">{successMessage}</AlertDescription>
                             </Alert>
                         )}
 
-                        <div className="mt-8 flex justify-center">
+                        <div className="mt-6 sm:mt-8 flex justify-center">
                             <Button 
                                 variant="outline" 
                                 onClick={() => navigate('/customer/addresses')}
-                                className="border-orange-200 text-orange-700 hover:bg-orange-50"
+                                className="border-orange-200 text-orange-700 hover:bg-orange-50 text-xs sm:text-sm py-1.5 sm:py-2.5"
+                                size="sm"
                             >
                                 Manage Addresses
                             </Button>

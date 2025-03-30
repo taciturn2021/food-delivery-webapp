@@ -79,11 +79,11 @@ const IntegratedLanding = () => {
 
             {loading ? (
                 <div className="flex justify-center items-center min-h-[60vh]">
-                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
                 </div>
             ) : error ? (
-                <div className="container mx-auto px-4 py-8">
-                    <div className="bg-red-100 border-l-4 border-red-500 p-4 rounded text-red-700">
+                <div className="container mx-auto px-4 py-6 sm:py-8">
+                    <div className="bg-red-100 border-l-4 border-red-500 p-3 sm:p-4 rounded text-red-700 text-sm sm:text-base">
                         {error}
                     </div>
                 </div>
@@ -101,7 +101,7 @@ const IntegratedLanding = () => {
                     if (selectedBranch) setBranchDialogOpen(open);
                 }}
             >
-                <DialogContent className="sm:max-w-[725px] p-0">
+                <DialogContent className="sm:max-w-[725px] p-0 w-[95vw] max-w-full mx-auto">
                     <BranchSelector
                         branches={branches}
                         onBranchSelect={handleBranchSelect}

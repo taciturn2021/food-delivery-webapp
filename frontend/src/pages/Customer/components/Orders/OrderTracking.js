@@ -129,34 +129,34 @@ const OrderTracking = () => {
       <CustomerHeader />
       <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 pt-16">
         <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-red-500/20"></div>
-        <div className="container mx-auto px-4 py-8 relative z-10">
-          <div className="flex items-center gap-2 mb-6">
+        <div className="container mx-auto px-4 py-6 sm:py-8 relative z-10">
+          <div className="flex flex-wrap items-center gap-2 mb-4 sm:mb-6">
             <button 
               onClick={() => navigate('/customer/orders')}
               className="hover:bg-orange-100 p-2 rounded-full transition-colors text-orange-600"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <h1 className="text-2xl font-semibold text-orange-900">Order #{id}</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold text-orange-900">Order #{id}</h1>
             
             {order && order.status !== 'cancelled' && order.status !== 'delivered' && (
               <Badge 
-                className={`ml-auto ${orderStatusConfig[order.status]?.color} text-white px-3 py-1 text-sm`}
+                className={`ml-auto ${orderStatusConfig[order.status]?.color} text-white px-2 sm:px-3 py-1 text-xs sm:text-sm`}
               >
                 <span className="flex items-center">
                   {orderStatusConfig[order.status]?.icon}
-                  <span className="ml-1">{orderStatusConfig[order.status]?.label}</span>
+                  <span className="ml-1 hidden xs:inline">{orderStatusConfig[order.status]?.label}</span>
                 </span>
               </Badge>
             )}
             
             {order && (order.status === 'cancelled' || order.status === 'delivered') && (
               <Badge 
-                className={`ml-auto ${orderStatusConfig[order.status]?.color} text-white px-3 py-1 text-sm`}
+                className={`ml-auto ${orderStatusConfig[order.status]?.color} text-white px-2 sm:px-3 py-1 text-xs sm:text-sm`}
               >
                 <span className="flex items-center">
                   {orderStatusConfig[order.status]?.icon}
-                  <span className="ml-1">{orderStatusConfig[order.status]?.label}</span>
+                  <span className="ml-1 hidden xs:inline">{orderStatusConfig[order.status]?.label}</span>
                 </span>
               </Badge>
             )}
@@ -172,26 +172,27 @@ const OrderTracking = () => {
           ) : error ? (
             <div className="bg-red-100 border-l-4 border-red-500 p-4 rounded text-red-700 mb-6">
               <div className="flex items-center">
-                <AlertTriangle className="h-5 w-5 mr-2" />
-                <p>{error}</p>
+                <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0" />
+                <p className="text-sm sm:text-base">{error}</p>
               </div>
               <Button 
                 onClick={fetchOrder} 
                 variant="outline" 
-                className="mt-4 text-red-600 border-red-200 hover:bg-red-50"
+                size="sm"
+                className="mt-3 sm:mt-4 text-red-600 border-red-200 hover:bg-red-50 text-xs sm:text-sm"
               >
                 Try Again
               </Button>
             </div>
           ) : order ? (
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="md:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+              <div className="md:col-span-2 space-y-4 sm:space-y-6">
                 {/* Order Status Timeline */}
                 <Card className="bg-white/95 backdrop-blur-sm border-orange-100">
-                  <CardContent className="p-6">
-                    <h2 className="text-lg font-semibold text-orange-900 mb-4">Order Status</h2>
+                  <CardContent className="p-4 sm:p-6">
+                    <h2 className="text-lg font-semibold text-orange-900 mb-3 sm:mb-4">Order Status</h2>
                     <div className="relative">
-                      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-orange-100"></div>
+                      <div className="absolute left-3 sm:left-4 top-0 bottom-0 w-0.5 bg-orange-100"></div>
                       {['pending', 'preparing', 'delivering', 'delivered'].map((status, index) => {
                         const isCompleted = order.status === 'delivered' 
                           ? ['pending', 'preparing', 'delivering', 'delivered'].indexOf(status) <= ['pending', 'preparing', 'delivering', 'delivered'].indexOf(order.status)
@@ -199,21 +200,25 @@ const OrderTracking = () => {
                         
                         const isCurrent = order.status === status;
                         return (
-                          <div key={status} className="flex mb-6 items-center relative">
-                            <div className={`z-10 flex items-center justify-center w-8 h-8 rounded-full 
+                          <div key={status} className="flex mb-4 sm:mb-6 items-center relative">
+                            <div className={`z-10 flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full 
                               ${isCompleted 
                                 ? orderStatusConfig[isCurrent ? status : status === 'delivered' ? 'delivered' : 'delivered'].color
                                 : 'bg-gray-200'} 
                               ${isCompleted ? 'text-white' : 'text-gray-500'}`}
                             >
-                              {isCompleted ? orderStatusConfig[isCurrent ? status : status === 'delivered' ? 'delivered' : 'delivered'].icon : index + 1}
+                              {isCompleted ? (
+                                <span className="w-3 h-3 sm:w-5 sm:h-5">
+                                  {orderStatusConfig[isCurrent ? status : status === 'delivered' ? 'delivered' : 'delivered'].icon}
+                                </span>
+                              ) : index + 1}
                             </div>
-                            <div className="ml-4">
-                              <p className={`font-medium ${isCompleted && isCurrent ? orderStatusConfig[status].textColor : !isCompleted ? 'text-gray-500' : 'text-orange-600'}`}>
+                            <div className="ml-3 sm:ml-4">
+                              <p className={`font-medium text-sm sm:text-base ${isCompleted && isCurrent ? orderStatusConfig[status].textColor : !isCompleted ? 'text-gray-500' : 'text-orange-600'}`}>
                                 {orderStatusConfig[status].label}
                               </p>
                               {isCurrent && (
-                                <p className="text-sm text-orange-600">
+                                <p className="text-xs sm:text-sm text-orange-600">
                                   {status === 'pending' && 'Waiting for restaurant to confirm your order'}
                                   {status === 'preparing' && 'The restaurant is preparing your food'}
                                   {status === 'delivering' && 'Your food is on the way!'}
@@ -226,13 +231,13 @@ const OrderTracking = () => {
                       })}
 
                       {order.status === 'cancelled' && (
-                        <div className="flex mt-6 items-center">
-                          <div className="z-10 flex items-center justify-center w-8 h-8 rounded-full bg-red-500 text-white">
-                            <X className="h-5 w-5" />
+                        <div className="flex mt-4 sm:mt-6 items-center">
+                          <div className="z-10 flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-red-500 text-white">
+                            <X className="h-3 w-3 sm:h-5 sm:w-5" />
                           </div>
-                          <div className="ml-4">
-                            <p className="font-medium text-red-500">Order Cancelled</p>
-                            <p className="text-sm text-red-600">This order has been cancelled</p>
+                          <div className="ml-3 sm:ml-4">
+                            <p className="font-medium text-sm sm:text-base text-red-500">Order Cancelled</p>
+                            <p className="text-xs sm:text-sm text-red-600">This order has been cancelled</p>
                           </div>
                         </div>
                       )}
@@ -242,39 +247,39 @@ const OrderTracking = () => {
 
                 {/* Order Items */}
                 <Card className="bg-white/95 backdrop-blur-sm border-orange-100">
-                  <CardContent className="p-6">
-                    <h2 className="text-lg font-semibold text-orange-900 mb-4">Order Items</h2>
-                    <div className="space-y-4">
+                  <CardContent className="p-4 sm:p-6">
+                    <h2 className="text-lg font-semibold text-orange-900 mb-3 sm:mb-4">Order Items</h2>
+                    <div className="space-y-3 sm:space-y-4">
                       {order.items.map((item) => (
-                        <div key={item.id} className="flex justify-between items-center p-3 border-b border-orange-100 last:border-0">
+                        <div key={item.id} className="flex justify-between items-center p-2 sm:p-3 border-b border-orange-100 last:border-0">
                           <div>
-                            <p className="font-medium text-orange-900">{item.name}</p>
-                            <p className="text-sm text-orange-600">${formatPrice(item.price_at_time)} × {item.quantity}</p>
+                            <p className="font-medium text-orange-900 text-sm sm:text-base">{item.name}</p>
+                            <p className="text-xs sm:text-sm text-orange-600">${formatPrice(item.price_at_time)} × {item.quantity}</p>
                             {item.special_instructions && (
                               <p className="text-xs text-gray-500 mt-1">Note: {item.special_instructions}</p>
                             )}
                           </div>
-                          <p className="font-medium text-orange-900">${formatPrice(item.price_at_time) * item.quantity}</p>
+                          <p className="font-medium text-orange-900 text-sm sm:text-base">${formatPrice(item.price_at_time) * item.quantity}</p>
                         </div>
                       ))}
                     </div>
                     
-                    <div className="mt-6 pt-4 border-t border-orange-100">
+                    <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-orange-100">
                       <div className="flex justify-between">
-                        <span className="font-medium text-orange-900">Total</span>
-                        <span className="font-bold text-orange-900">${formatPrice(order.total_amount)}</span>
+                        <span className="font-medium text-orange-900 text-sm sm:text-base">Total</span>
+                        <span className="font-bold text-orange-900 text-sm sm:text-base">${formatPrice(order.total_amount)}</span>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Delivery Tracking */}
                 <Card className="bg-white/95 backdrop-blur-sm border-orange-100">
-                  <CardContent className="p-6">
-                    <h2 className="text-lg font-semibold text-orange-900 mb-4">Delivery Tracking</h2>
-                    <div style={{ height: '300px', width: '100%' }}>
+                  <CardContent className="p-4 sm:p-6">
+                    <h2 className="text-lg font-semibold text-orange-900 mb-3 sm:mb-4">Delivery Tracking</h2>
+                    <div style={{ height: '250px', width: '100%' }} className="sm:h-[300px]">
                       {(() => {
                         // Parse delivery address if it's a string
                         let deliveryAddress = order.delivery_address;
@@ -307,15 +312,15 @@ const OrderTracking = () => {
                             // Create a DOM element to render the SVG
                             const customIcon = L.divIcon({
                               html: `<div style="color: ${color}; background: white; border-radius: 50%; padding: 4px; border: 2px solid ${color}; display: flex; align-items: center; justify-content: center;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                   ${IconComponent === Home ? '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' : ''}
                                   ${IconComponent === Utensils ? '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2"/><path d="M18.5 15a2.5 2.5 0 0 0 0 5H23"/><path d="M21 22v-2"/>' : ''}
                                   ${IconComponent === Bike ? '<circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5V14l-3-3 4-3 2 3h2"/>' : ''}
                                 </svg>
                               </div>`,
                               className: '',
-                              iconSize: [30, 30],
-                              iconAnchor: [15, 15]
+                              iconSize: [26, 26],
+                              iconAnchor: [13, 13]
                             });
                             return customIcon;
                           };
@@ -330,6 +335,7 @@ const OrderTracking = () => {
                               center={center}
                               zoom={13}
                               style={{ height: '100%', width: '100%' }}
+                              attributionControl={false}
                             >
                               <TileLayer
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -370,9 +376,9 @@ const OrderTracking = () => {
                         } else {
                           return (
                             <div className="h-full flex flex-col items-center justify-center bg-orange-50 rounded border border-orange-200 p-4">
-                              <AlertTriangle className="h-6 w-6 text-orange-500 mb-2" />
-                              <p className="text-orange-600 text-center">Location data unavailable</p>
-                              <p className="text-orange-400 text-sm text-center mt-1">The delivery locations couldn't be loaded</p>
+                              <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-orange-500 mb-2" />
+                              <p className="text-orange-600 text-center text-sm sm:text-base">Location data unavailable</p>
+                              <p className="text-orange-400 text-xs sm:text-sm text-center mt-1">The delivery locations couldn't be loaded</p>
                             </div>
                           );
                         }
@@ -383,18 +389,18 @@ const OrderTracking = () => {
 
                 {/* Delivery Information */}
                 <Card className="bg-white/95 backdrop-blur-sm border-orange-100">
-                  <CardContent className="p-6">
-                    <h2 className="text-lg font-semibold text-orange-900 mb-4">Delivery Information</h2>
+                  <CardContent className="p-4 sm:p-6">
+                    <h2 className="text-lg font-semibold text-orange-900 mb-3 sm:mb-4">Delivery Information</h2>
                     
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       <div>
-                        <p className="text-sm text-orange-600 mb-1">Delivery Address</p>
-                        <p className="font-medium text-orange-900">
+                        <p className="text-xs sm:text-sm text-orange-600 mb-1">Delivery Address</p>
+                        <p className="font-medium text-orange-900 text-sm sm:text-base">
                           {typeof order.delivery_address === 'string'
                             ? JSON.parse(order.delivery_address).street
                             : order.delivery_address?.street}
                         </p>
-                        <p className="text-sm text-orange-700">
+                        <p className="text-xs sm:text-sm text-orange-700">
                           {typeof order.delivery_address === 'string'
                             ? `${JSON.parse(order.delivery_address).city}, ${JSON.parse(order.delivery_address).state} ${JSON.parse(order.delivery_address).zipCode}`
                             : `${order.delivery_address?.city}, ${order.delivery_address?.state} ${order.delivery_address?.zipCode}`}
@@ -402,21 +408,21 @@ const OrderTracking = () => {
                       </div>
                       
                       <div>
-                        <p className="text-sm text-orange-600 mb-1">Restaurant</p>
-                        <p className="font-medium text-orange-900">{order.branch_name}</p>
+                        <p className="text-xs sm:text-sm text-orange-600 mb-1">Restaurant</p>
+                        <p className="font-medium text-orange-900 text-sm sm:text-base">{order.branch_name}</p>
                       </div>
 
                       {order.rider_first_name && (
                         <div>
-                          <p className="text-sm text-orange-600 mb-1">Delivery Rider</p>
-                          <p className="font-medium text-orange-900">{order.rider_first_name} {order.rider_last_name}</p>
-                          {order.rider_phone && <p className="text-sm text-orange-700">{order.rider_phone}</p>}
+                          <p className="text-xs sm:text-sm text-orange-600 mb-1">Delivery Rider</p>
+                          <p className="font-medium text-orange-900 text-sm sm:text-base">{order.rider_first_name} {order.rider_last_name}</p>
+                          {order.rider_phone && <p className="text-xs sm:text-sm text-orange-700">{order.rider_phone}</p>}
                         </div>
                       )}
                       
                       <div>
-                        <p className="text-sm text-orange-600 mb-1">Order Date</p>
-                        <p className="font-medium text-orange-900">
+                        <p className="text-xs sm:text-sm text-orange-600 mb-1">Order Date</p>
+                        <p className="font-medium text-orange-900 text-sm sm:text-base">
                           {new Date(order.created_at).toLocaleString()}
                         </p>
                       </div>
@@ -425,7 +431,8 @@ const OrderTracking = () => {
                     {canCancel && (
                       <Button
                         variant="outline"
-                        className="w-full mt-6 border-red-200 text-red-600 hover:bg-red-50"
+                        size="sm"
+                        className="w-full mt-4 sm:mt-6 border-red-200 text-red-600 hover:bg-red-50 text-xs sm:text-sm py-2 sm:py-5"
                         onClick={() => setCancelDialogOpen(true)}
                       >
                         Cancel Order
@@ -436,12 +443,13 @@ const OrderTracking = () => {
               </div>
             </div>
           ) : (
-            <div className="bg-orange-100 border-l-4 border-orange-500 p-4 rounded text-orange-700 mb-6">
-              <p>Order not found. It may have been cancelled or removed.</p>
+            <div className="bg-orange-100 border-l-4 border-orange-500 p-3 sm:p-4 rounded text-orange-700 mb-4 sm:mb-6">
+              <p className="text-sm sm:text-base">Order not found. It may have been cancelled or removed.</p>
               <Button 
                 onClick={() => navigate('/customer/orders')} 
                 variant="outline" 
-                className="mt-4 text-orange-600 border-orange-200 hover:bg-orange-50"
+                size="sm"
+                className="mt-3 sm:mt-4 text-orange-600 border-orange-200 hover:bg-orange-50 text-xs sm:text-sm"
               >
                 Back to Orders
               </Button>
@@ -452,19 +460,21 @@ const OrderTracking = () => {
 
       {/* Cancel Order Confirmation Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] w-[95vw] mx-auto">
           <DialogHeader>
             <DialogTitle>Cancel Order?</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-gray-700">
+          <div className="py-3 sm:py-4">
+            <p className="text-gray-700 text-sm sm:text-base">
               Are you sure you want to cancel this order? This action cannot be undone.
             </p>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col space-y-2 sm:space-y-0 sm:flex-row sm:space-x-2">
             <Button
               type="button"
               variant="outline"
+              size="sm"
+              className="w-full sm:w-auto text-xs sm:text-sm"
               onClick={() => setCancelDialogOpen(false)}
             >
               No, Keep Order
@@ -472,12 +482,14 @@ const OrderTracking = () => {
             <Button
               type="button"
               variant="destructive"
+              size="sm"
+              className="w-full sm:w-auto text-xs sm:text-sm"
               onClick={handleCancelOrder}
               disabled={cancelLoading}
             >
               {cancelLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                   Cancelling...
                 </>
               ) : (
