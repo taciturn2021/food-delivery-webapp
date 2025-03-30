@@ -270,60 +270,7 @@ const OrderTracking = () => {
               </div>
 
               <div className="space-y-6">
-                {/* Delivery Information */}
-                <Card className="bg-white/95 backdrop-blur-sm border-orange-100">
-                  <CardContent className="p-6">
-                    <h2 className="text-lg font-semibold text-orange-900 mb-4">Delivery Information</h2>
-                    
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-sm text-orange-600 mb-1">Delivery Address</p>
-                        <p className="font-medium text-orange-900">
-                          {typeof order.delivery_address === 'string'
-                            ? JSON.parse(order.delivery_address).street
-                            : order.delivery_address?.street}
-                        </p>
-                        <p className="text-sm text-orange-700">
-                          {typeof order.delivery_address === 'string'
-                            ? `${JSON.parse(order.delivery_address).city}, ${JSON.parse(order.delivery_address).state} ${JSON.parse(order.delivery_address).zipCode}`
-                            : `${order.delivery_address?.city}, ${order.delivery_address?.state} ${order.delivery_address?.zipCode}`}
-                        </p>
-                      </div>
-                      
-                      <div>
-                        <p className="text-sm text-orange-600 mb-1">Restaurant</p>
-                        <p className="font-medium text-orange-900">{order.branch_name}</p>
-                      </div>
-
-                      {order.rider_first_name && (
-                        <div>
-                          <p className="text-sm text-orange-600 mb-1">Delivery Rider</p>
-                          <p className="font-medium text-orange-900">{order.rider_first_name} {order.rider_last_name}</p>
-                          {order.rider_phone && <p className="text-sm text-orange-700">{order.rider_phone}</p>}
-                        </div>
-                      )}
-                      
-                      <div>
-                        <p className="text-sm text-orange-600 mb-1">Order Date</p>
-                        <p className="font-medium text-orange-900">
-                          {new Date(order.created_at).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-
-                    {canCancel && (
-                      <Button
-                        variant="outline"
-                        className="w-full mt-6 border-red-200 text-red-600 hover:bg-red-50"
-                        onClick={() => setCancelDialogOpen(true)}
-                      >
-                        Cancel Order
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Map */}
+                {/* Delivery Tracking */}
                 <Card className="bg-white/95 backdrop-blur-sm border-orange-100">
                   <CardContent className="p-6">
                     <h2 className="text-lg font-semibold text-orange-900 mb-4">Delivery Tracking</h2>
@@ -431,6 +378,59 @@ const OrderTracking = () => {
                         }
                       })()}
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* Delivery Information */}
+                <Card className="bg-white/95 backdrop-blur-sm border-orange-100">
+                  <CardContent className="p-6">
+                    <h2 className="text-lg font-semibold text-orange-900 mb-4">Delivery Information</h2>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm text-orange-600 mb-1">Delivery Address</p>
+                        <p className="font-medium text-orange-900">
+                          {typeof order.delivery_address === 'string'
+                            ? JSON.parse(order.delivery_address).street
+                            : order.delivery_address?.street}
+                        </p>
+                        <p className="text-sm text-orange-700">
+                          {typeof order.delivery_address === 'string'
+                            ? `${JSON.parse(order.delivery_address).city}, ${JSON.parse(order.delivery_address).state} ${JSON.parse(order.delivery_address).zipCode}`
+                            : `${order.delivery_address?.city}, ${order.delivery_address?.state} ${order.delivery_address?.zipCode}`}
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <p className="text-sm text-orange-600 mb-1">Restaurant</p>
+                        <p className="font-medium text-orange-900">{order.branch_name}</p>
+                      </div>
+
+                      {order.rider_first_name && (
+                        <div>
+                          <p className="text-sm text-orange-600 mb-1">Delivery Rider</p>
+                          <p className="font-medium text-orange-900">{order.rider_first_name} {order.rider_last_name}</p>
+                          {order.rider_phone && <p className="text-sm text-orange-700">{order.rider_phone}</p>}
+                        </div>
+                      )}
+                      
+                      <div>
+                        <p className="text-sm text-orange-600 mb-1">Order Date</p>
+                        <p className="font-medium text-orange-900">
+                          {new Date(order.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {canCancel && (
+                      <Button
+                        variant="outline"
+                        className="w-full mt-6 border-red-200 text-red-600 hover:bg-red-50"
+                        onClick={() => setCancelDialogOpen(true)}
+                      >
+                        Cancel Order
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               </div>
