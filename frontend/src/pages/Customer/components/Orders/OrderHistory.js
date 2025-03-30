@@ -124,14 +124,10 @@ const OrderHistory = () => {
     if (searchTerm.trim() === '') {
       setFilteredOrders(orders);
     } else {
-      const term = searchTerm.toLowerCase().trim();
+      const term = searchTerm.trim();
+      // Only filter by order ID
       const filtered = orders.filter(order => 
-        order.id.toString().includes(term) || 
-        order.branch_name.toLowerCase().includes(term) ||
-        order.status.toLowerCase().includes(term) ||
-        order.delivery_address?.street.toLowerCase().includes(term) ||
-        order.items.some(item => item.name.toLowerCase().includes(term)) ||
-        order.items.some(item => item.description.toLowerCase().includes(term))
+        order.id.toString() === term
       );
       setFilteredOrders(filtered);
     }
@@ -187,7 +183,7 @@ const OrderHistory = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
               <Input
                 type="text"
-                placeholder="Search by order number, restaurant, item, etc."
+                placeholder="Search by order number (e.g. 1, 2, 3)"
                 value={searchTerm}
                 onChange={handleSearch}
                 className="pl-10 border-orange-200 focus:border-orange-500 focus:ring-orange-500"

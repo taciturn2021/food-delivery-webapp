@@ -410,7 +410,7 @@ const OrderTracking = () => {
                               )}
                               
                               {/* Rider location marker with custom icon */}
-                              {hasRiderLocation && (
+                              {hasRiderLocation && order.status !== 'delivered' && (
                                 <Marker 
                                   position={[parseFloat(order.rider_latitude), parseFloat(order.rider_longitude)]}
                                   icon={riderIcon}

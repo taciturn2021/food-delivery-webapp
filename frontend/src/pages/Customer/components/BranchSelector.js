@@ -86,6 +86,8 @@ const BranchSelector = ({ branches = [], onBranchSelect, isDialog = false, curre
                                         lng: parseFloat(selectedBranchData.longitude) 
                                     }}
                                     onLocationChange={() => {}}
+                                    readOnly={true}
+                                    deliveryRadius={selectedBranchData.delivery_radius}
                                 />
                             </div>
                         </div>

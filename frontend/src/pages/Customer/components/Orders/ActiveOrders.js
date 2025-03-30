@@ -142,14 +142,16 @@ const ActiveOrders = () => {
             </Button>
           </div>
 
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-center items-center mb-6">
             <Button
-              variant="ghost"
-              className="text-orange-600 hover:bg-orange-100 font-medium"
+              variant="outline"
+              className="text-orange-600 hover:bg-orange-100 font-medium border-orange-300 px-6 py-2 shadow-sm hover:shadow transition-all"
               onClick={() => navigate('/customer/orders/history')}
             >
-              View Order History
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <div className="flex items-center">
+                View Order History
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </div>
             </Button>
           </div>
 
