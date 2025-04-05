@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Grid,
@@ -26,6 +26,10 @@ import {
     MenuItem,
     Badge,
     useTheme,
+    InputAdornment,
+    Tabs,
+    Tab,
+    CircularProgress,
 } from '@mui/material';
 import {
     Visibility as ViewIcon,
@@ -37,7 +41,9 @@ import {
     Timer as TimerIcon,
     Receipt as ReceiptIcon,
     DeliveryDining as RiderIcon,
-    MyLocation as TrackIcon
+    MyLocation as TrackIcon,
+    Search as SearchIcon,
+    Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { 
     assignOrderToRider, 
@@ -514,21 +520,18 @@ const OrderManagement = () => {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [assignDialogOpen, setAssignDialogOpen] = useState(false);
     const [selectedOrderForAssignment, setSelectedOrderForAssignment] = useState(null);
+    const [autoRefreshInterval, setAutoRefreshInterval] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchField, setSearchField] = useState('id');
+    const [refreshing, setRefreshing] = useState(false);
     const { user } = useAuth();
 
     // Get branch ID from authenticated user
     const branchId = user?.branchId;
 
-    useEffect(() => {
-        if (branchId) {
-            loadOrders();
-            loadRiders();
-        }
-    }, [branchId]);
-
-    const loadOrders = async () => {
+    const loadOrders = useCallback(async () => {
         try {
-            setLoading(true);
+            setRefreshing(true);
             // Use the getOrders API endpoint with branch_id filter
             const response = await getOrders({ branch_id: branchId });
             
@@ -551,13 +554,15 @@ const OrderManagement = () => {
                                 phone: detailedOrder.data.phone,
                                 rider_id: order.rider_id,
                                 rider_name: detailedOrder.data.rider_first_name,
-                                rider_phone: detailedOrder.data.rider_phone
+                                rider_phone: detailedOrder.data.rider_phone,
+                                assignment_id: order.assignment_id
                             };
                         } catch (err) {
                             console.error(`Error fetching details for order ${order.id}:`, err);
+                            return null;
                         }
                     })
-                );
+                ).then(results => results.filter(Boolean)); // Remove any null results
                 
                 setOrders(ordersWithDetails);
                 setError(null);
@@ -566,9 +571,10 @@ const OrderManagement = () => {
             console.error("Error loading orders:", error);
             setError('Failed to load orders: ' + (error.response?.data?.message || error.message));
         } finally {
+            setRefreshing(false);
             setLoading(false);
         }
-    };
+    }, [branchId]);
 
     const loadRiders = async () => {
         try {
@@ -581,6 +587,27 @@ const OrderManagement = () => {
             setError('Failed to load riders: ' + (error.response?.data?.message || error.message));
         }
     };
+
+    useEffect(() => {
+        if (branchId) {
+            loadOrders();
+            loadRiders();
+            
+            // Set up auto-refresh interval for 20 seconds
+            const interval = setInterval(() => {
+                loadOrders();
+            }, 20000);
+            
+            setAutoRefreshInterval(interval);
+            
+            // Clean up interval on component unmount
+            return () => {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                }
+            };
+        }
+    }, [branchId, loadOrders]);
 
     const handleStatusChange = async (orderId, newStatus) => {
         try {
@@ -621,9 +648,35 @@ const OrderManagement = () => {
         }
     };
 
-    const filteredOrders = statusFilter === 'all'
-        ? orders
-        : orders.filter(order => order.status === statusFilter);
+    const handleSearchChange = (event) => {
+        setSearchQuery(event.target.value);
+    };
+
+    const handleSearchFieldChange = (event) => {
+        setSearchField(event.target.value);
+    };
+
+    // Filter orders based on status and search query
+    const filteredOrders = orders.filter(order => {
+        // First filter by status
+        const statusMatches = statusFilter === 'all' || order.status === statusFilter;
+        
+        // Then apply search filter if there's a search query
+        if (!searchQuery) return statusMatches;
+        
+        const query = searchQuery.toLowerCase().trim();
+        
+        switch (searchField) {
+            case 'id':
+                return statusMatches && order.id.toString().includes(query);
+            case 'phone':
+                return statusMatches && order.phone && order.phone.toLowerCase().includes(query);
+            case 'name':
+                return statusMatches && order.customerName && order.customerName.toLowerCase().includes(query);
+            default:
+                return statusMatches;
+        }
+    });
 
     const statusCounts = orders.reduce((acc, order) => {
         acc[order.status] = (acc[order.status] || 0) + 1;
@@ -633,7 +686,8 @@ const OrderManagement = () => {
     if (loading && orders.length === 0) {
         return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-                <Typography>Loading orders...</Typography>
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Loading orders...</Typography>
             </Box>
         );
     }
@@ -652,55 +706,105 @@ const OrderManagement = () => {
                 </Alert>
             )}
 
-            {/* Status filter buttons */}
-            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Search and refresh area */}
+            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
                 <Typography variant="h4">
                     Order Management
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                    <Button
-                        variant={statusFilter === 'all' ? 'contained' : 'outlined'}
+                
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1, maxWidth: { xs: '100%', md: '50%' }, ml: { xs: 0, md: 2 } }}>
+                    <TextField
+                        placeholder="Search orders..."
+                        variant="outlined"
                         size="small"
-                        onClick={() => setStatusFilter('all')}
+                        fullWidth
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        InputProps={{
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchIcon fontSize="small" />
+                                </InputAdornment>
+                            ),
+                        }}
+                    />
+                    <TextField
+                        select
+                        size="small"
+                        value={searchField}
+                        onChange={handleSearchFieldChange}
+                        sx={{ minWidth: 120 }}
                     >
-                        All
+                        <MenuItem value="id">Order ID</MenuItem>
+                        <MenuItem value="phone">Phone</MenuItem>
+                        <MenuItem value="name">Customer Name</MenuItem>
+                    </TextField>
+                    <Button 
+                        variant="outlined" 
+                        onClick={loadOrders}
+                        disabled={refreshing}
+                        startIcon={refreshing ? <CircularProgress size={16} /> : <RefreshIcon />}
+                        sx={{ whiteSpace: 'nowrap' }}
+                    >
+                        {refreshing ? 'Refreshing...' : 'Refresh'}
                     </Button>
-                    {['pending', 'preparing', 'delivering', 'delivered', 'cancelled'].map((status) => (
-                        <Button
-                            key={status}
-                            variant={statusFilter === status ? 'contained' : 'outlined'}
-                            size="small"
-                            onClick={() => setStatusFilter(status)}
-                            startIcon={status === 'pending' ? <TimerIcon /> : null}
-                        >
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
-                            {statusCounts[status] > 0 && (
-                                <Badge
-                                    color="error"
-                                    badgeContent={statusCounts[status]}
-                                    sx={{ ml: 1 }}
-                                />
-                            )}
-                        </Button>
-                    ))}
                 </Box>
             </Box>
 
-            {/* Refresh button */}
-            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
-                <Button 
-                    variant="outlined" 
-                    onClick={loadOrders}
-                    disabled={loading}
+            {/* Status filter tabs */}
+            <Paper sx={{ mb: 4, boxShadow: 2, borderRadius: 2, overflow: 'hidden' }}>
+                <Tabs 
+                    value={statusFilter === 'all' ? 0 : ['pending', 'preparing', 'delivering', 'delivered', 'cancelled'].indexOf(statusFilter) + 1}
+                    onChange={(e, newValue) => {
+                        const statuses = ['all', 'pending', 'preparing', 'delivering', 'delivered', 'cancelled'];
+                        setStatusFilter(statuses[newValue]);
+                    }}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    sx={{
+                        '& .MuiTab-root': {
+                            minWidth: 120,
+                            py: 2
+                        }
+                    }}
                 >
-                    {loading ? 'Refreshing...' : 'Refresh Orders'}
-                </Button>
-            </Box>
+                    <Tab 
+                        label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <span>All Orders</span>
+                            </Box>
+                        } 
+                    />
+                    {['pending', 'preparing', 'delivering', 'delivered', 'cancelled'].map((status) => (
+                        <Tab 
+                            key={status}
+                            label={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    {status === 'pending' && <TimerIcon fontSize="small" />}
+                                    {status === 'preparing' && <DiningIcon fontSize="small" />}
+                                    {status === 'delivering' && <DeliveryIcon fontSize="small" />}
+                                    {status === 'delivered' && <AcceptIcon fontSize="small" />}
+                                    {status === 'cancelled' && <RejectIcon fontSize="small" />}
+                                    <span>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
+                                    {status === 'pending' && statusCounts[status] > 0 && (
+                                        <Badge 
+                                            color={statusColors[status]} 
+                                            badgeContent={statusCounts[status]} 
+                                            max={99}
+                                        />
+                                    )}
+                                </Box>
+                            }
+                        />
+                    ))}
+                </Tabs>
+            </Paper>
 
             {/* Orders grid */}
             {filteredOrders.length === 0 ? (
                 <Alert severity="info">
                     No orders found in "{statusFilter === 'all' ? 'any' : statusFilter}" status
+                    {searchQuery && ` matching search "${searchQuery}"`}
                 </Alert>
             ) : (
                 <Grid container spacing={3}>
