@@ -505,6 +505,19 @@ const OrderDetails = ({ order, onClose, onStatusChange, onAssignRider }) => {
                         Start Delivery
                     </Button>
                 )}
+                {order.status === 'delivering' && (
+                    <Button
+                        variant="contained"
+                        color="success"
+                        startIcon={<AcceptIcon />}
+                        onClick={() => {
+                            onStatusChange(order.id, 'delivered');
+                            onClose();
+                        }}
+                    >
+                        Mark as Delivered
+                    </Button>
+                )}
             </DialogActions>
         </Dialog>
     );
