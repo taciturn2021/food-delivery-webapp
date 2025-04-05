@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
     Box,
     Grid,
@@ -6,32 +6,31 @@ import {
     CardContent,
     Typography,
     LinearProgress,
-    IconButton,
-    Chip,
-    useTheme,
     Button,
-    Divider,
-    MenuItem,
-    Menu,
+    useTheme,
 } from '@mui/material';
 import {
     ShoppingCart as OrderIcon,
     AccessTime as TimeIcon,
     AttachMoney as MoneyIcon,
     LocalShipping as DeliveryIcon,
-    MoreVert as MoreVertIcon,
-    ArrowUpward as ArrowUpIcon,
-    ArrowDownward as ArrowDownIcon,
     Restaurant as MenuIcon,
-    Speed as SpeedIcon,
 } from '@mui/icons-material';
 
-const StatCard = ({ title, value, subtext, icon, color, trend, percentChange }) => {
+const StatCard = ({ title, value, subtext, icon, color }) => {
     const theme = useTheme();
-    const [anchorEl, setAnchorEl] = useState(null);
     
     return (
-        <Card sx={{ height: '100%' }}>
+        <Card 
+            sx={{ 
+                height: '100%',
+                transition: 'transform 0.2s',
+                '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: theme.shadows[4]
+                }
+            }}
+        >
             <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 3 }}>
                     <Box
@@ -48,20 +47,6 @@ const StatCard = ({ title, value, subtext, icon, color, trend, percentChange }) 
                     >
                         {icon}
                     </Box>
-                    <IconButton 
-                        size="small"
-                        onClick={(e) => setAnchorEl(e.currentTarget)}
-                    >
-                        <MoreVertIcon />
-                    </IconButton>
-                    <Menu
-                        anchorEl={anchorEl}
-                        open={Boolean(anchorEl)}
-                        onClose={() => setAnchorEl(null)}
-                    >
-                        <MenuItem onClick={() => setAnchorEl(null)}>View Details</MenuItem>
-                        <MenuItem onClick={() => setAnchorEl(null)}>Download Report</MenuItem>
-                    </Menu>
                 </Box>
 
                 <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -71,26 +56,6 @@ const StatCard = ({ title, value, subtext, icon, color, trend, percentChange }) 
                 <Typography variant="h4" sx={{ mb: 1 }}>
                     {value}
                 </Typography>
-
-                {(trend || percentChange) && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {trend === 'up' ? (
-                            <ArrowUpIcon sx={{ color: 'success.main', fontSize: 20 }} />
-                        ) : (
-                            <ArrowDownIcon sx={{ color: 'error.main', fontSize: 20 }} />
-                        )}
-                        <Typography 
-                            variant="body2" 
-                            color={trend === 'up' ? 'success.main' : 'error.main'}
-                            sx={{ fontWeight: 500 }}
-                        >
-                            {percentChange}%
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            vs last week
-                        </Typography>
-                    </Box>
-                )}
 
                 {subtext && (
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
@@ -109,12 +74,12 @@ const OrderProgress = ({ title, value, total, color }) => (
                 {title}
             </Typography>
             <Typography variant="body2" color="text.primary">
-                {value}/{total}
+                {value}
             </Typography>
         </Box>
         <LinearProgress
             variant="determinate"
-            value={(value / total) * 100}
+            value={value > 0 ? (value / (total || 1)) * 100 : 0}
             sx={{
                 height: 8,
                 borderRadius: 4,
@@ -128,58 +93,50 @@ const OrderProgress = ({ title, value, total, color }) => (
     </Box>
 );
 
-const PerformanceMetric = ({ title, value, target, unit, icon, color }) => (
-    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Box
-            sx={{
-                width: 40,
-                height: 40,
-                borderRadius: 1,
-                bgcolor: `${color}.lighter`,
-                color: `${color}.main`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mr: 2,
-            }}
-        >
-            {icon}
-        </Box>
-        <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-                {title}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
-                <Typography variant="h6">
-                    {value}{unit}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                    Target: {target}{unit}
-                </Typography>
-            </Box>
-        </Box>
-    </Box>
-);
+const BranchOverview = ({ orders = [], onSectionChange }) => {
+    // Filter orders for today's date only
+    const todayOrders = orders.filter(order => {
+        const orderDate = new Date(order.created_at);
+        const today = new Date();
+        return orderDate.toDateString() === today.toDateString();
+    });
 
-const BranchOverview = () => {
-    const [stats, setStats] = useState({
-        orders: 24,
-        avgPrepTime: 18,
-        revenue: 1284,
-        activeDeliveries: 8
+    // Calculate statistics from today's orders
+    const orderStats = todayOrders.reduce((acc, order) => {
+        // Count orders by status
+        acc[order.status] = (acc[order.status] || 0) + 1;
+        
+        // Sum up revenue only from today's orders
+        if (!['cancelled'].includes(order.status)) {
+            acc.totalRevenue += parseFloat(order.total || 0);
+        }
+        return acc;
+    }, {
+        pending: 0,
+        preparing: 0,
+        delivering: 0,
+        totalRevenue: 0
     });
 
     const orderStatuses = [
-        { title: 'Orders in Queue', value: 5, total: 20, color: 'warning' },
-        { title: 'Orders in Preparation', value: 8, total: 20, color: 'info' },
-        { title: 'Orders out for Delivery', value: 8, total: 15, color: 'success' }
+        { 
+            title: 'Orders Pending',
+            value: orderStats.pending, 
+            color: 'warning' 
+        },
+        { 
+            title: 'Orders Preparing', 
+            value: orderStats.preparing, 
+            color: 'info' 
+        },
+        { 
+            title: 'Orders Delivering', 
+            value: orderStats.delivering, 
+            color: 'success' 
+        }
     ];
 
-    const performanceMetrics = [
-        { title: 'Average Preparation Time', value: 18, target: 20, unit: 'm', icon: <TimeIcon />, color: 'primary' },
-        { title: 'Order Acceptance Rate', value: 95, target: 90, unit: '%', icon: <SpeedIcon />, color: 'success' },
-        { title: 'Customer Satisfaction', value: 4.8, target: 4.5, unit: '/5', icon: <MenuIcon />, color: 'warning' }
-    ];
+    const totalActiveOrders = orderStats.pending + orderStats.preparing + orderStats.delivering;
 
     return (
         <Box sx={{ py: 3 }}>
@@ -190,60 +147,57 @@ const BranchOverview = () => {
             <Grid container spacing={3}>
                 <Grid item xs={12} sm={6} md={3}>
                     <StatCard
-                        title="Today's Orders"
-                        value={stats.orders}
-                        subtext="+3 pending approval"
+                        title="Active Orders"
+                        value={totalActiveOrders}
+                        subtext={`${orderStats.pending} pending approval`}
                         icon={<OrderIcon />}
                         color="primary"
-                        trend="up"
-                        percentChange={12}
                     />
                 </Grid>
 
                 <Grid item xs={12} sm={6} md={3}>
                     <StatCard
-                        title="Average Prep Time"
-                        value={`${stats.avgPrepTime}m`}
-                        subtext="2m faster than target"
+                        title="Orders Preparing"
+                        value={orderStats.preparing}
+                        subtext="In kitchen"
                         icon={<TimeIcon />}
-                        color="success"
-                        trend="up"
-                        percentChange={8}
+                        color="info"
                     />
                 </Grid>
 
                 <Grid item xs={12} sm={6} md={3}>
                     <StatCard
                         title="Today's Revenue"
-                        value={`$${stats.revenue}`}
-                        subtext="15% above target"
+                        value={`$${orderStats.totalRevenue.toFixed(2)}`}
+                        subtext="From all orders"
                         icon={<MoneyIcon />}
                         color="warning"
-                        trend="up"
-                        percentChange={15}
                     />
                 </Grid>
 
                 <Grid item xs={12} sm={6} md={3}>
                     <StatCard
                         title="Active Deliveries"
-                        value={stats.activeDeliveries}
-                        subtext="All on schedule"
+                        value={orderStats.delivering}
+                        subtext="In transit"
                         icon={<DeliveryIcon />}
-                        color="info"
-                        trend="down"
-                        percentChange={5}
+                        color="success"
                     />
                 </Grid>
 
-                <Grid item xs={12} md={8}>
+                <Grid item xs={12}>
                     <Card sx={{ height: '100%' }}>
                         <CardContent>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                                 <Typography variant="h6">
-                                    Current Order Status
+                                    Order Status Overview
                                 </Typography>
-                                <Button size="small">View All Orders</Button>
+                                <Button 
+                                    size="small" 
+                                    onClick={() => onSectionChange('orders')}
+                                >
+                                    View All Orders
+                                </Button>
                             </Box>
                             
                             {orderStatuses.map((status, index) => (
@@ -251,74 +205,42 @@ const BranchOverview = () => {
                                     key={index}
                                     title={status.title}
                                     value={status.value}
-                                    total={status.total}
+                                    total={Math.max(totalActiveOrders, 1)}
                                     color={status.color}
-                                />
-                            ))}
-
-                            <Divider sx={{ my: 3 }} />
-
-                            <Typography variant="h6" sx={{ mb: 2 }}>
-                                Performance Metrics
-                            </Typography>
-
-                            {performanceMetrics.map((metric, index) => (
-                                <PerformanceMetric
-                                    key={index}
-                                    title={metric.title}
-                                    value={metric.value}
-                                    target={metric.target}
-                                    unit={metric.unit}
-                                    icon={metric.icon}
-                                    color={metric.color}
                                 />
                             ))}
                         </CardContent>
                     </Card>
                 </Grid>
 
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12}>
                     <Card sx={{ height: '100%' }}>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>
                                 Quick Actions
                             </Typography>
-                            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
                                 <Button
-                                    variant="outlined"
-                                    fullWidth
+                                    variant="contained"
                                     startIcon={<OrderIcon />}
-                                    onClick={() => {/* TODO */}}
+                                    onClick={() => onSectionChange('orders')}
                                 >
-                                    View New Orders
+                                    Manage Orders
                                 </Button>
                                 <Button
                                     variant="outlined"
-                                    fullWidth
                                     startIcon={<MenuIcon />}
-                                    onClick={() => {/* TODO */}}
+                                    onClick={() => onSectionChange('menu')}
                                 >
-                                    Update Menu Status
+                                    Update Menu
                                 </Button>
                                 <Button
                                     variant="outlined"
-                                    fullWidth
                                     startIcon={<DeliveryIcon />}
-                                    onClick={() => {/* TODO */}}
+                                    onClick={() => onSectionChange('riders')}
                                 >
-                                    Manage Deliveries
+                                    Manage Delivery Staff
                                 </Button>
-                            </Box>
-
-                            <Divider sx={{ my: 3 }} />
-
-                            <Typography variant="subtitle2" gutterBottom>
-                                Staff on Duty
-                            </Typography>
-                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-                                <Chip label="John (Kitchen)" color="primary" size="small" />
-                                <Chip label="Sarah (Counter)" color="primary" size="small" />
-                                <Chip label="Mike (Delivery)" color="primary" size="small" />
                             </Box>
                         </CardContent>
                     </Card>

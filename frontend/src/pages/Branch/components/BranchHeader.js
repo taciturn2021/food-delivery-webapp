@@ -8,19 +8,16 @@ import {
     MenuItem,
     Box,
     Avatar,
-    Badge,
 } from '@mui/material';
 import {
     Menu as MenuIcon,
     AccountCircle,
-    Notifications as NotificationsIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-const BranchHeader = ({ sidebarOpen, onSidebarToggle }) => {
+const BranchHeader = ({ sidebarOpen, onSidebarToggle, onSectionChange }) => {
     const [anchorEl, setAnchorEl] = useState(null);
-    const [notificationsAnchor, setNotificationsAnchor] = useState(null);
     const { user, logout } = useAuth();
     const navigate = useNavigate();
 
@@ -28,21 +25,18 @@ const BranchHeader = ({ sidebarOpen, onSidebarToggle }) => {
         setAnchorEl(event.currentTarget);
     };
 
-    const handleNotificationsMenu = (event) => {
-        setNotificationsAnchor(event.currentTarget);
-    };
-
     const handleClose = () => {
         setAnchorEl(null);
-    };
-
-    const handleNotificationsClose = () => {
-        setNotificationsAnchor(null);
     };
 
     const handleLogout = () => {
         logout();
         navigate('/login');
+    };
+
+    const handleSettings = () => {
+        onSectionChange('settings');
+        handleClose();
     };
 
     return (
@@ -66,50 +60,20 @@ const BranchHeader = ({ sidebarOpen, onSidebarToggle }) => {
                     <MenuIcon />
                 </IconButton>
                 <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                    Branch Dashboard
+                    {user?.branchName || 'Branch Dashboard'}
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <IconButton
-                        size="large"
-                        color="inherit"
-                        onClick={handleNotificationsMenu}
-                    >
-                        <Badge badgeContent={3} color="error">
-                            <NotificationsIcon />
-                        </Badge>
-                    </IconButton>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <IconButton
                         size="large"
                         onClick={handleMenu}
                         color="inherit"
                     >
-                        <Avatar sx={{ width: 32, height: 32 }}>
-                            <AccountCircle />
+                        <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+                            {user?.username?.charAt(0)?.toUpperCase() || <AccountCircle />}
                         </Avatar>
                     </IconButton>
                 </Box>
 
-                {/* Notifications Menu */}
-                <Menu
-                    anchorEl={notificationsAnchor}
-                    anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'right',
-                    }}
-                    keepMounted
-                    transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'right',
-                    }}
-                    open={Boolean(notificationsAnchor)}
-                    onClose={handleNotificationsClose}
-                >
-                    <MenuItem onClick={handleNotificationsClose}>New Order #1234</MenuItem>
-                    <MenuItem onClick={handleNotificationsClose}>Order #1233 Updated</MenuItem>
-                    <MenuItem onClick={handleNotificationsClose}>Menu Item Stock Low</MenuItem>
-                </Menu>
-
-                {/* Profile Menu */}
                 <Menu
                     anchorEl={anchorEl}
                     anchorOrigin={{
@@ -124,8 +88,7 @@ const BranchHeader = ({ sidebarOpen, onSidebarToggle }) => {
                     open={Boolean(anchorEl)}
                     onClose={handleClose}
                 >
-                    <MenuItem onClick={handleClose}>Branch Profile</MenuItem>
-                    <MenuItem onClick={handleClose}>Change Password</MenuItem>
+                    <MenuItem onClick={handleSettings}>Settings</MenuItem>
                     <MenuItem onClick={handleLogout}>Logout</MenuItem>
                 </Menu>
             </Toolbar>
