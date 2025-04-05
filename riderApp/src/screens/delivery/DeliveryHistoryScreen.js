@@ -81,7 +81,8 @@ const DeliveryHistoryScreen = ({ navigation }) => {
         onPress={() => {
           // Add logging to debug the orderId
           
-          navigation.navigate('DeliveryDetails', { delivery: order });
+          console.log('Navigating to DeliveryDetails with orderId:', order.id);
+          navigation.navigate('DeliveryDetails', { order });
         }}
       >
         <View style={styles.deliveryHeader}>
