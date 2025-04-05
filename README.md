@@ -1,5 +1,6 @@
 # Food Delivery Web Application (Work In Progress)
-
+## DEPLOYED AT 
+https://food-delivery-webapp-two.vercel.app/
 ## TO-DO
 - Fix bugs
 - security testing on backend endpoints
