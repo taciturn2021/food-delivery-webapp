@@ -19,32 +19,20 @@ import { Card, CardContent } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
 
 // Status display configuration
-const orderStatusConfig = {
+export const orderStatusConfig = {
   'pending': { 
     label: 'Pending', 
     color: 'bg-yellow-500',
     textColor: 'text-yellow-500',
     icon: <Clock className="h-4 w-4" />
   },
-  'confirmed': { 
-    label: 'Confirmed', 
+  'preparing': { 
+    label: 'Preparing', 
     color: 'bg-blue-500',
     textColor: 'text-blue-500',
     icon: <Check className="h-4 w-4" />
   },
-  'preparing': { 
-    label: 'Preparing', 
-    color: 'bg-indigo-500',
-    textColor: 'text-indigo-500',
-    icon: <ShoppingBag className="h-4 w-4" />
-  },
-  'ready': { 
-    label: 'Ready', 
-    color: 'bg-purple-500',
-    textColor: 'text-purple-500',
-    icon: <Store className="h-4 w-4" />
-  },
-  'out_for_delivery': { 
+  'delivering': { 
     label: 'Out for Delivery', 
     color: 'bg-orange-500',
     textColor: 'text-orange-500',
@@ -72,7 +60,7 @@ const ActiveOrders = () => {
   const [refreshInterval, setRefreshInterval] = useState(null);
 
   const formatPrice = (price) => {
-    return typeof price === 'number' ? price.toFixed(2) : '0.00';
+    return typeof price === 'string' ? parseFloat(price).toFixed(2) : '0.00';
   };
 
   const formatDate = (dateString) => {
@@ -225,14 +213,24 @@ const ActiveOrders = () => {
                     </div>
 
                     <div className="mb-6">
-                      <p className="text-sm text-orange-600 mb-1">Delivering to:</p>
-                      <p className="font-medium text-orange-900">
-                        {order.delivery_address?.street}
-                      </p>
-                      <p className="text-sm text-orange-700">
-                        {order.delivery_address?.city}, {order.delivery_address?.state} {order.delivery_address?.zipCode}
-                      </p>
-                    </div>
+                        <p className="text-sm text-orange-600 mb-1">Delivered to:</p>
+                        {order.delivery_address ? (
+                          <>
+                            <p className="font-medium text-orange-900">
+                              {typeof order.delivery_address === 'string' 
+                                ? JSON.parse(order.delivery_address).street 
+                                : order.delivery_address.street}
+                            </p>
+                            <p className="text-sm text-orange-700">
+                              {typeof order.delivery_address === 'string' 
+                                ? `${JSON.parse(order.delivery_address).city}, ${JSON.parse(order.delivery_address).state} ${JSON.parse(order.delivery_address).zipCode}`
+                                : `${order.delivery_address.city}, ${order.delivery_address.state} ${order.delivery_address.zipCode}`}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-sm text-orange-700">No address information available</p>
+                        )}
+                      </div>
 
                     <div className="flex items-center border-t border-orange-100 pt-4">
                       <Store className="h-5 w-5 text-orange-600 mr-2" />

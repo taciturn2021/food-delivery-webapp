@@ -70,7 +70,7 @@ const OrderTracking = () => {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState(null);
 
-  const formatPrice = (price) => {
+const formatPrice = (price) => {
     return typeof price === 'string' ? parseFloat(price).toFixed(2) : '0.00';
   };
 

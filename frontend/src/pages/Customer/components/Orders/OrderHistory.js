@@ -20,52 +20,8 @@ import { Card, CardContent } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
+import { orderStatusConfig } from './ActiveOrders';
 
-// Status display configuration
-const orderStatusConfig = {
-  'pending': { 
-    label: 'Pending', 
-    color: 'bg-yellow-500',
-    textColor: 'text-yellow-500',
-    icon: <Clock className="h-4 w-4" />
-  },
-  'confirmed': { 
-    label: 'Confirmed', 
-    color: 'bg-blue-500',
-    textColor: 'text-blue-500',
-    icon: <Check className="h-4 w-4" />
-  },
-  'preparing': { 
-    label: 'Preparing', 
-    color: 'bg-indigo-500',
-    textColor: 'text-indigo-500',
-    icon: <Clock className="h-4 w-4" />
-  },
-  'ready': { 
-    label: 'Ready', 
-    color: 'bg-purple-500',
-    textColor: 'text-purple-500',
-    icon: <Store className="h-4 w-4" />
-  },
-  'out_for_delivery': { 
-    label: 'Out for Delivery', 
-    color: 'bg-orange-500',
-    textColor: 'text-orange-500',
-    icon: <MapPin className="h-4 w-4" />
-  },
-  'delivered': { 
-    label: 'Delivered', 
-    color: 'bg-green-500',
-    textColor: 'text-green-500',
-    icon: <Check className="h-4 w-4" />
-  },
-  'cancelled': { 
-    label: 'Cancelled', 
-    color: 'bg-red-500',
-    textColor: 'text-red-500',
-    icon: <X className="h-4 w-4" />
-  }
-};
 
 const OrderHistory = () => {
   const navigate = useNavigate();
@@ -78,7 +34,7 @@ const OrderHistory = () => {
   const [filteredOrders, setFilteredOrders] = useState([]);
 
   const formatPrice = (price) => {
-    return typeof price === 'number' ? price.toFixed(2) : '0.00';
+    return typeof price === 'string' ? parseFloat(price).toFixed(2) : '0.00';
   };
 
   const formatDate = (dateString) => {
