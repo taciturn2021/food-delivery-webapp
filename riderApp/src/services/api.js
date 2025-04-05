@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@env';
 
 // Configure API base URL from environment variable
-const BASE_URL = API_BASE_URL ; // Fallback if env variable is not loaded
+const BASE_URL = API_BASE_URL || 'http://193.123.90.192:8443/api'; // Hardcoded fallback URL
 
 // Create axios instance
 const api = axios.create({

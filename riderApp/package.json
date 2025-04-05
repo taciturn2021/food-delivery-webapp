@@ -4,8 +4,8 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "dependencies": {
@@ -23,9 +23,11 @@
     "expo-location": "*",
     "expo-secure-store": "*",
     "expo-status-bar": "*",
+    "expo-system-ui": "^4.0.8",
     "react": "*",
     "react-native": "*",
     "react-native-animatable": "*",
+    "react-native-gesture-handler": "^2.24.0",
     "react-native-maps": "*",
     "react-native-paper": "*",
     "react-native-safe-area-context": "*",
@@ -33,6 +35,7 @@
   },
   "devDependencies": {
     "@babel/core": "*",
+    "@react-native-community/cli": "^18.0.0",
     "react-native-dotenv": "*"
   },
   "private": true

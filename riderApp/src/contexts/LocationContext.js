@@ -18,16 +18,30 @@ export const LocationProvider = ({ children }) => {
   // Track app state (foreground/background)
   const [appState, setAppState] = useState(AppState.currentState);
   
-  // Update location in the backend
+  // Reference to store the subscription
+  const locationSubscription = useRef(null);
+  
+  // Track last update time to prevent spam
+  const lastUpdateTime = useRef(0);
+  
+  // Update location in the backend with rate limiting
   const updateLocationInBackend = useCallback(async (latitude, longitude) => {
     if (!user) {
       console.log('No user logged in, skipping location update');
       return;
     }
     
+    const now = Date.now();
+    // Ensure updates are at least 30 seconds apart
+    if (now - lastUpdateTime.current < 30000) {
+      console.log('Skipping location update, too soon since last update');
+      return;
+    }
+    
     try {
       await api.updateRiderLocation({ latitude, longitude });
       console.log('Location updated in backend:', { latitude, longitude });
+      lastUpdateTime.current = now;
     } catch (error) {
       console.error('Failed to update location in backend:', error);
       setErrorMsg('Failed to update location. Please check your connection.');
@@ -37,6 +51,11 @@ export const LocationProvider = ({ children }) => {
   // Request and start location updates
   const startLocationTracking = useCallback(async () => {
     if (!user) return;
+    
+    // If we already have a subscription, clean it up first
+    if (locationSubscription.current) {
+      await stopLocationTracking();
+    }
     
     try {
       // Request permissions first
@@ -48,7 +67,7 @@ export const LocationProvider = ({ children }) => {
       }
       
       // Start watching position
-      const subscription = await Location.watchPositionAsync(
+      locationSubscription.current = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
           timeInterval: 30000,  // 30 seconds
@@ -64,8 +83,7 @@ export const LocationProvider = ({ children }) => {
       setIsTracking(true);
       setErrorMsg(null);
       
-      // Return the subscription so we can clean it up later
-      return subscription;
+      console.log('Location tracking started');
     } catch (error) {
       console.error('Error starting location tracking:', error);
       setErrorMsg('Error starting location tracking');
@@ -74,9 +92,11 @@ export const LocationProvider = ({ children }) => {
   }, [user, updateLocationInBackend]);
   
   // Stop location tracking
-  const stopLocationTracking = useCallback(async (subscription) => {
-    if (subscription) {
-      subscription.remove();
+  const stopLocationTracking = useCallback(async () => {
+    if (locationSubscription.current) {
+      console.log('Removing existing location subscription');
+      locationSubscription.current.remove();
+      locationSubscription.current = null;
     }
     setIsTracking(false);
     console.log('Location tracking stopped');
