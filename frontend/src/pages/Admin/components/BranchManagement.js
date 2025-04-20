@@ -96,10 +96,16 @@ const BranchManagement = () => {
         }
         setOpen(true);
         setActiveTab(0);
-    };
-
-    const handleSubmit = async (e) => {
+    };    const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Check if manager details are provided when creating a new branch
+        if (!editingId && (!formData.managerName || !formData.managerEmail || !formData.managerPassword)) {
+            setError('Branch manager details are required when creating a new branch');
+            setActiveTab(1); // Switch to manager tab to highlight the required fields
+            return;
+        }
+        
         try {
             if (editingId) {
                 const updateData = {
