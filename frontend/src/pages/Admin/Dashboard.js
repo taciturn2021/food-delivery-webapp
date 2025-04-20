@@ -4,7 +4,6 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import AdminSidebar from './components/AdminSidebar';
 import AdminHeader from './components/AdminHeader';
-import AdminOverview from './components/AdminOverview';
 import BranchManagement from './components/BranchManagement';
 import MenuManagement from './components/MenuManagement';
 import AdminSettings from './components/AdminSettings';
@@ -41,10 +40,9 @@ const AdminDashboard = () => {
                     backgroundColor: 'background.default',
                     minHeight: '100vh'
                 }}
-            >
-                <Container maxWidth="xl">
+            >                <Container maxWidth="xl">
                     <Routes>
-                        <Route path="/" element={<AdminOverview />} />
+                        <Route path="/" element={<Navigate to="/admin/menu" replace />} />
                         <Route path="/menu" element={<MenuManagement />} />
                         <Route path="/branches" element={<BranchManagement />} />
                         <Route path="/settings" element={<AdminSettings />} />

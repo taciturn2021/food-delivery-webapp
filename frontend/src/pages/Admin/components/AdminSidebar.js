@@ -48,7 +48,6 @@ const StyledDrawer = styled(Drawer, {
 }));
 
 const navItems = [
-    { path: '/admin', label: 'Overview', icon: <DashboardIcon /> },
     { path: '/admin/menu', label: 'Menu Management', icon: <MenuIcon /> },
     { path: '/admin/branches', label: 'Branch Management', icon: <BranchIcon /> },
 ];

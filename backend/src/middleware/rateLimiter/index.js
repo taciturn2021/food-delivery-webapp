@@ -63,6 +63,7 @@ const envConfig = {
   RATE_LIMIT_HEADERS: process.env.RATE_LIMIT_HEADERS !== 'false', // Enable rate limit headers by default
 };
 
+
 // Login rate limiter - more lenient
 export const loginLimiter = rateLimit({
   windowMs: envConfig.AUTH_LOGIN_LIMIT_WINDOW_MS,
