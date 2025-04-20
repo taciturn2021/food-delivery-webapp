@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import {
     Box,
@@ -11,25 +11,58 @@ import {
     Divider,
     Alert,
     TextField,
+    CircularProgress,
 } from '@mui/material';
+import { getAllBranches, createBranch, updateBranch } from '../../../services/api';
+
+// The ID we'll use for storing template/default branch settings
+const DEFAULT_TEMPLATE_ID = 'admin_defaults';
 
 const AdminSettings = () => {
     const { user } = useAuth();
     const [settings, setSettings] = useState({
-        platformFee: 2,
-        maintenanceMode: false,
-        defaultDeliveryRadius: 10, // Default value for new branches
-        defaultMinimumOrder: 15,   // Default value for new branches
-        allowBranchScheduling: true, // Whether branches can set their own schedules
-        requireOrderApproval: false, // Whether orders need admin approval
-        autoCreateBranchAccounts: false, // Auto create accounts when adding branches
-        emailNotifications: true,
-        orderConfirmationRequired: true,
-        automaticBranchAssignment: false,
-        defaultOrderTimeout: 30,
+        defaultDeliveryRadius: 10, // Default radius when creating new branches
+        defaultMinimumOrder: 15,   // Default minimum order when creating new branches
     });
 
     const [showSuccess, setShowSuccess] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [templateBranch, setTemplateBranch] = useState(null);
+
+    useEffect(() => {
+        // Look for a branch that serves as our template
+        const loadDefaultSettings = async () => {
+            try {
+                setLoading(true);
+                const response = await getAllBranches();
+                
+                // Find a branch with a specific name that we'll use as our template
+                const template = response.data.find(branch => 
+                    branch.name === 'Default Branch Template');
+                
+                if (template) {
+                    setTemplateBranch(template);
+                    setSettings({
+                        defaultDeliveryRadius: template.delivery_radius || 10,
+                        defaultMinimumOrder: template.minimum_order_amount || 15
+                    });
+                } else {
+                    // If no template branch exists, we might create one later
+                    console.log('No template branch found');
+                }
+            } catch (err) {
+                console.error('Error loading default settings:', err);
+                setError('Failed to load settings');
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        if (user && user.role === 'admin') {
+            loadDefaultSettings();
+        }
+    }, [user]);
 
     const handleChange = (field) => (event) => {
         const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
@@ -39,11 +72,42 @@ const AdminSettings = () => {
         }));
     };
 
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
-        // TODO: Implement settings update logic
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 3000);
+        try {
+            setError(null);
+            
+            if (templateBranch) {
+                // Update the existing template branch
+                await updateBranch(templateBranch.id, {
+                    delivery_radius: settings.defaultDeliveryRadius,
+                    minimum_order_amount: settings.defaultMinimumOrder,
+                    status: 'inactive' // Keep it inactive so it doesn't appear in customer searches
+                });
+            } else {
+                // Create a new template branch if none exists
+                await createBranch({
+                    name: 'Default Branch Template',
+                    address: 'Template Address',
+                    phone: '000-000-0000',
+                    managerName: 'Admin',
+                    managerEmail: user.email, // Use admin email
+                    managerPassword: Math.random().toString(36).slice(-10), // Random password (won't be used)
+                    status: 'inactive',
+                    delivery_radius: settings.defaultDeliveryRadius,
+                    minimum_order_amount: settings.defaultMinimumOrder,
+                    // Add location data to satisfy the API
+                    latitude: 0,
+                    longitude: 0
+                });
+            }
+            
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 3000);
+        } catch (err) {
+            console.error('Error saving settings:', err);
+            setError(err.response?.data?.message || 'Failed to update settings');
+        }
     };
 
     return (
@@ -52,235 +116,102 @@ const AdminSettings = () => {
                 Global System Settings
             </Typography>
 
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+                    {error}
+                </Alert>
+            )}
+
             {showSuccess && (
                 <Alert severity="success" sx={{ mb: 3 }}>
                     Settings updated successfully!
                 </Alert>
             )}
+            
+            {loading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <CircularProgress />
+                </Box>
+            ) : (
+                <Paper sx={{ p: 3 }}>
+                    <form onSubmit={handleSubmit}>
+                        <Grid container spacing={3}>
+                            <Grid item xs={12}>
+                                <Typography variant="h6" gutterBottom>
+                                    Branch Default Settings
+                                </Typography>
+                                <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                                    These settings will be used as defaults when creating new branches.
+                                </Typography>
+                            </Grid>
 
-            <Paper sx={{ p: 3 }}>
-                <form onSubmit={handleSubmit}>
-                    <Grid container spacing={3}>
-                        <Grid item xs={12}>
-                            <Typography variant="h6" gutterBottom>
-                                Platform Settings
-                            </Typography>
-                        </Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Default Delivery Radius (km)"
+                                    type="number"
+                                    value={settings.defaultDeliveryRadius}
+                                    onChange={handleChange('defaultDeliveryRadius')}
+                                    inputProps={{ min: 1 }}
+                                    helperText="Default delivery radius for new branches"
+                                />
+                            </Grid>
 
-                        <Grid item xs={12} md={6}>
-                            <TextField
-                                fullWidth
-                                label="Platform Fee ($)"
-                                type="number"
-                                value={settings.platformFee}
-                                onChange={handleChange('platformFee')}
-                                inputProps={{ min: 0, step: 0.5 }}
-                            />
-                        </Grid>
+                            <Grid item xs={12} md={6}>
+                                <TextField
+                                    fullWidth
+                                    label="Default Minimum Order ($)"
+                                    type="number"
+                                    value={settings.defaultMinimumOrder}
+                                    onChange={handleChange('defaultMinimumOrder')}
+                                    inputProps={{ min: 0 }}
+                                    helperText="Default minimum order amount for new branches"
+                                />
+                            </Grid>
 
-                        <Grid item xs={12}>
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        checked={settings.maintenanceMode}
-                                        onChange={handleChange('maintenanceMode')}
-                                    />
-                                }
-                                label="Maintenance Mode"
-                            />
-                        </Grid>
+                            <Grid item xs={12}>
+                                <Divider sx={{ my: 2 }} />
+                            </Grid>
 
-                        <Grid item xs={12}>
-                            <Divider sx={{ my: 2 }} />
-                        </Grid>
+                            <Grid item xs={12}>
+                                <Typography variant="h6" gutterBottom>
+                                    Account Information
+                                </Typography>
+                            </Grid>
 
-                        <Grid item xs={12}>
-                            <Typography variant="h6" gutterBottom>
-                                Branch Defaults
-                            </Typography>
-                        </Grid>
+                            <Grid item xs={12}>
+                                <Typography variant="body1">
+                                    <strong>Username:</strong> {user.username}
+                                </Typography>
+                            </Grid>
 
-                        <Grid item xs={12} md={6}>
-                            <TextField
-                                fullWidth
-                                label="Default Delivery Radius (km)"
-                                type="number"
-                                value={settings.defaultDeliveryRadius}
-                                onChange={handleChange('defaultDeliveryRadius')}
-                                inputProps={{ min: 1 }}
-                                helperText="Default value for new branches"
-                            />
-                        </Grid>
+                            <Grid item xs={12}>
+                                <Typography variant="body1">
+                                    <strong>Email:</strong> {user.email}
+                                </Typography>
+                            </Grid>
 
-                        <Grid item xs={12} md={6}>
-                            <TextField
-                                fullWidth
-                                label="Default Minimum Order ($)"
-                                type="number"
-                                value={settings.defaultMinimumOrder}
-                                onChange={handleChange('defaultMinimumOrder')}
-                                inputProps={{ min: 0 }}
-                                helperText="Default value for new branches"
-                            />
-                        </Grid>
+                            <Grid item xs={12}>
+                                <Typography variant="body1">
+                                    <strong>Role:</strong> {user.role}
+                                </Typography>
+                            </Grid>
 
-                        <Grid item xs={12}>
-                            <Divider sx={{ my: 2 }} />
+                            <Grid item xs={12}>
+                                <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
+                                    <Button
+                                        type="submit"
+                                        variant="contained"
+                                        size="large"
+                                    >
+                                        Save Changes
+                                    </Button>
+                                </Box>
+                            </Grid>
                         </Grid>
-
-                        <Grid item xs={12}>
-                            <Typography variant="h6" gutterBottom>
-                                Branch Permissions
-                            </Typography>
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        checked={settings.allowBranchScheduling}
-                                        onChange={handleChange('allowBranchScheduling')}
-                                    />
-                                }
-                                label="Allow Branches to Set Their Own Schedules"
-                            />
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        checked={settings.requireOrderApproval}
-                                        onChange={handleChange('requireOrderApproval')}
-                                    />
-                                }
-                                label="Require Admin Approval for Orders"
-                            />
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        checked={settings.autoCreateBranchAccounts}
-                                        onChange={handleChange('autoCreateBranchAccounts')}
-                                    />
-                                }
-                                label="Automatically Create Branch Accounts"
-                            />
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <Divider sx={{ my: 2 }} />
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <Typography variant="h6" gutterBottom>
-                                General Settings
-                            </Typography>
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        checked={settings.emailNotifications}
-                                        onChange={handleChange('emailNotifications')}
-                                    />
-                                }
-                                label="Email Notifications"
-                            />
-                            <Typography variant="body2" color="textSecondary">
-                                Receive email notifications for new orders and updates
-                            </Typography>
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        checked={settings.orderConfirmationRequired}
-                                        onChange={handleChange('orderConfirmationRequired')}
-                                    />
-                                }
-                                label="Order Confirmation Required"
-                            />
-                            <Typography variant="body2" color="textSecondary">
-                                Require manual confirmation for new orders
-                            </Typography>
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        checked={settings.automaticBranchAssignment}
-                                        onChange={handleChange('automaticBranchAssignment')}
-                                    />
-                                }
-                                label="Automatic Branch Assignment"
-                            />
-                            <Typography variant="body2" color="textSecondary">
-                                Automatically assign orders to nearest branch
-                            </Typography>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <TextField
-                                fullWidth
-                                label="Default Order Timeout (minutes)"
-                                type="number"
-                                value={settings.defaultOrderTimeout}
-                                onChange={handleChange('defaultOrderTimeout')}
-                                inputProps={{ min: 1, max: 120 }}
-                            />
-                            <Typography variant="body2" color="textSecondary">
-                                Time before unconfirmed orders are automatically cancelled
-                            </Typography>
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <Divider sx={{ my: 2 }} />
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <Typography variant="h6" gutterBottom>
-                                Account Information
-                            </Typography>
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <Typography variant="body1">
-                                <strong>Username:</strong> {user.username}
-                            </Typography>
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <Typography variant="body1">
-                                <strong>Email:</strong> {user.email}
-                            </Typography>
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <Typography variant="body1">
-                                <strong>Role:</strong> {user.role}
-                            </Typography>
-                        </Grid>
-
-                        <Grid item xs={12}>
-                            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-                                <Button
-                                    type="submit"
-                                    variant="contained"
-                                    size="large"
-                                >
-                                    Save Changes
-                                </Button>
-                            </Box>
-                        </Grid>
-                    </Grid>
-                </form>
-            </Paper>
+                    </form>
+                </Paper>
+            )}
         </Box>
     );
 };
