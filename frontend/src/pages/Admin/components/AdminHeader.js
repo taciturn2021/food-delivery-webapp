@@ -10,15 +10,11 @@ import {
     MenuItem,
     Box,
     Avatar,
-    Badge,
     useTheme
 } from '@mui/material';
 import {
     Menu as MenuIcon,
-    AccountCircle,
-    Notifications as NotificationsIcon,
-    Settings as SettingsIcon,
-    ExitToApp as LogoutIcon
+    AccountCircle
 } from '@mui/icons-material';
 
 const AdminHeader = ({ sidebarOpen, onSidebarToggle }) => {
@@ -26,30 +22,24 @@ const AdminHeader = ({ sidebarOpen, onSidebarToggle }) => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [anchorEl, setAnchorEl] = useState(null);
-    const [notificationsAnchor, setNotificationsAnchor] = useState(null);
 
     const handleMenu = (event) => {
         setAnchorEl(event.currentTarget);
-    };
-
-    const handleNotificationsMenu = (event) => {
-        setNotificationsAnchor(event.currentTarget);
     };
 
     const handleClose = () => {
         setAnchorEl(null);
     };
 
-    const handleNotificationsClose = () => {
-        setNotificationsAnchor(null);
-    };
-
     const handleLogout = () => {
         logout();
         navigate('/login');
     };
-
-    return (
+    
+    const handleSettings = () => {
+        navigate('/admin/settings');
+        handleClose();
+    };    return (
         <AppBar 
             position="fixed" 
             sx={{ 
@@ -74,81 +64,32 @@ const AdminHeader = ({ sidebarOpen, onSidebarToggle }) => {
                     Admin Dashboard
                 </Typography>
 
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <IconButton
-                        size="large"
-                        color="inherit"
-                        onClick={handleNotificationsMenu}
-                    >
-                        <Badge badgeContent={3} color="error">
-                            <NotificationsIcon />
-                        </Badge>
-                    </IconButton>
-
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <IconButton
                         size="large"
                         onClick={handleMenu}
                         color="inherit"
                     >
-                        <Avatar sx={{ width: 32, height: 32, bgcolor: theme.palette.secondary.main }}>
-                            {user?.username?.charAt(0)?.toUpperCase()}
+                        <Avatar sx={{ width: 32, height: 32, bgcolor: theme.palette.primary.main }}>
+                            {user?.username?.charAt(0)?.toUpperCase() || <AccountCircle />}
                         </Avatar>
                     </IconButton>
-                </Box>
-
-                <Menu
-                    anchorEl={notificationsAnchor}
-                    open={Boolean(notificationsAnchor)}
-                    onClose={handleNotificationsClose}
+                </Box>                <Menu
+                    anchorEl={anchorEl}
                     anchorOrigin={{
                         vertical: 'bottom',
                         horizontal: 'right',
                     }}
+                    keepMounted
                     transformOrigin={{
                         vertical: 'top',
                         horizontal: 'right',
                     }}
-                    PaperProps={{
-                        elevation: 3,
-                        sx: { width: 320, maxHeight: 400 }
-                    }}
-                >
-                    <MenuItem onClick={handleNotificationsClose}>
-                        <Typography variant="body2">New branch request pending approval</Typography>
-                    </MenuItem>
-                    <MenuItem onClick={handleNotificationsClose}>
-                        <Typography variant="body2">System update available</Typography>
-                    </MenuItem>
-                    <MenuItem onClick={handleNotificationsClose}>
-                        <Typography variant="body2">3 new manager applications</Typography>
-                    </MenuItem>
-                </Menu>
-
-                <Menu
-                    anchorEl={anchorEl}
                     open={Boolean(anchorEl)}
                     onClose={handleClose}
-                    anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'right',
-                    }}
-                    transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'right',
-                    }}
                 >
-                    <MenuItem onClick={handleClose}>
-                        <AccountCircle sx={{ mr: 1 }} />
-                        Profile
-                    </MenuItem>
-                    <MenuItem onClick={handleClose}>
-                        <SettingsIcon sx={{ mr: 1 }} />
-                        Settings
-                    </MenuItem>
-                    <MenuItem onClick={handleLogout}>
-                        <LogoutIcon sx={{ mr: 1 }} />
-                        Logout
-                    </MenuItem>
+                    <MenuItem onClick={handleSettings}>Settings</MenuItem>
+                    <MenuItem onClick={handleLogout}>Logout</MenuItem>
                 </Menu>
             </Toolbar>
         </AppBar>
