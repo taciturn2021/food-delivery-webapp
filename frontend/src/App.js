@@ -241,8 +241,14 @@ const App = () => {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<CustomerRegister />} />
                 <Route path="/admin/login" element={<AdminLogin />} />
-                <Route path="/cart" element={<Cart />} />
-
+                <Route
+                  path="/cart"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer']}>
+                      <Cart />
+                    </ProtectedRoute>
+                  }
+                />
                 {/* Order routes */}
                 <Route
                   path="/customer/orders"
