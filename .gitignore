@@ -13,6 +13,7 @@ frontend/.DS_Store
 frontend/package-lock.json
 frontend/package.json
 frontend/node_modules/
+frontend/build/
 riderApp/.env
 context.md
 projectDescription.md
