@@ -7,9 +7,7 @@
     "@emotion/styled": "latest",
     "@mui/icons-material": "latest",
     "@mui/material": "latest",
-    "@testing-library/jest-dom": "latest",
-    "@testing-library/react": "latest",
-    "@testing-library/user-event": "latest",
+    "@tailwindcss/postcss": "^4.1.13",
     "@vercel/analytics": "latest",
     "axios": "latest",
     "date-fns": "latest",
@@ -20,21 +18,14 @@
     "react-dom": "latest",
     "react-leaflet": "latest",
     "react-router-dom": "latest",
-    "react-scripts": "latest",
     "web-vitals": "latest",
     "yup": "latest"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "vite"
   },
   "browserslist": {
     "production": [
@@ -54,12 +45,14 @@
     "@radix-ui/react-navigation-menu": "latest",
     "@radix-ui/react-select": "latest",
     "@radix-ui/react-slot": "latest",
+    "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "latest",
     "class-variance-authority": "latest",
     "clsx": "latest",
     "lucide-react": "latest",
     "postcss": "latest",
     "tailwind-merge": "latest",
-    "tailwindcss": "latest"
+    "tailwindcss": "latest",
+    "vite": "^5.4.11"
   }
 }
