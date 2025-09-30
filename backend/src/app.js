@@ -44,12 +44,12 @@ app.use(cookieParser());
 initializeDatabase().catch(console.error);
 
 // Routes - specific rate limiters are applied in each route file
-app.use('/api/auth', authRoutes);
-app.use('/api/menu', menuRoutes);
-app.use('/api/branches', branchRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/riders', riderRoutes);
-app.use('/api/customers', customerRoutes);
+app.use('/fooddelivery/api/auth', authRoutes);
+app.use('/fooddelivery/api/menu', menuRoutes);
+app.use('/fooddelivery/api/branches', branchRoutes);
+app.use('/fooddelivery/api/orders', orderRoutes);
+app.use('/fooddelivery/api/riders', riderRoutes);
+app.use('/fooddelivery/api/customers', customerRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
