@@ -1,0 +1,32 @@
+{
+	admin off
+	persist_config off
+	auto_https off
+	log {
+		format json
+	}
+	servers {
+		trusted_proxies static private_ranges 100.0.0.0/8
+	}
+}
+
+:{$PORT:3000} {
+	log {
+		format json
+	}
+
+	# Health check
+	respond /health 200
+
+	# Serve from /srv directory
+	root * /srv
+
+	# Enable gzip
+	encode gzip
+
+	# Serve static files
+	file_server
+
+	# SPA fallback - must come after file_server
+	try_files {path} /index.html
+}
