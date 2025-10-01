@@ -1,8 +1,8 @@
 # Food Delivery Web Application (Work In Progress)
 ## DEPLOYED AT 
-https://food-delivery-webapp-two.vercel.app/
+[Deployment](https://bit.ly/3IzQgvP)
 ## SHOWCASE
-https://www.youtube.com/watch?v=Ieu_6uhlZhc
+[Food Delivery App Demo Youtube](https://www.youtube.com/watch?v=Ieu_6uhlZhc)
 ## TO-DO
 - Fix bugs
 - security testing on backend endpoints
