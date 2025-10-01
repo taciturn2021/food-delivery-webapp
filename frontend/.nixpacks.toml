@@ -1,0 +1,47 @@
+[phases.setup]
+nixPkgs = ['nodejs_18', 'npm-9_x']
+
+[phases.install]
+cmds = ['npm ci']
+
+[phases.build]
+cmds = ['npm run build']
+
+[start]
+cmd = 'exec caddy run --config /assets/Caddyfile --adapter caddyfile 2>&1'
+
+[staticAssets]
+"Caddyfile" = '''
+{
+	admin off
+	persist_config off
+	auto_https off
+	log {
+		format json
+	}
+	servers {
+		trusted_proxies static private_ranges 100.0.0.0/8
+	}
+}
+
+:{$PORT:3000} {
+	log {
+		format json
+	}
+
+	# health check
+	rewrite /health /*
+
+	# serve from the build directory
+	root * /app/build
+
+	# enable gzip
+	encode gzip
+
+	# serve static files
+	file_server
+
+	# SPA fallback
+	try_files {path} /index.html
+}
+'''
