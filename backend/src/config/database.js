@@ -139,9 +139,15 @@ const initializeDatabase = async () => {
                 total_amount DECIMAL(10,2) NOT NULL,
                 delivery_address TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 rider_id INTEGER REFERENCES riders(id),
                 assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+        `);
+
+        await client.query(`
+            ALTER TABLE orders
+            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         `);
 
         // Create order_items table
@@ -154,6 +160,23 @@ const initializeDatabase = async () => {
                 price_at_time DECIMAL(10,2) NOT NULL,
                 special_instructions TEXT
             )
+        `);
+
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_orders_branch_created_at
+            ON orders (branch_id, created_at DESC)
+        `);
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_orders_branch_status_created_at
+            ON orders (branch_id, status, created_at DESC)
+        `);
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_orders_branch_updated_at
+            ON orders (branch_id, updated_at)
+        `);
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_order_items_order_id
+            ON order_items (order_id)
         `);
 
         // Create riders table

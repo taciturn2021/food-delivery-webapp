@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Bike, Check, ChevronDown, Clock3, Eye, MoreVertical, PackageCheck, RefreshCw, Search, Truck, X } from 'lucide-react';
-import { assignOrderToRider, getBranchRiders, getOrderById, getOrders, updateOrderStatus } from '../../../services/api';
+import React, { useEffect, useState } from 'react';
+import { Bike, Check, ChevronDown, Eye, MoreVertical, RefreshCw, Search, Truck, X } from 'lucide-react';
+import { assignOrderToRider, getBranchRiders, updateOrderStatus } from '../../../services/api';
 import DeliveryTracker from './DeliveryTracker';
 import { useAuth } from '../../../context/AuthContext';
 import { ManagementAlert, ManagementBadge, ManagementButton, ManagementCard, ManagementPageHeader } from '../../../components/management/ManagementPrimitives';
@@ -15,10 +15,10 @@ const AssignRiderDialog = ({ order, riders, onClose, onAssign }) => {
     return <Modal title="Assign delivery staff" onClose={onClose}><label className="block space-y-1.5"><span className="text-sm font-medium text-slate-300">Select delivery staff</span><select className="management-input h-10 w-full rounded-md px-3 text-sm" value={selectedRider} onChange={e => setSelectedRider(e.target.value)}><option value="">Select a rider</option>{riders.filter(r => r.status === 'active').map(rider => <option key={rider.id} value={rider.id}>{rider.full_name} - {rider.vehicle_type}</option>)}</select></label><div className="mt-6 flex justify-end gap-2"><ManagementButton variant="outline" onClick={onClose}>Cancel</ManagementButton><ManagementButton disabled={!selectedRider} onClick={() => onAssign(selectedRider)}>Assign</ManagementButton></div></Modal>;
 };
 
-const OrderCard = ({ order, onView, onStatusChange, onAssignRider }) => {
+const OrderCard = ({ order, isNew, onView, onStatusChange, onAssignRider }) => {
     const [menuOpen, setMenuOpen] = useState(false);
     const [showTracker, setShowTracker] = useState(false);
-    return <><ManagementCard className="flex h-full flex-col p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-wide text-slate-500">Order</p><h2 className="mt-1 font-semibold text-slate-100">#{order.id}</h2></div><div className="relative"><button type="button" onClick={() => setMenuOpen(!menuOpen)} className="rounded-md p-1.5 text-slate-500 hover:bg-slate-800 hover:text-slate-200"><MoreVertical className="h-4 w-4" /></button>{menuOpen && <div className="management-card absolute right-0 top-8 z-10 w-36 p-1"><button type="button" onClick={() => { onView(order); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-xs text-slate-300 hover:bg-slate-800"><Eye className="h-3.5 w-3.5" /> View details</button><button type="button" onClick={() => setMenuOpen(false)} className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-xs text-slate-300 hover:bg-slate-800">Print receipt</button></div>}</div></div><div className="mt-5"><p className="text-xs text-slate-500">Customer</p><p className="mt-1 text-sm text-slate-200">{order.customerName}</p></div><div className="mt-4"><p className="text-xs text-slate-500">Items</p><div className="mt-1 space-y-1">{order.items.map((item, index) => <p key={index} className="text-sm text-slate-300">{item.quantity}× {item.name}</p>)}</div></div><div className="mt-auto pt-5"><div className="flex items-center justify-between"><span className="text-lg font-semibold text-indigo-300">${order.total.toFixed(2)}</span><ManagementBadge tone={toneForStatus(order.status)}>{titleStatus(order.status)}</ManagementBadge></div><div className="mt-4 space-y-2">{order.status === 'pending' && <div className="grid grid-cols-2 gap-2"><ManagementButton size="sm" className="bg-emerald-600 hover:bg-emerald-500" onClick={() => onStatusChange(order.id, 'preparing')}><Check className="h-4 w-4" /> Accept</ManagementButton><ManagementButton size="sm" variant="danger" onClick={() => onStatusChange(order.id, 'cancelled')}><X className="h-4 w-4" /> Reject</ManagementButton></div>}{order.status === 'preparing' && <ManagementButton size="sm" className="w-full" onClick={() => onStatusChange(order.id, 'delivering')}><Truck className="h-4 w-4" /> Start delivery</ManagementButton>}{order.status === 'preparing' && !order.rider_id && <ManagementButton size="sm" variant="outline" className="w-full" onClick={() => onAssignRider(order)}><Bike className="h-4 w-4" /> Assign rider</ManagementButton>}{order.status === 'preparing' && order.rider_id && <ManagementBadge tone="success">Rider assigned</ManagementBadge>}{order.status === 'delivering' && order.assignment_id && <ManagementButton size="sm" variant="outline" className="w-full" onClick={() => setShowTracker(true)}><Eye className="h-4 w-4" /> Track delivery</ManagementButton>}</div></div></ManagementCard>{showTracker && <DeliveryTracker assignmentId={order.assignment_id} onClose={() => setShowTracker(false)} />}</>;
+    return <><ManagementCard className={`flex h-full flex-col p-5 ${isNew ? 'ring-2 ring-indigo-400/70' : ''}`}><div className="flex items-start justify-between gap-3"><div><p className="text-xs uppercase tracking-wide text-slate-500">Order</p><div className="mt-1 flex items-center gap-2"><h2 className="font-semibold text-slate-100">#{order.id}</h2>{isNew && <ManagementBadge tone="info">New</ManagementBadge>}</div></div><div className="relative"><button type="button" onClick={() => setMenuOpen(!menuOpen)} className="rounded-md p-1.5 text-slate-500 hover:bg-slate-800 hover:text-slate-200"><MoreVertical className="h-4 w-4" /></button>{menuOpen && <div className="management-card absolute right-0 top-8 z-10 w-36 p-1"><button type="button" onClick={() => { onView(order); setMenuOpen(false); }} className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-xs text-slate-300 hover:bg-slate-800"><Eye className="h-3.5 w-3.5" /> View details</button><button type="button" onClick={() => setMenuOpen(false)} className="flex w-full items-center gap-2 rounded px-3 py-2 text-left text-xs text-slate-300 hover:bg-slate-800">Print receipt</button></div>}</div></div><div className="mt-5"><p className="text-xs text-slate-500">Customer</p><p className="mt-1 text-sm text-slate-200">{order.customerName}</p></div><div className="mt-4"><p className="text-xs text-slate-500">Items</p><div className="mt-1 space-y-1">{order.items.map((item, index) => <p key={index} className="text-sm text-slate-300">{item.quantity}× {item.name}</p>)}</div></div><div className="mt-auto pt-5"><div className="flex items-center justify-between"><span className="text-lg font-semibold text-indigo-300">${order.total.toFixed(2)}</span><ManagementBadge tone={toneForStatus(order.status)}>{titleStatus(order.status)}</ManagementBadge></div><div className="mt-4 space-y-2">{order.status === 'pending' && <div className="grid grid-cols-2 gap-2"><ManagementButton size="sm" className="bg-emerald-600 hover:bg-emerald-500" onClick={() => onStatusChange(order.id, 'preparing')}><Check className="h-4 w-4" /> Accept</ManagementButton><ManagementButton size="sm" variant="danger" onClick={() => onStatusChange(order.id, 'cancelled')}><X className="h-4 w-4" /> Reject</ManagementButton></div>}{order.status === 'preparing' && <ManagementButton size="sm" className="w-full" onClick={() => onStatusChange(order.id, 'delivering')}><Truck className="h-4 w-4" /> Start delivery</ManagementButton>}{order.status === 'preparing' && !order.rider_id && <ManagementButton size="sm" variant="outline" className="w-full" onClick={() => onAssignRider(order)}><Bike className="h-4 w-4" /> Assign rider</ManagementButton>}{order.status === 'preparing' && order.rider_id && <ManagementBadge tone="success">Rider assigned</ManagementBadge>}{order.status === 'delivering' && order.assignment_id && <ManagementButton size="sm" variant="outline" className="w-full" onClick={() => setShowTracker(true)}><Eye className="h-4 w-4" /> Track delivery</ManagementButton>}</div></div></ManagementCard>{showTracker && <DeliveryTracker assignmentId={order.assignment_id} onClose={() => setShowTracker(false)} />}</>;
 };
 
 const OrderDetails = ({ order, onClose, onStatusChange, onAssignRider }) => {
@@ -30,24 +30,115 @@ const OrderDetails = ({ order, onClose, onStatusChange, onAssignRider }) => {
 const Modal = ({ title, subtitle, onClose, children }) => <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"><div className="management-card max-h-[90vh] w-full max-w-3xl overflow-y-auto shadow-2xl"><div className="flex items-start justify-between border-b border-[#202832] px-6 py-4"><div><h2 className="text-lg font-semibold text-slate-50">{title}</h2>{subtitle && <p className="mt-1 text-xs text-slate-500">{subtitle}</p>}</div><button type="button" onClick={onClose} className="rounded-md p-1 text-slate-500 hover:bg-slate-800 hover:text-slate-100"><X className="h-4 w-4" /></button></div><div className="p-6">{children}</div></div></div>;
 const SectionLabel = ({ children }) => <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{children}</p>;
 
-const OrderManagement = () => {
+const OrderManagement = ({
+    orders = [],
+    loading,
+    refreshing,
+    error,
+    newOrderIds = [],
+    onAcknowledgeNewOrders,
+    onRefresh,
+    onOrderChange
+}) => {
     const { user } = useAuth();
     const branchId = user?.branchId;
-    const [orders, setOrders] = useState([]), [riders, setRiders] = useState([]), [loading, setLoading] = useState(true), [refreshing, setRefreshing] = useState(false), [error, setError] = useState(null), [success, setSuccess] = useState(''), [statusFilter, setStatusFilter] = useState('all'), [selectedOrder, setSelectedOrder] = useState(null), [assignmentOrder, setAssignmentOrder] = useState(null), [searchQuery, setSearchQuery] = useState(''), [searchField, setSearchField] = useState('id');
+    const [riders, setRiders] = useState([]);
+    const [success, setSuccess] = useState('');
+    const [actionError, setActionError] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [selectedOrder, setSelectedOrder] = useState(null);
+    const [assignmentOrder, setAssignmentOrder] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchField, setSearchField] = useState('id');
 
-    const loadOrders = useCallback(async () => {
-        try {
-            setRefreshing(true); const response = await getOrders({ branch_id: branchId });
-            const detailed = await Promise.all(response.data.map(async order => { try { const detail = await getOrderById(order.id); return { id: order.id, customerName: order.customer_name, status: order.status, total: parseFloat(order.total_amount), items: detail.data.items || [], time: new Date(order.created_at).toLocaleString(), address: order.delivery_address, phone: detail.data.phone, rider_id: order.rider_id, rider_name: detail.data.rider_first_name, rider_phone: detail.data.rider_phone, assignment_id: order.assignment_id }; } catch { return null; } }));
-            setOrders(detailed.filter(Boolean)); setError(null);
-        } catch (err) { setError(`Failed to load orders: ${err.response?.data?.message || err.message}`); } finally { setRefreshing(false); setLoading(false); }
+    useEffect(() => {
+        if (!branchId) return undefined;
+        getBranchRiders(branchId)
+            .then(response => setRiders(response.data))
+            .catch(() => {});
+        return undefined;
     }, [branchId]);
-    useEffect(() => { if (!branchId) return undefined; loadOrders(); getBranchRiders(branchId).then(response => setRiders(response.data)).catch(() => setError('Failed to load riders')); const interval = setInterval(loadOrders, 20000); return () => clearInterval(interval); }, [branchId, loadOrders]);
-    const handleStatusChange = async (orderId, newStatus) => { try { await updateOrderStatus(orderId, { status: newStatus }); setOrders(current => current.map(order => order.id === orderId ? { ...order, status: newStatus } : order)); setSuccess(`Order #${orderId} status updated to ${newStatus}`); setTimeout(() => setSuccess(''), 3000); } catch (err) { setError(`Failed to update order status: ${err.response?.data?.message || err.message}`); } };
-    const handleAssignRider = async riderId => { try { await assignOrderToRider(assignmentOrder.id, riderId); await loadOrders(); setSuccess('Order assigned to rider successfully'); setTimeout(() => setSuccess(''), 3000); } catch (err) { setError(`Failed to assign rider: ${err.response?.data?.message || err.message}`); } finally { setAssignmentOrder(null); } };
-    const filtered = orders.filter(order => { if (statusFilter !== 'all' && order.status !== statusFilter) return false; if (!searchQuery) return true; const query = searchQuery.toLowerCase(); return searchField === 'id' ? String(order.id).includes(query) : searchField === 'phone' ? order.phone?.toLowerCase().includes(query) : order.customerName?.toLowerCase().includes(query); });
+
+    const handleStatusChange = async (orderId, newStatus) => {
+        try {
+            await updateOrderStatus(orderId, { status: newStatus });
+            onOrderChange?.(orderId, { status: newStatus });
+            setActionError('');
+            setSuccess(`Order #${orderId} status updated to ${newStatus}`);
+            setTimeout(() => setSuccess(''), 3000);
+        } catch (err) {
+            setActionError(err.response?.data?.message || 'Failed to update order status');
+            setSuccess('');
+        }
+    };
+
+    const handleAssignRider = async riderId => {
+        try {
+            await assignOrderToRider(assignmentOrder.id, riderId);
+            await onRefresh?.();
+            setActionError('');
+            setSuccess('Order assigned to rider successfully');
+            setTimeout(() => setSuccess(''), 3000);
+        } catch (err) {
+            setActionError(err.response?.data?.message || 'Failed to assign rider');
+            setSuccess('');
+        } finally {
+            setAssignmentOrder(null);
+        }
+    };
+
+    const filtered = orders.filter(order => {
+        if (statusFilter !== 'all' && order.status !== statusFilter) return false;
+        if (!searchQuery) return true;
+        const query = searchQuery.toLowerCase();
+        return searchField === 'id'
+            ? String(order.id).includes(query)
+            : searchField === 'phone'
+                ? order.phone?.toLowerCase().includes(query)
+                : order.customerName?.toLowerCase().includes(query);
+    });
+
+    const statusPriority = { pending: 0, preparing: 1, delivering: 2, delivered: 3, cancelled: 4 };
+    const sortedOrders = [...filtered].sort((a, b) => {
+        const priorityDifference = statusPriority[a.status] - statusPriority[b.status];
+        if (priorityDifference !== 0) return priorityDifference;
+
+        const aTime = new Date(a.created_at).getTime();
+        const bTime = new Date(b.created_at).getTime();
+        return ['pending', 'preparing', 'delivering'].includes(a.status)
+            ? aTime - bTime
+            : bTime - aTime;
+    });
     const counts = orders.reduce((acc, order) => ({ ...acc, [order.status]: (acc[order.status] || 0) + 1 }), {});
-    if (loading && orders.length === 0) return <div className="py-16 text-center text-sm text-slate-400">Loading orders...</div>;
-    return <><ManagementPageHeader eyebrow="Operations" title="Order management" description="Review, progress, and assign orders for this branch." actions={<ManagementButton variant="outline" onClick={loadOrders} disabled={refreshing}><RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> {refreshing ? 'Refreshing...' : 'Refresh'}</ManagementButton>} />{success && <ManagementAlert tone="success" onClose={() => setSuccess('')}>{success}</ManagementAlert>}{error && <ManagementAlert onClose={() => setError(null)}>{error}</ManagementAlert>}<ManagementCard className="mb-5 p-4"><div className="flex flex-wrap gap-3"><div className="relative min-w-[220px] flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" /><input className="management-input h-9 w-full rounded-md pl-9 pr-3 text-sm" placeholder="Search orders..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div><div className="relative"><select className="management-input h-9 appearance-none rounded-md pl-3 pr-9 text-sm" value={searchField} onChange={e => setSearchField(e.target.value)}><option value="id">Order ID</option><option value="phone">Phone</option><option value="name">Customer name</option></select><ChevronDown className="pointer-events-none absolute right-2 top-2.5 h-4 w-4 text-slate-500" /></div></div><div className="mt-4 flex gap-1 overflow-x-auto border-t border-[#202832] pt-3">{statuses.map(status => <button type="button" key={status} onClick={() => setStatusFilter(status)} className={`whitespace-nowrap rounded-md px-3 py-2 text-xs font-medium ${statusFilter === status ? 'bg-indigo-500/15 text-indigo-300' : 'text-slate-500 hover:bg-slate-800 hover:text-slate-200'}`}>{status === 'all' ? 'All orders' : titleStatus(status)}{status !== 'all' && counts[status] ? <span className="ml-2 rounded-full bg-slate-800 px-1.5 py-0.5">{counts[status]}</span> : null}</button>)}</div></ManagementCard>{filtered.length === 0 ? <ManagementCard className="p-10 text-center text-sm text-slate-500">No orders found in “{statusFilter === 'all' ? 'any' : statusFilter}” status{searchQuery ? ` matching “${searchQuery}”` : ''}.</ManagementCard> : <div className="grid gap-4 xl:grid-cols-3">{filtered.map(order => <OrderCard key={order.id} order={order} onView={setSelectedOrder} onStatusChange={handleStatusChange} onAssignRider={setAssignmentOrder} />)}</div>}<OrderDetails order={selectedOrder} onClose={() => setSelectedOrder(null)} onStatusChange={handleStatusChange} onAssignRider={() => setAssignmentOrder(selectedOrder)} /><AssignRiderDialog order={assignmentOrder} riders={riders} onClose={() => setAssignmentOrder(null)} onAssign={handleAssignRider} /></>;
+
+    if (loading && orders.length === 0) {
+        return <div className="py-16 text-center text-sm text-slate-400">Loading orders...</div>;
+    }
+
+    return <>
+        <ManagementPageHeader
+            eyebrow="Operations"
+            title="Order management"
+            description="Review, progress, and assign orders for this branch."
+            actions={<ManagementButton variant="outline" onClick={onRefresh} disabled={refreshing}><RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> {refreshing ? 'Refreshing...' : 'Refresh'}</ManagementButton>}
+        />
+        {newOrderIds.length > 0 && <ManagementAlert tone="success" onClose={onAcknowledgeNewOrders}>
+            {newOrderIds.length === 1 ? 'A new order has arrived.' : `${newOrderIds.length} new orders have arrived.`}
+            <button type="button" onClick={onAcknowledgeNewOrders} className="ml-3 font-semibold underline">Mark as seen</button>
+        </ManagementAlert>}
+        {success && <ManagementAlert tone="success" onClose={() => setSuccess('')}>{success}</ManagementAlert>}
+        {actionError && <ManagementAlert onClose={() => setActionError('')}>{actionError}</ManagementAlert>}
+        {error && <ManagementAlert>{error}</ManagementAlert>}
+        <ManagementCard className="mb-5 p-4">
+            <div className="flex flex-wrap gap-3">
+                <div className="relative min-w-[220px] flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" /><input className="management-input h-9 w-full rounded-md pl-9 pr-3 text-sm" placeholder="Search orders..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div>
+                <div className="relative"><select className="management-input h-9 appearance-none rounded-md pl-3 pr-9 text-sm" value={searchField} onChange={e => setSearchField(e.target.value)}><option value="id">Order ID</option><option value="phone">Phone</option><option value="name">Customer name</option></select><ChevronDown className="pointer-events-none absolute right-2 top-2.5 h-4 w-4 text-slate-500" /></div>
+            </div>
+            <div className="mt-4 flex gap-1 overflow-x-auto border-t border-[#202832] pt-3">{statuses.map(status => <button type="button" key={status} onClick={() => setStatusFilter(status)} className={`whitespace-nowrap rounded-md px-3 py-2 text-xs font-medium ${statusFilter === status ? 'bg-indigo-500/15 text-indigo-300' : 'text-slate-500 hover:bg-slate-800 hover:text-slate-200'}`}>{status === 'all' ? 'All orders' : titleStatus(status)}{status !== 'all' && counts[status] ? <span className="ml-2 rounded-full bg-slate-800 px-1.5 py-0.5">{counts[status]}</span> : null}</button>)}</div>
+        </ManagementCard>
+        {sortedOrders.length === 0 ? <ManagementCard className="p-10 text-center text-sm text-slate-500">No orders found in “{statusFilter === 'all' ? 'any' : statusFilter}” status{searchQuery ? ` matching “${searchQuery}”` : ''}.</ManagementCard> : <div className="grid gap-4 xl:grid-cols-3">{sortedOrders.map(order => <OrderCard key={order.id} order={order} isNew={newOrderIds.includes(order.id)} onView={setSelectedOrder} onStatusChange={handleStatusChange} onAssignRider={setAssignmentOrder} />)}</div>}
+        <OrderDetails order={selectedOrder} onClose={() => setSelectedOrder(null)} onStatusChange={handleStatusChange} onAssignRider={() => setAssignmentOrder(selectedOrder)} />
+        <AssignRiderDialog order={assignmentOrder} riders={riders} onClose={() => setAssignmentOrder(null)} onAssign={handleAssignRider} />
+    </>;
 };
 export default OrderManagement;

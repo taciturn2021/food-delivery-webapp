@@ -1,5 +1,138 @@
 import { pool } from '../config/database.js';
 
+const ORDER_STATUSES = ['pending', 'preparing', 'delivering', 'delivered', 'cancelled'];
+
+const assertBranchOrderAccess = (req, branchId) => {
+    if (req.user.role === 'branch_manager' && Number(branchId) !== Number(req.user.branchId)) {
+        const error = new Error('Access denied for this branch');
+        error.statusCode = 403;
+        throw error;
+    }
+};
+
+const getHydratedBranchOrders = async ({
+    branchId,
+    status,
+    limit,
+    offset,
+    updatedAfter,
+    syncCursor
+}) => {
+    const queryParams = [branchId];
+    const filters = ['o.branch_id = $1'];
+    let parameterIndex = 2;
+
+    if (status) {
+        filters.push(`o.status = $${parameterIndex}`);
+        queryParams.push(status);
+        parameterIndex += 1;
+    }
+
+    if (updatedAfter) {
+        filters.push(`o.updated_at > $${parameterIndex} AND o.updated_at <= $${parameterIndex + 1}`);
+        queryParams.push(updatedAfter, syncCursor);
+        parameterIndex += 2;
+    }
+
+    queryParams.push(limit, offset);
+
+    const result = await pool.query(`
+        SELECT
+            o.id,
+            o.user_id,
+            o.branch_id,
+            o.status,
+            o.total_amount,
+            o.delivery_address,
+            o.created_at,
+            o.updated_at,
+            o.rider_id,
+            o.assigned_at,
+            u.username AS customer_name,
+            c.phone,
+            b.name AS branch_name,
+            r.full_name AS rider_name,
+            r.contact_number AS rider_phone,
+            COALESCE(order_items.items, '[]'::json) AS items
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.id
+        LEFT JOIN customers c ON o.user_id = c.user_id
+        LEFT JOIN branches b ON o.branch_id = b.id
+        LEFT JOIN riders r ON o.rider_id = r.id
+        LEFT JOIN LATERAL (
+            SELECT json_agg(
+                json_build_object(
+                    'id', oi.id,
+                    'menu_item_id', oi.menu_item_id,
+                    'name', mi.name,
+                    'description', mi.description,
+                    'category', mi.category,
+                    'quantity', oi.quantity,
+                    'price_at_time', oi.price_at_time,
+                    'special_instructions', oi.special_instructions
+                ) ORDER BY oi.id
+            ) AS items
+            FROM order_items oi
+            JOIN menu_items mi ON mi.id = oi.menu_item_id
+            WHERE oi.order_id = o.id
+        ) order_items ON true
+        WHERE ${filters.join(' AND ')}
+        ORDER BY o.created_at DESC
+        LIMIT $${parameterIndex} OFFSET $${parameterIndex + 1}
+    `, queryParams);
+
+    return result.rows;
+};
+
+export const getBranchOrders = async (req, res) => {
+    try {
+        const requestedBranchId = Number(req.query.branch_id || req.user.branchId);
+        const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 100);
+        const offset = Math.max(Number(req.query.offset) || 0, 0);
+        const status = req.query.status || null;
+        const updatedAfter = req.query.updated_after || null;
+        const syncCursor = new Date().toISOString();
+
+        if (!Number.isInteger(requestedBranchId) || requestedBranchId <= 0) {
+            return res.status(400).json({ message: 'A valid branch_id is required' });
+        }
+
+        if (req.user.role === 'branch_manager' && requestedBranchId !== Number(req.user.branchId)) {
+            return res.status(403).json({ message: 'You can only view orders for your own branch' });
+        }
+
+        if (status && !ORDER_STATUSES.includes(status)) {
+            return res.status(400).json({ message: 'Invalid order status filter' });
+        }
+
+        if (updatedAfter && Number.isNaN(Date.parse(updatedAfter))) {
+            return res.status(400).json({ message: 'Invalid updated_after timestamp' });
+        }
+
+        const orders = await getHydratedBranchOrders({
+            branchId: requestedBranchId,
+            status,
+            limit,
+            offset,
+            updatedAfter,
+            syncCursor
+        });
+
+        res.json({
+            orders,
+            pagination: {
+                limit,
+                offset,
+                hasMore: orders.length === limit
+            },
+            sync_cursor: syncCursor
+        });
+    } catch (error) {
+        console.error('Error fetching branch orders:', error);
+        res.status(500).json({ message: 'Error fetching branch orders' });
+    }
+};
+
 export const createOrder = async (req, res) => {
     const { branch_id, items, delivery_address } = req.body;
     const client = await pool.connect();
@@ -59,7 +192,15 @@ export const createOrder = async (req, res) => {
 
 export const getOrders = async (req, res) => {
     try {
-        const { status, branch_id, start_date, end_date } = req.query;
+        let { status, branch_id, start_date, end_date } = req.query;
+        const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 100);
+        const offset = Math.max(Number(req.query.offset) || 0, 0);
+        if (req.user.role === 'branch_manager') {
+            if (branch_id && Number(branch_id) !== Number(req.user.branchId)) {
+                return res.status(403).json({ message: 'You can only view orders for your own branch' });
+            }
+            branch_id = req.user.branchId;
+        }
         let query = `
             SELECT o.*, 
                    u.username as customer_name,
@@ -96,7 +237,8 @@ export const getOrders = async (req, res) => {
             paramCount++;
         }
 
-        query += ' ORDER BY o.created_at DESC';
+        query += ` ORDER BY o.created_at DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+        queryParams.push(limit, offset);
 
         const result = await pool.query(query, queryParams);
         res.json(result.rows);
@@ -124,16 +266,17 @@ export const getOrderById = async (req, res) => {
         if (req.user.role === 'customer' && order.user_id !== req.user.userId) {
             return res.status(403).json({ message: 'Access denied' });
         }
+        assertBranchOrderAccess(req, order.branch_id);
         res.json(order);
     } catch (error) {
         console.error('Error in getOrderById:', error.message, error.stack);
-        res.status(500).json({ message: 'Error fetching order', error: error.message });
+        res.status(error.statusCode || 500).json({ message: 'Error fetching order', error: error.message });
     }
 };
 
 export const updateOrderStatus = async (req, res) => {
     const { id } = req.params;
-    const  status  = req.body.status.status;
+    const status = req.body?.status?.status || req.body?.status;
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
@@ -149,6 +292,7 @@ export const updateOrderStatus = async (req, res) => {
         }
 
         const order = orderCheck.rows[0];
+        assertBranchOrderAccess(req, order.branch_id);
         const validTransitions = {
             pending: ['preparing', 'cancelled'],
             preparing: ['delivering', 'cancelled'],
@@ -166,7 +310,7 @@ export const updateOrderStatus = async (req, res) => {
 
 
         const result = await client.query(
-            'UPDATE orders SET status = $1 WHERE id = $2 RETURNING *',
+            'UPDATE orders SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
             [status, id]
         );
 
@@ -174,7 +318,7 @@ export const updateOrderStatus = async (req, res) => {
         res.json(result.rows[0]);
     } catch (error) {
         await client.query('ROLLBACK');
-        res.status(400).json({ message: error.message });
+        res.status(error.statusCode || 400).json({ message: error.message });
     } finally {
         client.release();
     }
@@ -197,6 +341,7 @@ export const cancelOrder = async (req, res) => {
         }
 
         const order = orderCheck.rows[0];
+        assertBranchOrderAccess(req, order.branch_id);
 
         // Only allow cancellation of orders that aren't delivered or already cancelled
         if (['delivered', 'cancelled'].includes(order.status)) {
@@ -209,7 +354,7 @@ export const cancelOrder = async (req, res) => {
         }
 
         const result = await client.query(
-            'UPDATE orders SET status = $1 WHERE id = $2 RETURNING *',
+            'UPDATE orders SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
             ['cancelled', id]
         );
 
@@ -217,7 +362,7 @@ export const cancelOrder = async (req, res) => {
         res.json(result.rows[0]);
     } catch (error) {
         await client.query('ROLLBACK');
-        res.status(400).json({ message: error.message });
+        res.status(error.statusCode || 400).json({ message: error.message });
     } finally {
         client.release();
     }
@@ -343,6 +488,7 @@ export const assignRiderToOrder = async (req, res) => {
         }
 
         const order = orderCheck.rows[0];
+        assertBranchOrderAccess(req, order.branch_id);
 
         // Only allow rider assignment for orders in confirmed/preparing/ready status
         if (!['confirmed', 'preparing', 'ready'].includes(order.status)) {
@@ -351,8 +497,8 @@ export const assignRiderToOrder = async (req, res) => {
 
         // Verify rider exists and is active
         const riderCheck = await client.query(
-            'SELECT * FROM riders WHERE id = $1 AND status = $2',
-            [rider_id, 'active']
+            'SELECT * FROM riders WHERE id = $1 AND status = $2 AND branch_id = $3',
+            [rider_id, 'active', order.branch_id]
         );
 
         if (riderCheck.rows.length === 0) {
@@ -361,7 +507,7 @@ export const assignRiderToOrder = async (req, res) => {
 
         // Assign rider to order
         const result = await client.query(
-            'UPDATE orders SET rider_id = $1 WHERE id = $2 RETURNING *',
+            'UPDATE orders SET rider_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
             [rider_id, id]
         );
 
@@ -372,7 +518,7 @@ export const assignRiderToOrder = async (req, res) => {
         res.json(updatedOrder);
     } catch (error) {
         await client.query('ROLLBACK');
-        res.status(400).json({ message: error.message });
+        res.status(error.statusCode || 400).json({ message: error.message });
     } finally {
         client.release();
     }
@@ -447,6 +593,7 @@ export const riderUpdateOrderStatus = async (req, res) => {
         }
 
         const order = orderCheck.rows[0];
+        assertBranchOrderAccess(req, order.branch_id);
 
         // Riders should only be able to update to delivered
         if (!['delivered'].includes(status)) {
@@ -463,7 +610,7 @@ export const riderUpdateOrderStatus = async (req, res) => {
         }
 
         const result = await client.query(
-            'UPDATE orders SET status = $1 WHERE id = $2 RETURNING *',
+            'UPDATE orders SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
             [status, id]
         );
 
@@ -471,7 +618,7 @@ export const riderUpdateOrderStatus = async (req, res) => {
         res.json(result.rows[0]);
     } catch (error) {
         await client.query('ROLLBACK');
-        res.status(400).json({ message: error.message });
+        res.status(error.statusCode || 400).json({ message: error.message });
     } finally {
         client.release();
     }

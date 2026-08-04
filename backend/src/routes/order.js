@@ -2,6 +2,7 @@ import express from 'express';
 import {
     createOrder,
     getOrders,
+    getBranchOrders,
     getOrderById,
     updateOrderStatus,
     cancelOrder,
@@ -27,6 +28,7 @@ router.get('/customer/history', protect, orderReadLimiter, getCustomerOrderHisto
 
 // Branch order routes with read rate limiter
 router.get('/branch/pending', protect, orderReadLimiter, isAdminOrManager, getBranchPendingOrders);
+router.get('/branch', protect, orderReadLimiter, isAdminOrManager, getBranchOrders);
 
 // ID-specific routes
 router.get('/:id', protect, orderReadLimiter, getOrderById);

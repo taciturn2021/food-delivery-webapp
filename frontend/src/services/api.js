@@ -213,6 +213,7 @@ export const deleteAddress = (id) => api.delete(`/customers/addresses/${id}`);
 // Order APIs
 export const createOrder = (orderData) => api.post('/orders', orderData);
 export const getOrders = (params) => api.get('/orders', { params });
+export const getBranchOrders = (params) => api.get('/orders/branch', { params });
 export const getCustomerActiveOrders = () => api.get('/orders/customer/active');
 export const getCustomerOrderHistory = (page = 1, limit = 10) =>
     api.get('/orders/customer/history', { params: { page, limit } });
