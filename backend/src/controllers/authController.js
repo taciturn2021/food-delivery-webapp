@@ -16,7 +16,7 @@ export const login = async (req, res) => {
         // Get user with password for comparison
         let result;
         result = await pool.query(
-            `SELECT u.*, b.id as branch_id, r.id as rider_id 
+            `SELECT u.*, b.id as branch_id, b.name as branch_name, r.id as rider_id 
              FROM users u 
              LEFT JOIN branches b ON u.id = b.manager_id 
              LEFT JOIN riders r ON u.id = r.user_id 
@@ -45,6 +45,7 @@ export const login = async (req, res) => {
             email: user.email,
             role: user.role,
             branchId: user.branch_id,
+            branchName: user.branch_name,
             riderId: user.rider_id
         };
 
@@ -191,7 +192,7 @@ export const getProfile = async (req, res) => {
             );
         } else {
             result = await pool.query(
-                `SELECT u.id, u.username, u.email, u.role, b.id as branch_id 
+                `SELECT u.id, u.username, u.email, u.role, b.id as branch_id, b.name as branch_name 
                  FROM users u 
                  LEFT JOIN branches b ON u.id = b.manager_id 
                  WHERE u.id = $1`,
@@ -210,6 +211,7 @@ export const getProfile = async (req, res) => {
             email: result.rows[0].email,
             role: result.rows[0].role,
             branchId: result.rows[0].branch_id,
+            branchName: result.rows[0].branch_name,
             riderId: result.rows[0].rider_id
         };
 

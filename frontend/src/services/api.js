@@ -223,9 +223,14 @@ export const updateOrderStatus = (id, status) => api.put(`/orders/${id}/status`,
 
 // Menu Management APIs
 export const createMenuItem = (data) => api.post('/menu', data);
-export const getAllMenuItems = () => api.get('/menu');
+export const getAllMenuItems = (params) => api.get('/menu', { params });
 export const updateMenuItem = (id, data) => api.put(`/menu/${id}`, data);
 export const deleteMenuItem = (id) => api.delete(`/menu/${id}`);
+export const uploadMenuItemImage = (id, file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return api.post(`/menu/${id}/image`, formData);
+};
 export const assignMenuItemToBranch = (data) => api.post('/menu/branch-assignment', data);
 
 // Branch Management APIs

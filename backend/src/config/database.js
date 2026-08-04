@@ -106,6 +106,18 @@ const initializeDatabase = async () => {
             )
         `);
 
+        // Store one admin-managed image per menu item without loading image bytes
+        // into normal menu queries.
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS menu_item_images (
+                menu_item_id INTEGER PRIMARY KEY REFERENCES menu_items(id) ON DELETE CASCADE,
+                image_data BYTEA NOT NULL,
+                mime_type VARCHAR(50) NOT NULL,
+                file_size INTEGER NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
         // Create branch_menu_items table (for branch-specific availability and pricing)
         await client.query(`
             CREATE TABLE IF NOT EXISTS branch_menu_items (

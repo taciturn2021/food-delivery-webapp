@@ -1,5 +1,16 @@
 import { pool } from '../config/database.js';
 import bcrypt from 'bcryptjs';
+import { getMenuItemImageUrl } from './menuController.js';
+
+const decorateMenuItems = (req, items) => items.map((item) => {
+    const { has_uploaded_image, image_updated_at, ...menuItem } = item;
+    return {
+        ...menuItem,
+        image_url: has_uploaded_image
+            ? getMenuItemImageUrl(req, item.id, image_updated_at)
+            : menuItem.image_url
+    };
+});
 
 export const createBranch = async (req, res) => {
     const { name, address, phone, managerEmail, managerPassword, managerName, latitude, longitude } = req.body;
@@ -299,13 +310,16 @@ export const getBranchMenu = async (req, res) => {
 
     try {
         const result = await pool.query(`
-            SELECT mi.*, bmi.price as branch_price, bmi.is_available as branch_availability 
+            SELECT mi.*, bmi.price as branch_price, bmi.is_available as branch_availability,
+                   (mii.menu_item_id IS NOT NULL) AS has_uploaded_image,
+                   mii.updated_at AS image_updated_at
             FROM menu_items mi 
             LEFT JOIN branch_menu_items bmi ON mi.id = bmi.menu_item_id AND bmi.branch_id = $1
+            LEFT JOIN menu_item_images mii ON mii.menu_item_id = mi.id
             ORDER BY mi.category, mi.name
         `, [id]);
 
-        res.json(result.rows);
+        res.json(decorateMenuItems(req, result.rows));
     } catch (error) {
         res.status(500).json({ message: 'Error fetching branch menu', error: error.message });
     }
@@ -323,17 +337,20 @@ export const getPublicBranchMenu = async (req, res) => {
                 mi.price,
                 mi.category,
                 mi.image_url,
+                (mii.menu_item_id IS NOT NULL) AS has_uploaded_image,
+                mii.updated_at AS image_updated_at,
                 COALESCE(bmi.price, mi.price) as branch_price
             FROM menu_items mi 
             INNER JOIN branch_menu_items bmi 
                 ON mi.id = bmi.menu_item_id 
                 AND bmi.branch_id = $1
+            LEFT JOIN menu_item_images mii ON mii.menu_item_id = mi.id
             WHERE mi.is_available = true
                 AND bmi.is_available = true
             ORDER BY mi.category, mi.name
         `, [id]);
 
-        res.json(result.rows);
+        res.json(decorateMenuItems(req, result.rows));
     } catch (error) {
         res.status(500).json({ message: 'Error fetching branch menu', error: error.message });
     }

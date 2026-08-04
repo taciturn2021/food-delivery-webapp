@@ -70,7 +70,7 @@ const ManagementShell = ({
                 <div className="flex h-16 items-center border-b border-[#202832] px-4">
                     <button type="button" onClick={() => setSidebarOpen(!sidebarOpen)} className="flex min-w-0 items-center gap-3 text-left">
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-indigo-500 text-sm font-bold text-white">FD</span>
-                        {sidebarOpen && <span className="truncate text-sm font-semibold text-slate-100">Food Delivery</span>}
+                        {sidebarOpen && <span className="truncate text-sm font-semibold text-slate-100">{isAdmin ? 'Food Delivery' : user?.branchName || 'Branch workspace'}</span>}
                     </button>
                 </div>
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Edit2, ImageOff, Plus, Trash2 } from 'lucide-react';
-import { getAllMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from '../../../services/api';
+import { getAllMenuItems, createMenuItem, updateMenuItem, deleteMenuItem, uploadMenuItemImage } from '../../../services/api';
 import {
     ManagementAlert,
     ManagementBadge,
@@ -10,7 +10,7 @@ import {
 } from '../../../components/management/ManagementPrimitives';
 
 const categories = ['Appetizers', 'Main Course', 'Desserts', 'Beverages', 'Sides', 'Special Offers'];
-const emptyForm = { name: '', description: '', price: '', category: '', image_url: '', is_available: true };
+const emptyForm = { name: '', description: '', price: '', category: '', image_url: '', image_file: null, is_available: true };
 
 const MenuManagement = () => {
     const [menuItems, setMenuItems] = useState([]);
@@ -25,7 +25,7 @@ const MenuManagement = () => {
 
     const loadMenuItems = async () => {
         try {
-            const response = await getAllMenuItems();
+            const response = await getAllMenuItems({ cacheBust: Date.now() });
             setMenuItems(response.data);
         } catch (err) {
             setError('Failed to load menu items');
@@ -47,6 +47,7 @@ const MenuManagement = () => {
                 price: item.price || '',
                 category: item.category || '',
                 image_url: item.image_url || '',
+                image_file: null,
                 is_available: item.is_available
             });
             setEditingId(item.id);
@@ -59,14 +60,21 @@ const MenuManagement = () => {
     const handleSubmit = async (event) => {
         event.preventDefault();
         try {
+            const { image_file, ...menuItemData } = formData;
+            let response;
             if (editingId) {
-                await updateMenuItem(editingId, formData);
+                response = await updateMenuItem(editingId, menuItemData);
                 setSuccess('Menu item updated successfully');
             } else {
-                await createMenuItem(formData);
+                response = await createMenuItem(menuItemData);
                 setSuccess('Menu item created successfully');
             }
-            await loadMenuItems();
+            const menuItemId = editingId || response.data.id;
+            if (image_file) {
+                await uploadMenuItemImage(menuItemId, image_file);
+                setSuccess('Menu item and image saved successfully');
+            }
+            await loadMenuItems({ cacheBust: Date.now() });
             handleClose();
         } catch (err) {
             setError(err.response?.data?.message || 'Error saving menu item');
@@ -78,7 +86,7 @@ const MenuManagement = () => {
         try {
             await deleteMenuItem(id);
             setSuccess('Menu item deleted successfully');
-            loadMenuItems();
+            loadMenuItems({ cacheBust: Date.now() });
         } catch (err) {
             setError('Failed to delete menu item');
         }
@@ -145,7 +153,8 @@ const MenuManagement = () => {
                                 <label className="space-y-1.5 sm:col-span-2"><span className="text-sm font-medium text-slate-300">Description</span><textarea className="management-input min-h-24 w-full rounded-md px-3 py-2 text-sm" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} /></label>
                                 <label className="space-y-1.5"><span className="text-sm font-medium text-slate-300">Price</span><input className="management-input h-10 w-full rounded-md px-3 text-sm" type="number" step="0.01" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} required /></label>
                                 <label className="space-y-1.5"><span className="text-sm font-medium text-slate-300">Category</span><select className="management-input h-10 w-full rounded-md px-3 text-sm" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} required><option value="">Select category</option>{categories.map(category => <option key={category} value={category}>{category}</option>)}</select></label>
-                                <label className="space-y-1.5 sm:col-span-2"><span className="text-sm font-medium text-slate-300">Image URL</span><input className="management-input h-10 w-full rounded-md px-3 text-sm" value={formData.image_url} onChange={(e) => setFormData({ ...formData, image_url: e.target.value })} /></label>
+                                <label className="space-y-1.5 sm:col-span-2"><span className="text-sm font-medium text-slate-300">Upload image</span><input className="management-input w-full rounded-md px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-indigo-500/20 file:px-3 file:py-1 file:text-xs file:font-medium file:text-indigo-200" type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => setFormData({ ...formData, image_file: e.target.files?.[0] || null })} /><span className="text-xs text-slate-500">JPEG, PNG, WebP, or GIF up to 5 MB. {formData.image_file ? `Selected: ${formData.image_file.name}` : ''}</span></label>
+                                <label className="space-y-1.5 sm:col-span-2"><span className="text-sm font-medium text-slate-300">External image URL (optional)</span><input className="management-input h-10 w-full rounded-md px-3 text-sm" value={formData.image_url} onChange={(e) => setFormData({ ...formData, image_url: e.target.value })} /><span className="text-xs text-slate-500">Used only when no uploaded image exists.</span></label>
                                 <label className="flex items-center gap-3 text-sm text-slate-300 sm:col-span-2"><input type="checkbox" className="h-4 w-4 accent-indigo-500" checked={formData.is_available} onChange={(e) => setFormData({ ...formData, is_available: e.target.checked })} /> Available for order</label>
                             </div>
                             <div className="flex justify-end gap-2 border-t border-[#202832] px-6 py-4"><ManagementButton type="button" variant="outline" onClick={handleClose}>Cancel</ManagementButton><ManagementButton type="submit">{editingId ? 'Update item' : 'Create item'}</ManagementButton></div>
