@@ -1,100 +1,72 @@
 import React from 'react';
-import { MapPin, Clock } from 'lucide-react';
-import MapLocationPicker from '../../../components/common/MapLocationPicker';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '../../../components/ui/select';
-import { Card, CardContent } from '../../../components/ui/card';
-import { Badge } from '../../../components/ui/badge';
-import { useNavigate } from 'react-router-dom';
+import { ArrowRight, Clock3, MapPin, Sparkles } from 'lucide-react';
+import { CustomerLoading } from '../../../components/customer/CustomerStates';
 
-const BranchSelector = ({ branches = [], onBranchSelect, isDialog = false, currentBranchId }) => {
-    const navigate = useNavigate();
-    const handleChange = (value) => {
-        const branchId = parseInt(value);
-        if (branchId) {
-            const branch = branches.find(b => b.id === branchId);
-            if (branch) {
-                onBranchSelect(branchId);
-            }
-        }
-    };
-
-    const selectedBranchData = branches.find(b => b.id === currentBranchId);
-
-    if (!branches || branches.length === 0) {
-        return (
-            <div className="p-6 flex justify-center items-center">
-                <div className="animate-spin mr-3 h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                <p>Loading branches...</p>
-            </div>
-        );
+const BranchSelector = ({ branches = [], onBranchSelect, currentBranchId, isDialog = false }) => {
+    if (!branches.length) {
+        return <CustomerLoading label="Finding nearby kitchens..." />;
     }
 
     return (
-        <div className="p-4 sm:p-6">
-            <div className="mb-4 sm:mb-6">
-                <Select onValueChange={handleChange} value={currentBranchId ? currentBranchId.toString() : undefined}>
-                    <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a Branch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {branches.map((branch) => (
-                            <SelectItem key={branch.id} value={branch.id.toString()}>
-                                {branch.name} - {branch.address}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+        <section className={isDialog ? 'p-5 sm:p-7' : 'customer-surface p-5 sm:p-8'}>
+            <div className="mb-6 flex items-start gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--customer-soft)] text-[var(--customer-coral)]">
+                    <Sparkles className="h-5 w-5" />
+                </span>
+                <div>
+                    <p className="customer-eyebrow">Choose your table</p>
+                    <h2 className="mt-1 text-2xl font-bold tracking-[-0.04em]">
+                        Where are we delivering?
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-[var(--customer-muted)]">
+                        Pick a nearby branch to see its menu, availability, and delivery area.
+                    </p>
+                </div>
             </div>
 
-            {selectedBranchData && (
-                <Card className="mt-4 overflow-hidden">
-                    <CardContent className="p-0">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                            <div className="p-4 sm:p-6">
-                                <h3 className="text-lg font-semibold mb-3 sm:mb-4">Branch Details</h3>
-                                <div className="space-y-3">
-                                    <div className="flex items-start text-slate-700">
-                                        <MapPin className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                                        <span className="text-sm sm:text-base">{selectedBranchData.address}</span>
-                                    </div>
-                                    <div className="flex items-center text-slate-700">
-                                        <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                                        <span className="text-sm sm:text-base">
-                                            {`${selectedBranchData.opening_time ? selectedBranchData.opening_time.slice(0, 5) : 'N/A'} - ${selectedBranchData.closing_time ? selectedBranchData.closing_time.slice(0, 5) : 'N/A'}`}
+            <div className="grid gap-3">
+                {branches.map((branch) => {
+                    const isSelected = branch.id === currentBranchId;
+                    return (
+                        <button
+                            type="button"
+                            key={branch.id}
+                            onClick={() => onBranchSelect(branch.id)}
+                            className={`group flex w-full items-center justify-between gap-4 rounded-2xl border p-4 text-left transition ${
+                                isSelected
+                                    ? 'border-[var(--customer-coral)] bg-[var(--customer-selected)]'
+                                    : 'border-[var(--customer-line)] bg-[var(--customer-surface)] hover:-translate-y-0.5 hover:border-[var(--customer-coral)] hover:shadow-lg'
+                            }`}
+                        >
+                            <span className="min-w-0">
+                                <span className="flex items-center gap-2">
+                                    <span className="truncate text-base font-bold">{branch.name}</span>
+                                    {isSelected && (
+                                        <span className="rounded-full bg-[var(--customer-sage-soft)] px-2 py-0.5 text-[0.62rem] font-bold uppercase tracking-[0.08em] text-[var(--customer-sage)]">
+                                            Current
                                         </span>
-                                    </div>
-                                </div>
-                                <div className="flex flex-wrap gap-2 mt-3 sm:mt-4">
-                                    <Badge variant="outline" className="px-2 sm:px-3 py-1 text-xs sm:text-sm">
-                                        Minimum Order: ${selectedBranchData.minimum_order_amount}
-                                    </Badge>
-                                    <Badge variant="outline" className="px-2 sm:px-3 py-1 text-xs sm:text-sm">
-                                        Delivery Radius: {selectedBranchData.delivery_radius}km
-                                    </Badge>
-                                </div>
-                            </div>
-                            <div className="h-48 sm:h-64 md:h-auto w-full">
-                                <MapLocationPicker
-                                    location={{ 
-                                        lat: parseFloat(selectedBranchData.latitude), 
-                                        lng: parseFloat(selectedBranchData.longitude) 
-                                    }}
-                                    onLocationChange={() => {}}
-                                    readOnly={true}
-                                    deliveryRadius={selectedBranchData.delivery_radius}
-                                />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-        </div>
+                                    )}
+                                </span>
+                                <span className="mt-2 flex items-start gap-2 text-sm leading-5 text-[var(--customer-muted)]">
+                                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--customer-coral)]" />
+                                    {branch.address}
+                                </span>
+                                <span className="mt-2 flex items-center gap-2 text-xs font-semibold text-[var(--customer-sage)]">
+                                    <Clock3 className="h-3.5 w-3.5" />
+                                    {branch.opening_time?.slice(0, 5) || '09:00'} – {branch.closing_time?.slice(0, 5) || '22:00'}
+                                    <span className="font-normal text-[var(--customer-muted)]">
+                                        · {branch.delivery_radius || 10} km delivery area
+                                    </span>
+                                </span>
+                            </span>
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--customer-coral)] text-white transition group-hover:bg-[var(--customer-coral-dark)]">
+                                <ArrowRight className="h-4 w-4" />
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+        </section>
     );
 };
 

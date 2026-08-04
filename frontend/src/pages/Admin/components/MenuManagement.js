@@ -1,44 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import {
-    Box,
-    Grid,
-    Card,
-    CardMedia,
-    CardContent,
-    Typography,
-    Button,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    TextField,
-    IconButton,
-    FormControlLabel,
-    Switch,
-    Chip,
-    Alert,
-    InputAdornment,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
-} from '@mui/material';
-import {
-    Add as AddIcon,
-    Edit as EditIcon,
-    Delete as DeleteIcon,
-    Restaurant as MenuIcon,
-} from '@mui/icons-material';
+import React, { useEffect, useState } from 'react';
+import { Edit2, ImageOff, Plus, Trash2 } from 'lucide-react';
 import { getAllMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from '../../../services/api';
+import {
+    ManagementAlert,
+    ManagementBadge,
+    ManagementButton,
+    ManagementCard,
+    ManagementPageHeader
+} from '../../../components/management/ManagementPrimitives';
 
-const categories = [
-    'Appetizers',
-    'Main Course',
-    'Desserts',
-    'Beverages',
-    'Sides',
-    'Special Offers'
-];
+const categories = ['Appetizers', 'Main Course', 'Desserts', 'Beverages', 'Sides', 'Special Offers'];
+const emptyForm = { name: '', description: '', price: '', category: '', image_url: '', is_available: true };
 
 const MenuManagement = () => {
     const [menuItems, setMenuItems] = useState([]);
@@ -46,55 +18,46 @@ const MenuManagement = () => {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState('');
     const [open, setOpen] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        price: '',
-        category: '',
-        image_url: '',
-        is_available: true
-    });
+    const [formData, setFormData] = useState(emptyForm);
     const [editingId, setEditingId] = useState(null);
 
-    useEffect(() => {
-        loadMenuItems();
-    }, []);
+    useEffect(() => { loadMenuItems(); }, []);
 
     const loadMenuItems = async () => {
         try {
             const response = await getAllMenuItems();
             setMenuItems(response.data);
-        } catch (error) {
+        } catch (err) {
             setError('Failed to load menu items');
         } finally {
             setLoading(false);
         }
     };
 
+    const resetForm = () => {
+        setFormData(emptyForm);
+        setEditingId(null);
+    };
+
     const handleOpen = (item = null) => {
         if (item) {
             setFormData({
-                name: item.name,
-                description: item.description,
-                price: item.price,
-                category: item.category,
-                image_url: item.image_url,
+                name: item.name || '',
+                description: item.description || '',
+                price: item.price || '',
+                category: item.category || '',
+                image_url: item.image_url || '',
                 is_available: item.is_available
             });
             setEditingId(item.id);
-        } else {
-            resetForm();
-        }
+        } else resetForm();
         setOpen(true);
     };
 
-    const handleClose = () => {
-        resetForm();
-        setOpen(false);
-    };
+    const handleClose = () => { resetForm(); setOpen(false); };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async (event) => {
+        event.preventDefault();
         try {
             if (editingId) {
                 await updateMenuItem(editingId, formData);
@@ -103,233 +66,94 @@ const MenuManagement = () => {
                 await createMenuItem(formData);
                 setSuccess('Menu item created successfully');
             }
-            loadMenuItems();
+            await loadMenuItems();
             handleClose();
-        } catch (error) {
-            setError(error.response?.data?.message || 'Error saving menu item');
+        } catch (err) {
+            setError(err.response?.data?.message || 'Error saving menu item');
         }
     };
 
     const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to delete this item?')) {
-            try {
-                await deleteMenuItem(id);
-                setSuccess('Menu item deleted successfully');
-                loadMenuItems();
-            } catch (error) {
-                setError('Failed to delete menu item');
-            }
+        if (!window.confirm('Are you sure you want to delete this item?')) return;
+        try {
+            await deleteMenuItem(id);
+            setSuccess('Menu item deleted successfully');
+            loadMenuItems();
+        } catch (err) {
+            setError('Failed to delete menu item');
         }
     };
 
-    const resetForm = () => {
-        setFormData({
-            name: '',
-            description: '',
-            price: '',
-            category: '',
-            image_url: '',
-            is_available: true
-        });
-        setEditingId(null);
-    };
-
-    if (loading) {
-        return (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Typography>Loading menu items...</Typography>
-            </Box>
-        );
-    }
+    if (loading) return <div className="py-16 text-center text-sm text-slate-400">Loading menu items...</div>;
 
     return (
-        <Box sx={{ p: 3 }}>
-            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h4" component="h1">
-                    Menu Management
-                </Typography>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => handleOpen()}
-                >
-                    Add New Item
-                </Button>
-            </Box>
+        <>
+            <ManagementPageHeader
+                eyebrow="Inventory"
+                title="Menu management"
+                description="Keep the global menu catalog accurate and ready for branches."
+                actions={<ManagementButton onClick={() => handleOpen()}><Plus className="h-4 w-4" /> Add new item</ManagementButton>}
+            />
+            {error && <ManagementAlert onClose={() => setError(null)}>{error}</ManagementAlert>}
+            {success && <ManagementAlert tone="success" onClose={() => setSuccess('')}>{success}</ManagementAlert>}
 
-            {error && (
-                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-                    {error}
-                </Alert>
+            <ManagementCard className="overflow-hidden">
+                <div className="border-b border-[#202832] px-5 py-4">
+                    <p className="text-sm font-medium text-slate-200">{menuItems.length} catalog items</p>
+                    <p className="mt-1 text-xs text-slate-500">Changes here are available to branch managers.</p>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="management-table w-full min-w-[760px] text-left text-sm">
+                        <thead><tr>
+                            <th className="px-5 py-3">Item</th>
+                            <th className="px-5 py-3">Category</th>
+                            <th className="px-5 py-3">Price</th>
+                            <th className="px-5 py-3">Availability</th>
+                            <th className="px-5 py-3 text-right">Actions</th>
+                        </tr></thead>
+                        <tbody>
+                            {menuItems.map((item) => (
+                                <tr key={item.id} className="text-slate-300">
+                                    <td className="px-5 py-4">
+                                        <div className="flex items-center gap-3">
+                                            {item.image_url ? <img src={item.image_url} alt="" className="h-10 w-10 rounded-md object-cover" /> : <span className="flex h-10 w-10 items-center justify-center rounded-md bg-slate-800 text-slate-500"><ImageOff className="h-4 w-4" /></span>}
+                                            <div><p className="font-medium text-slate-100">{item.name}</p><p className="mt-0.5 max-w-md truncate text-xs text-slate-500">{item.description}</p></div>
+                                        </div>
+                                    </td>
+                                    <td className="px-5 py-4"><ManagementBadge>{item.category}</ManagementBadge></td>
+                                    <td className="px-5 py-4 font-medium text-slate-100">${Number(item.price).toFixed(2)}</td>
+                                    <td className="px-5 py-4"><ManagementBadge tone={item.is_available ? 'success' : 'danger'}>{item.is_available ? 'Available' : 'Unavailable'}</ManagementBadge></td>
+                                    <td className="px-5 py-4"><div className="flex justify-end gap-1">
+                                        <ManagementButton variant="ghost" size="sm" onClick={() => handleOpen(item)} aria-label={`Edit ${item.name}`}><Edit2 className="h-4 w-4" /></ManagementButton>
+                                        <ManagementButton variant="ghost" size="sm" className="text-red-300 hover:bg-red-500/10" onClick={() => handleDelete(item.id)} aria-label={`Delete ${item.name}`}><Trash2 className="h-4 w-4" /></ManagementButton>
+                                    </div></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                {menuItems.length === 0 && <div className="px-5 py-12 text-center text-sm text-slate-500">No menu items found.</div>}
+            </ManagementCard>
+
+            {open && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true">
+                    <div className="management-card w-full max-w-xl shadow-2xl">
+                        <div className="border-b border-[#202832] px-6 py-4"><h2 className="text-lg font-semibold text-slate-50">{editingId ? 'Edit menu item' : 'Add new menu item'}</h2><p className="mt-1 text-sm text-slate-500">Use the same catalog fields used by the existing workflow.</p></div>
+                        <form onSubmit={handleSubmit}>
+                            <div className="grid gap-4 p-6 sm:grid-cols-2">
+                                <label className="space-y-1.5 sm:col-span-2"><span className="text-sm font-medium text-slate-300">Item name</span><input className="management-input h-10 w-full rounded-md px-3 text-sm" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required /></label>
+                                <label className="space-y-1.5 sm:col-span-2"><span className="text-sm font-medium text-slate-300">Description</span><textarea className="management-input min-h-24 w-full rounded-md px-3 py-2 text-sm" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} /></label>
+                                <label className="space-y-1.5"><span className="text-sm font-medium text-slate-300">Price</span><input className="management-input h-10 w-full rounded-md px-3 text-sm" type="number" step="0.01" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} required /></label>
+                                <label className="space-y-1.5"><span className="text-sm font-medium text-slate-300">Category</span><select className="management-input h-10 w-full rounded-md px-3 text-sm" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} required><option value="">Select category</option>{categories.map(category => <option key={category} value={category}>{category}</option>)}</select></label>
+                                <label className="space-y-1.5 sm:col-span-2"><span className="text-sm font-medium text-slate-300">Image URL</span><input className="management-input h-10 w-full rounded-md px-3 text-sm" value={formData.image_url} onChange={(e) => setFormData({ ...formData, image_url: e.target.value })} /></label>
+                                <label className="flex items-center gap-3 text-sm text-slate-300 sm:col-span-2"><input type="checkbox" className="h-4 w-4 accent-indigo-500" checked={formData.is_available} onChange={(e) => setFormData({ ...formData, is_available: e.target.checked })} /> Available for order</label>
+                            </div>
+                            <div className="flex justify-end gap-2 border-t border-[#202832] px-6 py-4"><ManagementButton type="button" variant="outline" onClick={handleClose}>Cancel</ManagementButton><ManagementButton type="submit">{editingId ? 'Update item' : 'Create item'}</ManagementButton></div>
+                        </form>
+                    </div>
+                </div>
             )}
-
-            {success && (
-                <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
-                    {success}
-                </Alert>
-            )}
-
-            <Grid container spacing={3}>
-                {menuItems.map((item) => (
-                    <Grid item xs={12} sm={6} md={4} key={item.id}>
-                        <Card 
-                            sx={{ 
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                position: 'relative'
-                            }}
-                        >
-                            <CardMedia
-                                component="img"
-                                height="200"
-                                image={item.image_url || 'https://via.placeholder.com/300x200?text=No+Image'}
-                                alt={item.name}
-                                sx={{ objectFit: 'cover' }}
-                            />
-                            <CardContent sx={{ flexGrow: 1 }}>
-                                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                                    <Typography variant="h6" component="h2" gutterBottom>
-                                        {item.name}
-                                    </Typography>
-                                    <Chip
-                                        label={item.is_available ? 'Available' : 'Unavailable'}
-                                        color={item.is_available ? 'success' : 'error'}
-                                        size="small"
-                                    />
-                                </Box>
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                    {item.description}
-                                </Typography>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="h6" color="primary">
-                                        ${Number(item.price).toFixed(2)}
-                                    </Typography>
-                                    <Chip
-                                        label={item.category}
-                                        size="small"
-                                        color="primary"
-                                        variant="outlined"
-                                    />
-                                </Box>
-                            </CardContent>
-                            <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                                <IconButton
-                                    size="small"
-                                    onClick={() => handleOpen(item)}
-                                    color="primary"
-                                >
-                                    <EditIcon />
-                                </IconButton>
-                                <IconButton
-                                    size="small"
-                                    onClick={() => handleDelete(item.id)}
-                                    color="error"
-                                >
-                                    <DeleteIcon />
-                                </IconButton>
-                            </Box>
-                        </Card>
-                    </Grid>
-                ))}
-            </Grid>
-
-            <Dialog 
-                open={open} 
-                onClose={handleClose}
-                fullWidth
-                maxWidth="sm"
-            >
-                <DialogTitle>
-                    {editingId ? 'Edit Menu Item' : 'Add New Menu Item'}
-                </DialogTitle>
-                <DialogContent>
-                    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-                        <Grid container spacing={2}>
-                            <Grid item xs={12}>
-                                <TextField
-                                    fullWidth
-                                    label="Item Name"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                    required
-                                />
-                            </Grid>
-                            <Grid item xs={12}>
-                                <TextField
-                                    fullWidth
-                                    label="Description"
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                                    multiline
-                                    rows={3}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    fullWidth
-                                    label="Price"
-                                    type="number"
-                                    value={formData.price}
-                                    onChange={(e) => setFormData({...formData, price: e.target.value})}
-                                    required
-                                    InputProps={{
-                                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                                    }}
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <FormControl fullWidth>
-                                    <InputLabel>Category</InputLabel>
-                                    <Select
-                                        value={formData.category}
-                                        label="Category"
-                                        onChange={(e) => setFormData({...formData, category: e.target.value})}
-                                        required
-                                    >
-                                        {categories.map((category) => (
-                                            <MenuItem key={category} value={category}>
-                                                {category}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Grid>
-                            <Grid item xs={12}>
-                                <TextField
-                                    fullWidth
-                                    label="Image URL"
-                                    value={formData.image_url}
-                                    onChange={(e) => setFormData({...formData, image_url: e.target.value})}
-                                />
-                            </Grid>
-                            <Grid item xs={12}>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            checked={formData.is_available}
-                                            onChange={(e) => setFormData({...formData, is_available: e.target.checked})}
-                                            color="success"
-                                        />
-                                    }
-                                    label="Available for Order"
-                                />
-                            </Grid>
-                        </Grid>
-                    </Box>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClose}>Cancel</Button>
-                    <Button 
-                        onClick={handleSubmit}
-                        variant="contained"
-                        startIcon={editingId ? <EditIcon /> : <AddIcon />}
-                    >
-                        {editingId ? 'Update' : 'Create'} Item
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </Box>
+        </>
     );
 };
 

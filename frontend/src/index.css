@@ -13,3 +13,194 @@ code {
     font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+:root {
+    --customer-paper: #0f1112;
+    --customer-surface: #171a1c;
+    --customer-surface-raised: #1e2225;
+    --customer-ink: #f2eee6;
+    --customer-muted: #9a958c;
+    --customer-line: #2a2f33;
+    --customer-coral: #ff5c45;
+    --customer-coral-dark: #ff745f;
+    --customer-sage: #8fad96;
+    --customer-sage-soft: rgba(143, 173, 150, 0.16);
+    --customer-gold: #e8b84a;
+    --customer-soft: #22272b;
+    --customer-soft-hover: #2a3035;
+    --customer-danger-soft: rgba(255, 92, 69, 0.14);
+    --customer-selected: rgba(255, 92, 69, 0.12);
+}
+
+.customer-page {
+    min-height: 100vh;
+    color: var(--customer-ink);
+    background:
+        radial-gradient(circle at 12% -10%, rgba(255, 92, 69, 0.14), transparent 32rem),
+        radial-gradient(circle at 90% 10%, rgba(232, 184, 74, 0.06), transparent 24rem),
+        var(--customer-paper);
+}
+
+.customer-container {
+    width: min(1180px, calc(100% - 2rem));
+    margin: 0 auto;
+}
+
+.customer-header {
+    background: rgba(15, 17, 18, 0.88);
+    border-bottom: 1px solid var(--customer-line);
+    backdrop-filter: blur(18px);
+}
+
+.customer-surface {
+    background: var(--customer-surface);
+    border: 1px solid var(--customer-line);
+    border-radius: 1.25rem;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+.customer-eyebrow {
+    color: var(--customer-coral);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.customer-soft {
+    background: var(--customer-soft);
+}
+
+.customer-soft-hover:hover {
+    background: var(--customer-soft-hover);
+}
+
+.customer-danger-soft {
+    background: var(--customer-danger-soft);
+    color: var(--customer-coral);
+}
+
+.customer-selected {
+    background: var(--customer-selected);
+    border-color: var(--customer-coral);
+}
+
+.customer-focus:focus-visible,
+.customer-page button:focus-visible,
+.customer-page a:focus-visible,
+.customer-page input:focus-visible,
+.customer-page select:focus-visible,
+.customer-page textarea:focus-visible {
+    outline: 3px solid rgba(255, 92, 69, 0.45);
+    outline-offset: 3px;
+}
+
+.customer-mobile-nav {
+    background: rgba(15, 17, 18, 0.96);
+    border-top: 1px solid var(--customer-line);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.customer-image-shine {
+    position: relative;
+    overflow: hidden;
+}
+
+.customer-image-shine::after {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.12), transparent 65%);
+    content: "";
+    pointer-events: none;
+    transform: translateX(-100%);
+    transition: transform 700ms ease;
+}
+
+.customer-image-shine:hover::after {
+    transform: translateX(100%);
+}
+
+.customer-page input,
+.customer-page textarea,
+.customer-page select {
+    color: var(--customer-ink);
+    background: var(--customer-soft);
+    border-color: var(--customer-line);
+}
+
+.customer-page input::placeholder,
+.customer-page textarea::placeholder {
+    color: var(--customer-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .customer-page *,
+    .customer-page *::before,
+    .customer-page *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+.management-page {
+    min-height: 100vh;
+    background: #090b0e;
+    color: #f8fafc;
+}
+
+.management-sidebar {
+    background: #0f1318;
+    border-right: 1px solid #202832;
+}
+
+.management-topbar {
+    background: rgba(9, 11, 14, 0.88);
+    border-bottom: 1px solid #202832;
+    backdrop-filter: blur(16px);
+}
+
+.management-card {
+    background: #11161c;
+    border: 1px solid #202832;
+    border-radius: 0.75rem;
+}
+
+.management-input {
+    background: #0d1116;
+    border: 1px solid #2a3440;
+    color: #f8fafc;
+}
+
+.management-input::placeholder {
+    color: #64748b;
+}
+
+.management-input:focus {
+    border-color: #6366f1;
+    outline: 2px solid rgba(99, 102, 241, 0.25);
+    outline-offset: 1px;
+}
+
+.management-dialog {
+    background: #11161c !important;
+    border-color: #2a3440 !important;
+    color: #f8fafc !important;
+}
+
+.management-dialog button[data-radix-dialog-close] {
+    color: #94a3b8;
+}
+
+.management-table th {
+    color: #94a3b8;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.management-table td {
+    border-top: 1px solid #202832;
+}

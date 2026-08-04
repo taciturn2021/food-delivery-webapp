@@ -1,0 +1,12 @@
+<svg width="800" height="560" viewBox="0 0 800 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="560" fill="#F8E4D9"/>
+  <circle cx="680" cy="116" r="142" fill="#F2C2AC"/>
+  <circle cx="92" cy="452" r="175" fill="#F5D2BF"/>
+  <path d="M244 188L556 188L594 407C597 424 584 440 566 440H234C216 440 203 424 206 407L244 188Z" fill="#E76543"/>
+  <path d="M244 188H556L532 252H268L244 188Z" fill="#F7E8C9"/>
+  <path d="M269 253H531L508 311H292L269 253Z" fill="#6F8972"/>
+  <path d="M291 313H509L487 367H313L291 313Z" fill="#D9A441"/>
+  <path d="M302 165C322 128 350 113 379 122C398 128 406 145 400 163" stroke="#6F8972" stroke-width="18" stroke-linecap="round"/>
+  <path d="M410 163C404 135 418 115 442 110C477 104 503 124 518 164" stroke="#E76543" stroke-width="18" stroke-linecap="round"/>
+  <text x="400" y="505" text-anchor="middle" fill="#202522" font-family="Arial, sans-serif" font-size="22" font-weight="700">Handheld favorite</text>
+</svg>

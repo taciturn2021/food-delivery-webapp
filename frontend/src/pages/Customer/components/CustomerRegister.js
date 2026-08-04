@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
+import { ArrowLeft, Check, Loader2, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { registerCustomer } from '../../../services/api';
-import { UtensilsCrossed, Loader2 } from 'lucide-react';
-import { Input } from '../../../components/ui/input';
-import { Button } from '../../../components/ui/button';
-import { Alert, AlertDescription } from '../../../components/ui/alert';
-import { Stepper } from '../../../components/ui/stepper';
 
 const CustomerRegister = () => {
     const navigate = useNavigate();
@@ -14,287 +10,125 @@ const CustomerRegister = () => {
     const [activeStep, setActiveStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [formData, setFormData] = useState({
-        username: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        firstName: '',
-        lastName: '',
-        phone: ''
-    });
     const [formErrors, setFormErrors] = useState({});
+    const [formData, setFormData] = useState({
+        username: '', email: '', password: '', confirmPassword: '', firstName: '', lastName: '', phone: ''
+    });
 
-    const steps = ['Account Details', 'Personal Information'];
+    const steps = ['Account', 'About you'];
+    const inputClass = 'customer-focus h-12 w-full rounded-xl border border-[var(--customer-line)] bg-[var(--customer-soft)] px-4 text-sm outline-none transition focus:border-[var(--customer-coral)]';
 
-    const validateStep = (step) => {
+    const updateField = (field, value) => setFormData((current) => ({ ...current, [field]: value }));
+
+    const validateStep = () => {
         const errors = {};
-        
-        if (step === 0) {
-            if (!formData.username) errors.username = 'Username is required';
-            else if (formData.username.length < 3) errors.username = 'Username must be at least 3 characters';
-            
-            if (!formData.email) errors.email = 'Email is required';
-            else if (!/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Email is invalid';
-            
-            if (!formData.password) errors.password = 'Password is required';
-            else if (formData.password.length < 6) errors.password = 'Password must be at least 6 characters';
-            
-            if (!formData.confirmPassword) errors.confirmPassword = 'Please confirm your password';
-            else if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Passwords do not match';
-        } else if (step === 1) {
-            if (!formData.firstName) errors.firstName = 'First name is required';
-            if (!formData.lastName) errors.lastName = 'Last name is required';
-            if (!formData.phone) errors.phone = 'Phone number is required';
-            else if (!/^\+?[\d\s-]{10,}$/.test(formData.phone)) errors.phone = 'Please enter a valid phone number';
+        if (activeStep === 0) {
+            if (!formData.username || formData.username.length < 3) errors.username = 'Use at least 3 characters.';
+            if (!formData.email || !/\S+@\S+\.\S+/.test(formData.email)) errors.email = 'Enter a valid email.';
+            if (!formData.password || formData.password.length < 6) errors.password = 'Use at least 6 characters.';
+            if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Passwords do not match.';
+        } else {
+            if (!formData.firstName) errors.firstName = 'First name is required.';
+            if (!formData.lastName) errors.lastName = 'Last name is required.';
+            if (!formData.phone || !/^\+?[\d\s-]{10,}$/.test(formData.phone)) errors.phone = 'Enter a valid phone number.';
         }
-
         setFormErrors(errors);
-        return Object.keys(errors).length === 0;
+        return !Object.keys(errors).length;
     };
 
-    const handleNext = async (e) => {
-        e.preventDefault();
-        if (validateStep(activeStep)) {
-            setActiveStep(prevStep => prevStep + 1);
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+        if (!validateStep()) return;
+        if (activeStep === 0) {
+            setActiveStep(1);
+            setError('');
+            return;
         }
-    };
-
-    const handleBack = () => {
-        setActiveStep(prevStep => prevStep - 1);
-        setError('');
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!validateStep(activeStep)) return;
-
-        setLoading(true);
-        setError('');
 
         try {
-            const customerData = {
+            setLoading(true);
+            setError('');
+            const response = await registerCustomer({
                 username: formData.username,
                 email: formData.email.toLowerCase(),
                 password: formData.password,
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 phone: formData.phone
-            };
-
-            const response = await registerCustomer(customerData);
+            });
             if (response.data?.token && response.data?.user) {
                 await login(response.data.token, response.data.user);
                 navigate('/');
             } else {
                 setError('Registration failed. Please try again.');
-                setActiveStep(0);
             }
-        } catch (err) {
-            const errorMessage = err.response?.data?.message || 'Registration failed. Please try again.';
-            setError(errorMessage);
-            // If there's a username/email conflict, go back to first step
-            if (errorMessage.includes('exists')) {
-                setActiveStep(0);
-            }
+        } catch (registerError) {
+            const message = registerError.response?.data?.message || 'Registration failed. Please try again.';
+            setError(message);
+            if (message.toLowerCase().includes('exists')) setActiveStep(0);
         } finally {
             setLoading(false);
         }
     };
 
-    const renderStepContent = (step) => {
-        const inputClassName = "border-orange-200 focus:border-orange-500 focus:ring-orange-500 text-sm sm:text-base";
-        const errorClassName = "text-xs sm:text-sm text-red-500 mt-1";
-        
-        switch (step) {
-            case 0:
-                return (
-                    <div className="space-y-3 sm:space-y-4">
-                        <div>
-                            <Input
-                                placeholder="Username"
-                                name="username"
-                                value={formData.username}
-                                onChange={(e) => setFormData({...formData, username: e.target.value})}
-                                className={`${inputClassName} ${formErrors.username ? 'border-red-500' : ''}`}
-                            />
-                            {formErrors.username && (
-                                <p className={errorClassName}>{formErrors.username}</p>
-                            )}
-                        </div>
-                        <div>
-                            <Input
-                                type="email"
-                                placeholder="Email Address"
-                                name="email"
-                                value={formData.email}
-                                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                className={`${inputClassName} ${formErrors.email ? 'border-red-500' : ''}`}
-                            />
-                            {formErrors.email && (
-                                <p className={errorClassName}>{formErrors.email}</p>
-                            )}
-                        </div>
-                        <div>
-                            <Input
-                                type="password"
-                                placeholder="Password"
-                                name="password"
-                                value={formData.password}
-                                onChange={(e) => setFormData({...formData, password: e.target.value})}
-                                className={`${inputClassName} ${formErrors.password ? 'border-red-500' : ''}`}
-                            />
-                            {formErrors.password && (
-                                <p className={errorClassName}>{formErrors.password}</p>
-                            )}
-                        </div>
-                        <div>
-                            <Input
-                                type="password"
-                                placeholder="Confirm Password"
-                                name="confirmPassword"
-                                value={formData.confirmPassword}
-                                onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                                className={`${inputClassName} ${formErrors.confirmPassword ? 'border-red-500' : ''}`}
-                            />
-                            {formErrors.confirmPassword && (
-                                <p className={errorClassName}>{formErrors.confirmPassword}</p>
-                            )}
-                        </div>
-                    </div>
-                );
-            case 1:
-                return (
-                    <div className="space-y-3 sm:space-y-4">
-                        <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                            <div>
-                                <Input
-                                    placeholder="First Name"
-                                    name="firstName"
-                                    value={formData.firstName}
-                                    onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-                                    className={`${inputClassName} ${formErrors.firstName ? 'border-red-500' : ''}`}
-                                />
-                                {formErrors.firstName && (
-                                    <p className={errorClassName}>{formErrors.firstName}</p>
-                                )}
-                            </div>
-                            <div>
-                                <Input
-                                    placeholder="Last Name"
-                                    name="lastName"
-                                    value={formData.lastName}
-                                    onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-                                    className={`${inputClassName} ${formErrors.lastName ? 'border-red-500' : ''}`}
-                                />
-                                {formErrors.lastName && (
-                                    <p className={errorClassName}>{formErrors.lastName}</p>
-                                )}
-                            </div>
-                        </div>
-                        <div>
-                            <Input
-                                placeholder="Phone Number"
-                                name="phone"
-                                value={formData.phone}
-                                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                                className={`${inputClassName} ${formErrors.phone ? 'border-red-500' : ''}`}
-                            />
-                            {formErrors.phone && (
-                                <p className={errorClassName}>{formErrors.phone}</p>
-                            )}
-                        </div>
-                    </div>
-                );
-            default:
-                return null;
-        }
-    };
+    const field = (name, label, type = 'text', placeholder = label) => (
+        <label className="block text-sm font-bold">
+            {label}
+            <input className={`${inputClass} mt-2 ${formErrors[name] ? 'border-[var(--customer-coral)]' : ''}`} type={type} value={formData[name]} placeholder={placeholder} onChange={(event) => updateField(name, event.target.value)} />
+            {formErrors[name] && <span className="mt-1 block text-xs font-normal text-[var(--customer-coral-dark)]">{formErrors[name]}</span>}
+        </label>
+    );
 
     return (
-        <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 py-8 sm:py-12 px-4 relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-red-500/20"></div>
-            <div className="container mx-auto max-w-sm sm:max-w-md relative z-10">
-                <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-5 sm:p-8 border border-orange-100">
-                    <button
-                        type="button"
-                        onClick={() => navigate('/')}
-                        className="absolute top-3 sm:top-4 left-3 sm:left-4 text-orange-600 hover:text-orange-700 text-sm sm:text-base"
-                    >
-                        ← Back to Menu
-                    </button>
-
-                    <div className="flex flex-col items-center mb-4 sm:mb-6 mt-4 sm:mt-0">
-                        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-orange-100 flex items-center justify-center mb-3 sm:mb-4 transform hover:rotate-12 transition-transform">
-                            <UtensilsCrossed className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
+        <div className="customer-page flex min-h-screen items-center px-4 py-8 sm:py-12">
+            <main className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-[2rem] border border-[var(--customer-line)] bg-[var(--customer-surface)] shadow-[0_24px_80px_rgba(0,0,0,0.35)] md:grid-cols-[0.9fr_1.1fr]">
+                <div className="relative hidden overflow-hidden bg-[var(--customer-surface-raised)] p-10 text-[var(--customer-ink)] md:block lg:p-14">
+                    <div className="absolute -bottom-16 -right-16 h-64 w-64 rounded-full bg-[var(--customer-coral)]/15" />
+                    <div className="relative flex h-full flex-col justify-between">
+                        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--customer-coral)] text-xl text-white">✦</span>
+                        <div>
+                            <p className="text-sm font-bold uppercase tracking-[0.16em] text-[var(--customer-coral)]">A better table awaits</p>
+                            <h1 className="mt-4 text-5xl font-black leading-[0.95] tracking-[-0.07em]">Join the neighborhood.</h1>
+                            <p className="mt-5 max-w-xs text-sm leading-6 text-[var(--customer-muted)]">Save your favorite spots, keep your addresses handy, and order with less fuss.</p>
                         </div>
-                        <h1 className="text-xl sm:text-3xl font-bold text-center text-orange-900 mb-1 sm:mb-2">
-                            Join Our Food Family!
-                        </h1>
-                        <p className="text-xs sm:text-base text-orange-600 text-center">
-                            A world of delicious food awaits you
-                        </p>
-                    </div>
-
-                    <Stepper 
-                        steps={steps} 
-                        activeStep={activeStep} 
-                        className="mb-5 sm:mb-8"
-                        activeColor="rgb(249, 115, 22)"
-                        inactiveColor="rgb(254, 215, 170)"
-                    />
-
-                    {error && (
-                        <Alert variant="destructive" className="mb-4 sm:mb-6">
-                            <AlertDescription className="text-xs sm:text-sm">{error}</AlertDescription>
-                        </Alert>
-                    )}
-
-                    <form onSubmit={activeStep === steps.length - 1 ? handleSubmit : handleNext} className="space-y-3 sm:space-y-4">
-                        <div className="space-y-3 sm:space-y-4">
-                            {renderStepContent(activeStep)}
-                        </div>
-
-                        <div className="flex justify-between mt-5 sm:mt-8 gap-2 sm:gap-4">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={handleBack}
-                                disabled={activeStep === 0 || loading}
-                                className="border-orange-200 text-orange-700 hover:bg-orange-50 text-xs sm:text-sm py-1.5 sm:py-2.5"
-                            >
-                                Back
-                            </Button>
-                            <Button 
-                                type="submit" 
-                                disabled={loading}
-                                className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30 text-xs sm:text-sm py-1.5 sm:py-2.5"
-                            >
-                                {loading ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-                                        Preparing...
-                                    </>
-                                ) : activeStep === steps.length - 1 ? (
-                                    'Start Your Food Journey!'
-                                ) : (
-                                    'Next'
-                                )}
-                            </Button>
-                        </div>
-                    </form>
-
-                    <div className="mt-4 sm:mt-6 text-center">
-                        <button
-                            type="button"
-                            onClick={() => navigate('/login')}
-                            className="text-orange-700 hover:text-orange-500 font-medium text-xs sm:text-sm"
-                        >
-                            Already a foodie? Sign in!
-                        </button>
+                        <p className="text-xs text-[var(--customer-muted)]">Table &amp; Thyme</p>
                     </div>
                 </div>
-            </div>
+
+                <div className="p-6 sm:p-10 lg:p-14">
+                    <button type="button" onClick={() => navigate('/')} className="mb-8 flex items-center gap-2 text-sm font-semibold text-[var(--customer-muted)] hover:text-[var(--customer-ink)]"><ArrowLeft className="h-4 w-4" /> Back to menu</button>
+                    <div className="flex items-center gap-3">
+                        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--customer-sage-soft)] text-[var(--customer-sage)]"><UserRound className="h-5 w-5" /></span>
+                        <div><p className="customer-eyebrow">New customer</p><h2 className="mt-1 text-3xl font-black tracking-[-0.06em]">Make it yours.</h2></div>
+                    </div>
+                    <div className="mt-8 flex items-center gap-3">
+                        {steps.map((step, index) => <React.Fragment key={step}><span className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${index <= activeStep ? 'bg-[var(--customer-coral)] text-white' : 'bg-[var(--customer-soft)] text-[var(--customer-muted)]'}`}>{index < activeStep ? <Check className="h-4 w-4" /> : index + 1}</span><span className={`text-xs font-bold ${index === activeStep ? 'text-[var(--customer-ink)]' : 'text-[var(--customer-muted)]'}`}>{step}</span>{index < steps.length - 1 && <span className="h-px flex-1 bg-[var(--customer-line)]" />}</React.Fragment>)}
+                    </div>
+                    {error && <div className="mt-6 rounded-xl border border-[var(--customer-coral)] bg-[var(--customer-danger-soft)] px-4 py-3 text-sm leading-6 text-[var(--customer-coral-dark)]">{error}</div>}
+                    <form onSubmit={handleSubmit} className="mt-7 space-y-4">
+                        {activeStep === 0 ? (
+                            <>
+                                {field('username', 'Username')}
+                                {field('email', 'Email address', 'email')}
+                                {field('password', 'Password', 'password')}
+                                {field('confirmPassword', 'Confirm password', 'password')}
+                            </>
+                        ) : (
+                            <>
+                                <div className="grid gap-4 sm:grid-cols-2">{field('firstName', 'First name')}{field('lastName', 'Last name')}</div>
+                                {field('phone', 'Phone number', 'tel')}
+                            </>
+                        )}
+                        <div className="flex gap-3 pt-2">
+                            {activeStep === 1 && <button type="button" onClick={() => { setActiveStep(0); setFormErrors({}); }} className="h-12 rounded-full border border-[var(--customer-line)] px-5 text-sm font-bold transition hover:border-[var(--customer-ink)]">Back</button>}
+                            <button type="submit" disabled={loading} className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-[var(--customer-coral)] px-5 text-sm font-bold text-white transition hover:bg-[var(--customer-coral-dark)] disabled:opacity-50">
+                                {loading && <Loader2 className="h-4 w-4 animate-spin" />} {activeStep === 0 ? 'Continue' : 'Create account'}
+                            </button>
+                        </div>
+                    </form>
+                    <p className="mt-8 text-center text-sm text-[var(--customer-muted)]">Already have an account? <button type="button" onClick={() => navigate('/login')} className="font-bold text-[var(--customer-coral-dark)] hover:underline">Sign in</button></p>
+                </div>
+            </main>
         </div>
     );
 };

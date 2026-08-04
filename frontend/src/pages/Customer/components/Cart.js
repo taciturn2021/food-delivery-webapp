@@ -1,77 +1,83 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, Check, Loader2, MapPin, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../../context/CartContext';
 import { getCustomerAddresses, createOrder } from '../../../services/api';
-import { ArrowLeft, Plus, Minus, ShoppingCart, Trash2, MapPin, Loader2 } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import { Card, CardContent } from '../../../components/ui/card';
-import { Alert, AlertDescription } from '../../../components/ui/alert';
-import { useToast } from '../../../components/ui/use-toast';
 import CustomerHeader from '../../../components/customer/CustomerHeader';
+import { CustomerEmpty, CustomerError, CustomerLoading } from '../../../components/customer/CustomerStates';
+import { useToast } from '../../../components/ui/use-toast';
+
+const normalizeAddress = (address) => ({
+    ...address,
+    street: address.street || address.street_address || '',
+    city: address.city || '',
+    state: address.state || '',
+    zipCode: address.zipCode || address.postal_code || '',
+    branchId: address.branchId ?? address.branch_id
+});
+
+const formatPrice = (price) => {
+    const numericPrice = Number.parseFloat(price);
+    return Number.isFinite(numericPrice) ? numericPrice.toFixed(2) : '0.00';
+};
 
 const Cart = () => {
     const navigate = useNavigate();
+    const { toast } = useToast();
     const { cart, updateQuantity, removeFromCart, getTotal, clearCart } = useCart();
     const [addresses, setAddresses] = useState([]);
-    const [selectedAddress, setSelectedAddress] = useState(null);
+    const [selectedAddressId, setSelectedAddressId] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [placingOrder, setPlacingOrder] = useState(false);
-    const { toast } = useToast();
 
     useEffect(() => {
-        const fetchAddresses = async () => {
+        const loadAddresses = async () => {
             try {
+                setLoading(true);
                 const response = await getCustomerAddresses();
-                // Filter addresses based on the current branch
-                const branchAddresses = response.data.filter(
-                    address => address.branchId === cart.branchId
-                );
+                const branchAddresses = response.data
+                    .map(normalizeAddress)
+                    .filter((address) => Number(address.branchId) === Number(cart.branchId));
                 setAddresses(branchAddresses);
-                
-                // If there's only one address, select it automatically
-                if (branchAddresses.length === 1) {
-                    setSelectedAddress(branchAddresses[0]);
-                }
-                
+                if (branchAddresses.length === 1) setSelectedAddressId(branchAddresses[0].id);
                 setError(null);
-            } catch (err) {
-                setError('Failed to load addresses. Please try again.');
+            } catch (fetchError) {
+                console.error('Error loading addresses:', fetchError);
+                setError('We could not load your delivery addresses.');
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchAddresses();
-    }, [cart.branchId]);
+        if (cart.items.length) loadAddresses();
+        else setLoading(false);
+    }, [cart.branchId, cart.items.length]);
 
-    const formatPrice = (price) => {
-        return typeof price === 'number' ? price.toFixed(2) : '0.00';
-    };
+    const selectedAddress = useMemo(
+        () => addresses.find((address) => address.id === selectedAddressId),
+        [addresses, selectedAddressId]
+    );
 
     const handlePlaceOrder = async () => {
         if (!selectedAddress) {
             toast({
-                title: "No address selected",
-                description: "Please select a delivery address",
-                variant: "destructive"
+                title: 'Choose a delivery address',
+                description: 'Select where you would like your order delivered.',
+                variant: 'destructive'
             });
             return;
         }
 
         try {
             setPlacingOrder(true);
-
-            // Create order payload
-            const orderItems = cart.items.map(item => ({
-                menu_item_id: item.id,
-                quantity: item.quantity,
-                special_instructions: item.specialInstructions || ""
-            }));
-
-            const orderData = {
+            const response = await createOrder({
                 branch_id: cart.branchId,
-                items: orderItems,
+                items: cart.items.map((item) => ({
+                    menu_item_id: item.id,
+                    quantity: item.quantity,
+                    special_instructions: item.specialInstructions || ''
+                })),
                 delivery_address: {
                     street: selectedAddress.street,
                     city: selectedAddress.city,
@@ -80,219 +86,189 @@ const Cart = () => {
                     latitude: selectedAddress.latitude,
                     longitude: selectedAddress.longitude
                 }
-            };
-
-            // Send order to API
-            const response = await createOrder(orderData);
-            
-            // After successful order creation, clear the cart
-            clearCart();
-            
-            // Show success toast
-            toast({
-                title: "Order placed successfully!",
-                description: "Your order has been received and is being processed.",
-                variant: "success"
             });
-            
-            // Navigate to the order tracking page
-            navigate(`/customer/orders/${response.data.id}`);
-            
-        } catch (error) {
-            console.error('Error placing order:', error);
+
+            clearCart();
             toast({
-                title: "Failed to place order",
-                description: error.response?.data?.message || "Something went wrong. Please try again.",
-                variant: "destructive"
+                title: 'Order placed',
+                description: 'Your kitchen has received the order.',
+                variant: 'success'
+            });
+            navigate(`/customer/orders/${response.data.id}`);
+        } catch (orderError) {
+            console.error('Error placing order:', orderError);
+            toast({
+                title: 'Could not place order',
+                description: orderError.response?.data?.message || 'Please try again in a moment.',
+                variant: 'destructive'
             });
         } finally {
             setPlacingOrder(false);
         }
     };
 
-    if (cart.items.length === 0) {
+    if (!cart.items.length) {
         return (
-            <>
+            <div className="customer-page pb-20 md:pb-0">
                 <CustomerHeader />
-                <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 pt-16">
-                    <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-red-500/20"></div>
-                    <div className="container mx-auto px-4 py-8 relative z-10">
-                        <div className="text-center">
-                            <ShoppingCart className="mx-auto h-12 w-12 text-orange-600 mb-4" />
-                            <h2 className="text-2xl font-semibold text-orange-900 mb-4">Your cart is empty</h2>
-                            <Button onClick={() => navigate(-1)} className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white">
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                Continue Shopping
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            </>
+                <main className="customer-container pt-[7.5rem]">
+                    <CustomerEmpty
+                        title="Your bag is waiting"
+                        description="Choose a branch and add something delicious before checking out."
+                        action={(
+                            <button type="button" onClick={() => navigate('/')} className="mt-3 rounded-full bg-[var(--customer-coral)] px-5 py-3 text-sm font-bold text-white transition hover:bg-[var(--customer-coral-dark)]">
+                                Browse the menu
+                            </button>
+                        )}
+                    />
+                </main>
+            </div>
         );
     }
 
     return (
-        <>
+        <div className="customer-page pb-20 md:pb-0">
             <CustomerHeader />
-            <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 pt-16">
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-red-500/20"></div>
-                <div className="container mx-auto px-4 py-6 sm:py-8 relative z-10">
-                    <div className="flex items-center gap-2 mb-4 sm:mb-6">
-                        <button 
-                            onClick={() => navigate(-1)}
-                            className="hover:bg-orange-100 p-2 rounded-full transition-colors text-orange-600"
-                        >
-                            <ArrowLeft className="h-5 w-5" />
-                        </button>
-                        <h1 className="text-xl sm:text-2xl font-semibold text-orange-900">Shopping Cart</h1>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-                        {/* Cart Items */}
-                        <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-                            {cart.items.map((item) => (
-                                <Card key={item.id} className="bg-white/95 backdrop-blur-sm border-orange-100">
-                                    <CardContent className="p-3 sm:p-4">
-                                        <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
-                                            <div className="mb-2 sm:mb-0">
-                                                <h3 className="text-base sm:text-lg font-medium text-orange-900">{item.name}</h3>
-                                                <p className="text-orange-600 text-sm sm:text-base">
-                                                    ${formatPrice((item.branch_price || item.price) * item.quantity)}
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center justify-end sm:justify-start gap-1 sm:gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    className="h-7 w-7 sm:h-8 sm:w-8 border-orange-200 text-orange-600 hover:bg-orange-50"
-                                                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                                >
-                                                    <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
-                                                </Button>
-                                                <span className="w-6 sm:w-8 text-center text-orange-900 text-sm sm:text-base">{item.quantity}</span>
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    className="h-7 w-7 sm:h-8 sm:w-8 border-orange-200 text-orange-600 hover:bg-orange-50"
-                                                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                                >
-                                                    <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-7 w-7 sm:h-8 sm:w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                                                    onClick={() => removeFromCart(item.id)}
-                                                >
-                                                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-
-                        {/* Order Summary */}
-                        <div>
-                            <Card className="bg-white/95 backdrop-blur-sm border-orange-100 sticky top-20">
-                                <CardContent className="p-4 sm:p-6">
-                                    <h2 className="text-lg font-semibold text-orange-900 mb-3 sm:mb-4">Order Summary</h2>
-                                    <div className="flex justify-between mb-3 sm:mb-4">
-                                        <span className="text-sm sm:text-base text-orange-700">Subtotal:</span>
-                                        <span className="font-medium text-sm sm:text-base text-orange-900">${formatPrice(getTotal())}</span>
-                                    </div>
-
-                                    <div className="border-t border-orange-100 my-3 sm:my-4" />
-
-                                    <h3 className="text-base sm:text-lg font-semibold text-orange-900 mb-3 sm:mb-4">Delivery Address</h3>
-                                    
-                                    {loading ? (
-                                        <div className="flex justify-center py-3 sm:py-4">
-                                            <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-orange-600" />
-                                        </div>
-                                    ) : error ? (
-                                        <Alert variant="destructive" className="mb-3 sm:mb-4 text-sm">
-                                            <AlertDescription>{error}</AlertDescription>
-                                        </Alert>
-                                    ) : addresses.length === 0 ? (
-                                        <div className="text-center py-3 sm:py-4">
-                                            <p className="text-orange-700 mb-3 sm:mb-4 text-sm sm:text-base">
-                                                No addresses found for this branch
-                                            </p>
-                                            <Button 
-                                                onClick={() => navigate('/customer/addresses')} 
-                                                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white text-xs sm:text-sm"
-                                                size="sm"
-                                            >
-                                                <MapPin className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                                                Add New Address
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="space-y-2 sm:space-y-3 mb-3 sm:mb-4">
-                                                {addresses.map((address) => (
-                                                    <div
-                                                        key={address.id}
-                                                        className={`p-2 sm:p-3 rounded-lg border cursor-pointer transition-colors ${
-                                                            selectedAddress?.id === address.id
-                                                                ? 'border-orange-500 bg-orange-50'
-                                                                : 'border-orange-200 hover:border-orange-500'
-                                                        }`}
-                                                        onClick={() => setSelectedAddress(address)}
-                                                    >
-                                                        <p className="font-medium text-orange-900 text-sm sm:text-base">{address.street}</p>
-                                                        <p className="text-xs sm:text-sm text-orange-700">
-                                                            {address.city}, {address.state} {address.zipCode}
-                                                        </p>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="w-full border-orange-200 text-orange-700 hover:bg-orange-50 text-xs sm:text-sm"
-                                                onClick={() => navigate('/customer/addresses')}
-                                            >
-                                                <MapPin className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                                                Add New Address
-                                            </Button>
-                                        </>
-                                    )}
-
-                                    <div className="border-t border-orange-100 my-3 sm:my-4" />
-
-                                    <h3 className="text-base sm:text-lg font-semibold text-orange-900 mb-3 sm:mb-4">Payment Method</h3>
-                                    <div className="p-2 sm:p-3 border border-orange-200 rounded-lg bg-orange-50">
-                                        <div className="flex justify-between items-center">
-                                            <span className="font-medium text-orange-900 text-sm sm:text-base">Cash on Delivery</span>
-                                            <span className="text-xs sm:text-sm text-orange-700">Pay when you receive</span>
-                                        </div>
-                                    </div>
-
-                                    <Button
-                                        className="w-full mt-4 sm:mt-6 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30"
-                                        size="lg"
-                                        disabled={!selectedAddress || cart.items.length === 0 || placingOrder}
-                                        onClick={handlePlaceOrder}
-                                    >
-                                        {placingOrder ? (
-                                            <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                Processing...
-                                            </>
-                                        ) : (
-                                            'Place Order'
-                                        )}
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        </div>
+            <main className="customer-container pt-[7.5rem]">
+                <div className="mb-7 flex items-center gap-3">
+                    <button type="button" onClick={() => navigate('/')} className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--customer-line)] transition hover:border-[var(--customer-coral)]">
+                        <ArrowLeft className="h-4 w-4" />
+                    </button>
+                    <div>
+                        <p className="customer-eyebrow">Almost there</p>
+                        <h1 className="mt-1 text-3xl font-black tracking-[-0.06em]">Your bag</h1>
                     </div>
                 </div>
-            </div>
-        </>
+
+                <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
+                    <section className="customer-surface p-4 sm:p-6">
+                        <div className="mb-5 flex items-center justify-between">
+                            <div>
+                                <p className="text-lg font-bold">Your picks</p>
+                                <p className="mt-1 text-sm text-[var(--customer-muted)]">
+                                    {cart.items.length} {cart.items.length === 1 ? 'dish' : 'dishes'} from this branch
+                                </p>
+                            </div>
+                            <ShoppingBag className="h-5 w-5 text-[var(--customer-coral)]" />
+                        </div>
+
+                        <div className="divide-y divide-[var(--customer-line)]">
+                            {cart.items.map((item) => (
+                                <div key={item.id} className="flex gap-3 py-4 first:pt-0 last:pb-0 sm:gap-4">
+                                    <img
+                                        src={item.image_url || '/food-placeholders/shareable.svg'}
+                                        alt=""
+                                        className="h-20 w-20 rounded-2xl object-cover sm:h-24 sm:w-24"
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div>
+                                                <h2 className="font-bold">{item.name}</h2>
+                                                <p className="mt-1 text-sm text-[var(--customer-muted)]">
+                                                    ${formatPrice(item.branch_price || item.price)} each
+                                                </p>
+                                            </div>
+                                            <p className="font-bold text-[var(--customer-coral-dark)]">
+                                                ${formatPrice((item.branch_price || item.price) * item.quantity)}
+                                            </p>
+                                        </div>
+                                        <div className="mt-3 flex items-center justify-between">
+                                            <div className="flex items-center gap-2 rounded-full border border-[var(--customer-line)] p-1">
+                                                <button type="button" onClick={() => updateQuantity(item.id, item.quantity - 1)} className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-[var(--customer-soft)]" aria-label={`Decrease ${item.name} quantity`}>
+                                                    <Minus className="h-3.5 w-3.5" />
+                                                </button>
+                                                <span className="w-5 text-center text-sm font-bold">{item.quantity}</span>
+                                                <button type="button" onClick={() => updateQuantity(item.id, item.quantity + 1)} className="flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-[var(--customer-soft)]" aria-label={`Increase ${item.name} quantity`}>
+                                                    <Plus className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                            <button type="button" onClick={() => removeFromCart(item.id)} className="flex items-center gap-1 text-xs font-semibold text-[var(--customer-muted)] transition hover:text-[var(--customer-coral-dark)]">
+                                                <Trash2 className="h-3.5 w-3.5" /> Remove
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+
+                    <aside className="customer-surface p-5 sm:p-6 lg:sticky lg:top-24">
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <p className="customer-eyebrow">Delivery details</p>
+                                <h2 className="mt-1 text-xl font-bold">Where should we bring it?</h2>
+                            </div>
+                            <MapPin className="h-5 w-5 text-[var(--customer-coral)]" />
+                        </div>
+
+                        {loading ? (
+                            <CustomerLoading label="Loading addresses..." />
+                        ) : error ? (
+                            <div className="mt-5">
+                                <CustomerError message={error} onRetry={() => window.location.reload()} />
+                            </div>
+                        ) : addresses.length === 0 ? (
+                            <div className="mt-5 rounded-2xl bg-[var(--customer-soft)] p-4">
+                                <p className="text-sm leading-6 text-[var(--customer-muted)]">Add an address for this branch before placing your order.</p>
+                                <button type="button" onClick={() => navigate('/customer/addresses')} className="mt-4 rounded-full bg-[var(--customer-coral)] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[var(--customer-coral-dark)]">
+                                    Manage addresses
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="mt-5 space-y-2">
+                                {addresses.map((address) => (
+                                    <button
+                                        type="button"
+                                        key={address.id}
+                                        onClick={() => setSelectedAddressId(address.id)}
+                                        className={`flex w-full items-start gap-3 rounded-2xl border p-3 text-left transition ${
+                                            selectedAddressId === address.id
+                                                ? 'border-[var(--customer-coral)] bg-[var(--customer-selected)]'
+                                                : 'border-[var(--customer-line)] hover:border-[var(--customer-coral)]'
+                                        }`}
+                                    >
+                                        <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${selectedAddressId === address.id ? 'border-[var(--customer-coral)] bg-[var(--customer-coral)] text-white' : 'border-[var(--customer-line)]'}`}>
+                                            {selectedAddressId === address.id && <Check className="h-3 w-3" />}
+                                        </span>
+                                        <span className="min-w-0">
+                                            <span className="block truncate text-sm font-bold">{address.street}</span>
+                                            <span className="mt-1 block text-xs leading-5 text-[var(--customer-muted)]">{address.city}, {address.state} {address.zipCode}</span>
+                                        </span>
+                                    </button>
+                                ))}
+                                <button type="button" onClick={() => navigate('/customer/addresses')} className="mt-2 w-full rounded-full border border-[var(--customer-line)] px-4 py-2.5 text-sm font-semibold transition hover:border-[var(--customer-coral)]">
+                                    Manage addresses
+                                </button>
+                            </div>
+                        )}
+
+                        <div className="my-6 border-t border-[var(--customer-line)]" />
+                        <div className="flex items-center justify-between text-sm text-[var(--customer-muted)]">
+                            <span>Subtotal</span>
+                            <span className="font-bold text-[var(--customer-ink)]">${formatPrice(getTotal())}</span>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between text-sm text-[var(--customer-muted)]">
+                            <span>Payment</span>
+                            <span className="rounded-full bg-[var(--customer-sage-soft)] px-3 py-1 text-xs font-bold text-[var(--customer-sage)]">Cash on delivery</span>
+                        </div>
+                        <div className="my-5 border-t border-[var(--customer-line)]" />
+                        <div className="flex items-end justify-between">
+                            <span className="font-bold">Total</span>
+                            <span className="text-2xl font-black text-[var(--customer-coral-dark)]">${formatPrice(getTotal())}</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handlePlaceOrder}
+                            disabled={!selectedAddress || placingOrder}
+                            className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[var(--customer-coral)] px-5 text-sm font-bold text-white transition hover:bg-[var(--customer-coral-dark)] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {placingOrder ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBag className="h-4 w-4" />}
+                            {placingOrder ? 'Placing order...' : 'Place order'}
+                        </button>
+                    </aside>
+                </div>
+            </main>
+        </div>
     );
 };
 

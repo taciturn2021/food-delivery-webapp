@@ -1,117 +1,99 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { ArrowDown, Clock3, MapPin } from 'lucide-react';
 import CustomerHeader from '../../components/customer/CustomerHeader';
-import BranchSelector from './components/BranchSelector';
 import CustomerMenu from './components/CustomerMenu';
+import BranchSelector from './components/BranchSelector';
+import { CustomerError, CustomerLoading } from '../../components/customer/CustomerStates';
 import { getPublicBranches } from '../../services/api';
-import { Dialog, DialogContent } from '../../components/ui/dialog';
 import { useCart } from '../../context/CartContext';
 
-const IntegratedLanding = () => {
+const LandingPage = () => {
     const [branches, setBranches] = useState([]);
     const [selectedBranch, setSelectedBranch] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [branchDialogOpen, setBranchDialogOpen] = useState(true);
-    const navigate = useNavigate();
     const { cart, setBranch } = useCart();
 
-    useEffect(() => {
-        const fetchBranches = async () => {
-            try {
-                const response = await getPublicBranches();
-                const activeBranches = response.data.filter(branch => branch.status === 'active');
-                setBranches(activeBranches);
-                setError(null);
+    const loadBranches = async () => {
+        try {
+            setLoading(true);
+            const response = await getPublicBranches();
+            const activeBranches = response.data.filter((branch) => branch.status === 'active');
+            setBranches(activeBranches);
 
-                // If there's a branch in cart, use that
-                if (cart.branchId) {
-                    const cartBranch = activeBranches.find(branch => branch.id === cart.branchId);
-                    if (cartBranch) {
-                        setSelectedBranch(cartBranch);
-                        setBranchDialogOpen(false);
-                    } else {
-                        // If cart branch not found in active branches, clear selection
-                        setSelectedBranch(null);
-                        setBranchDialogOpen(true);
-                    }
-                } else {
-                    // If no branch in cart, check localStorage
-                    const savedBranchId = localStorage.getItem('selectedBranch');
-                    if (savedBranchId) {
-                        const savedBranch = activeBranches.find(branch => branch.id === parseInt(savedBranchId));
-                        if (savedBranch) {
-                            setSelectedBranch(savedBranch);
-                            setBranchDialogOpen(false);
-                        } else {
-                            // If saved branch not found in active branches, clear selection
-                            localStorage.removeItem('selectedBranch');
-                            setSelectedBranch(null);
-                            setBranchDialogOpen(true);
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching branches:', error);
-                setError('Unable to load branches. Please try again later.');
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchBranches();
-    }, [cart.branchId]);
-
-    const handleBranchSelect = (branchId) => {
-        const selected = branches.find(branch => branch.id === branchId);
-        if (selected) {
-            setSelectedBranch(selected);
-            setBranch(branchId);
-            setBranchDialogOpen(false);
+            const savedBranchId = cart.branchId || Number(localStorage.getItem('selectedBranch'));
+            const savedBranch = activeBranches.find((branch) => branch.id === savedBranchId);
+            setSelectedBranch(savedBranch || null);
+            setError(null);
+        } catch (fetchError) {
+            console.error('Error fetching branches:', fetchError);
+            setError('We could not load the kitchens right now.');
+        } finally {
+            setLoading(false);
         }
     };
 
+    useEffect(() => {
+        loadBranches();
+    }, [cart.branchId]);
+
+    const handleBranchSelect = (branchId) => {
+        const branch = branches.find((item) => item.id === branchId);
+        if (!branch) return;
+        setBranch(branchId);
+        setSelectedBranch(branch);
+    };
+
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="customer-page pb-20 md:pb-0">
             <CustomerHeader onBranchSelect={handleBranchSelect} />
-            {/* Spacer for fixed header */}
-            <div className="h-16"></div>
-
-            {loading ? (
-                <div className="flex justify-center items-center min-h-[60vh]">
-                    <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-            ) : error ? (
-                <div className="container mx-auto px-4 py-6 sm:py-8">
-                    <div className="bg-red-100 border-l-4 border-red-500 p-3 sm:p-4 rounded text-red-700 text-sm sm:text-base">
-                        {error}
-                    </div>
-                </div>
-            ) : (
-                <>
-                    {selectedBranch && (
-                        <CustomerMenu branchId={selectedBranch.id} />
+            <main className="customer-container pt-[5.75rem]">
+                <section className="max-w-3xl pb-8 pt-6 sm:pb-10 sm:pt-10">
+                    <p className="customer-eyebrow">Night kitchen</p>
+                    <h1 className="mt-3 text-4xl font-black leading-[0.98] tracking-[-0.065em] sm:text-5xl lg:text-6xl">
+                        Order something good.{' '}
+                        <span className="text-[var(--customer-coral)]">Tonight.</span>
+                    </h1>
+                    <p className="mt-4 max-w-xl text-base leading-7 text-[var(--customer-muted)] sm:text-lg">
+                        Local kitchens, real menus, delivered while it still tastes like it should.
+                    </p>
+                    {selectedBranch ? (
+                        <div className="mt-6 inline-flex items-center gap-3 rounded-2xl border border-[var(--customer-line)] bg-[var(--customer-surface)] px-4 py-3">
+                            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--customer-sage-soft)] text-[var(--customer-sage)]">
+                                <MapPin className="h-5 w-5" />
+                            </span>
+                            <span>
+                                <span className="block text-xs text-[var(--customer-muted)]">Browsing</span>
+                                <span className="block font-bold">{selectedBranch.name}</span>
+                            </span>
+                            <span className="ml-1 hidden items-center gap-1 text-xs font-semibold text-[var(--customer-sage)] sm:flex">
+                                <Clock3 className="h-3.5 w-3.5" /> Open
+                            </span>
+                        </div>
+                    ) : (
+                        <a
+                            href="#choose-branch"
+                            className="mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--customer-coral)] px-5 py-3 text-sm font-bold text-white transition hover:bg-[var(--customer-coral-dark)]"
+                        >
+                            Choose a kitchen <ArrowDown className="h-4 w-4" />
+                        </a>
                     )}
-                </>
-            )}
+                </section>
 
-            <Dialog
-                open={branchDialogOpen}
-                onOpenChange={(open) => {
-                    if (selectedBranch) setBranchDialogOpen(open);
-                }}
-            >
-                <DialogContent className="sm:max-w-[725px] p-0 w-[95vw] max-w-full mx-auto">
-                    <BranchSelector
-                        branches={branches}
-                        onBranchSelect={handleBranchSelect}
-                        isDialog={true}
-                        currentBranchId={selectedBranch?.id || cart.branchId}
-                    />
-                </DialogContent>
-            </Dialog>
+                {loading ? (
+                    <CustomerLoading label="Finding nearby kitchens..." />
+                ) : error ? (
+                    <CustomerError message={error} onRetry={loadBranches} />
+                ) : selectedBranch ? (
+                    <CustomerMenu branchId={selectedBranch.id} branch={selectedBranch} />
+                ) : (
+                    <section id="choose-branch" className="scroll-mt-24 pb-12">
+                        <BranchSelector branches={branches} onBranchSelect={handleBranchSelect} />
+                    </section>
+                )}
+            </main>
         </div>
     );
 };
 
-export default IntegratedLanding;
+export default LandingPage;

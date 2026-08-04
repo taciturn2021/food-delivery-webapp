@@ -1,334 +1,57 @@
-import React, { useState, useEffect } from 'react';
-import {
-    Box,
-    Grid,
-    Card,
-    CardMedia,
-    CardContent,
-    Typography,
-    Switch,
-    FormControlLabel,
-    Button,
-    Menu,
-    MenuItem,
-    IconButton,
-    Chip,
-    TextField,
-    InputAdornment,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Alert,
-    FormControl,
-    InputLabel,
-    Select,
-    useTheme,
-} from '@mui/material';
-import {
-    Edit as EditIcon,
-    FilterList as FilterIcon,
-    Search as SearchIcon,
-    RestaurantMenu as MenuIcon,
-    CheckCircle as AvailableIcon,
-    Cancel as UnavailableIcon,
-} from '@mui/icons-material';
+import React, { useEffect, useState } from 'react';
+import { CheckCircle2, Edit2, Filter, Search, XCircle } from 'lucide-react';
 import { getBranchMenu, assignMenuItemToBranch } from '../../../services/api';
 import { useAuth } from '../../../context/AuthContext';
+import { ManagementAlert, ManagementBadge, ManagementButton, ManagementCard, ManagementPageHeader } from '../../../components/management/ManagementPrimitives';
 
-const categories = [
-    'All',
-    'Appetizers',
-    'Main Course',
-    'Desserts',
-    'Beverages',
-    'Sides',
-    'Special Offers'
-];
+const categories = ['All', 'Appetizers', 'Main Course', 'Desserts', 'Beverages', 'Sides', 'Special Offers'];
 
 const BranchMenu = () => {
-    const theme = useTheme();
     const { user } = useAuth();
     const [menuItems, setMenuItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState('');
-    const [filterAnchorEl, setFilterAnchorEl] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [editItem, setEditItem] = useState(null);
-    const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-    useEffect(() => {
-        loadBranchMenu();
-    }, []);
-
+    useEffect(() => { loadBranchMenu(); }, []);
     const loadBranchMenu = async () => {
+        try { const response = await getBranchMenu(user.branchId); setMenuItems(response.data); }
+        catch (err) { setError('Failed to load menu items'); }
+        finally { setLoading(false); }
+    };
+    const handleEditOpen = (item) => setEditItem({ ...item, branch_price: item.branch_price || item.price, branch_availability: item.branch_availability !== undefined ? item.branch_availability : item.is_available });
+    const saveItem = async () => {
         try {
-            const branchId = user.branchId;
-            const response = await getBranchMenu(branchId);
-            setMenuItems(response.data);
-        } catch (error) {
-            setError('Failed to load menu items');
-        } finally {
-            setLoading(false);
-        }
+            await assignMenuItemToBranch({ branch_id: user.branchId, menu_item_id: editItem.id, price: editItem.branch_price, is_available: editItem.branch_availability });
+            setSuccess('Menu item updated successfully'); await loadBranchMenu(); setEditItem(null);
+        } catch (err) { setError('Failed to update menu item'); }
     };
-
-    const handleFilterClick = (event) => {
-        setFilterAnchorEl(event.currentTarget);
-    };
-
-    const handleFilterClose = (category) => {
-        if (category && typeof category === 'string') {
-            setSelectedCategory(category);
-        }
-        setFilterAnchorEl(null);
-    };
-
-    const handleEditOpen = (item) => {
-        setEditItem({
-            ...item,
-            branch_price: item.branch_price || item.price,
-            branch_availability: item.branch_availability !== undefined ? item.branch_availability : item.is_available
-        });
-        setEditDialogOpen(true);
-    };
-
-    const handleEditClose = () => {
-        setEditItem(null);
-        setEditDialogOpen(false);
-    };
-
-    const handleEditSave = async () => {
+    const handleAvailabilityChange = async (itemId, value) => {
         try {
-            const branchId = user.branchId;
-            console.log('Edit Item:', editItem);
-            await assignMenuItemToBranch({
-                branch_id: branchId,
-                menu_item_id: editItem.id,
-                price: editItem.branch_price,
-                is_available: editItem.branch_availability
-            });
-            setSuccess('Menu item updated successfully');
+            const item = menuItems.find(menuItem => menuItem.id === itemId);
+            await assignMenuItemToBranch({ branch_id: user.branchId, menu_item_id: itemId, is_available: value, price: item.branch_price || item.price });
             loadBranchMenu();
-            handleEditClose();
-        } catch (error) {
-            setError('Failed to update menu item');
-        }
+        } catch (err) { setError('Failed to update item availability'); }
     };
+    const filteredItems = menuItems.filter(item => (selectedCategory === 'All' || item.category === selectedCategory) && `${item.name} ${item.description}`.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const handleAvailabilityChange = async (itemId, newValue) => {
-        try {
-            const branchId = user.branchId;
-            await assignMenuItemToBranch({
-                branch_id: branchId,
-                menu_item_id: itemId,
-                is_available: newValue,
-                price: menuItems.find(item => item.id === itemId).branch_price || menuItems.find(item => item.id === itemId).price
-            });
-            loadBranchMenu();
-        } catch (error) {
-            setError('Failed to update item availability');
-        }
-    };
-
-    const filteredItems = menuItems.filter(item => {
-        const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
-        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            item.description.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCategory && matchesSearch;
-    });
-
+    if (loading) return <div className="py-16 text-center text-sm text-slate-400">Loading menu items...</div>;
     return (
-        <Box sx={{ p: 3 }}>
-            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h4">
-                    Branch Menu
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                    <TextField
-                        placeholder="Search menu items..."
-                        size="small"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon />
-                                </InputAdornment>
-                            ),
-                        }}
-                        sx={{ width: 250 }}
-                    />
-                    <Button
-                        variant="outlined"
-                        startIcon={<FilterIcon />}
-                        onClick={handleFilterClick}
-                    >
-                        {selectedCategory}
-                    </Button>
-                </Box>
-            </Box>
-
-            {error && (
-                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-                    {error}
-                </Alert>
-            )}
-
-            {success && (
-                <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
-                    {success}
-                </Alert>
-            )}
-
-            <Menu
-                anchorEl={filterAnchorEl}
-                open={Boolean(filterAnchorEl)}
-                onClose={() => handleFilterClose()}
-            >
-                {categories.map((category) => (
-                    <MenuItem 
-                        key={category}
-                        onClick={() => handleFilterClose(category)}
-                        selected={category === selectedCategory}
-                    >
-                        {category}
-                    </MenuItem>
-                ))}
-            </Menu>
-
-            <Grid container spacing={3}>
-                {filteredItems.map((item) => (
-                    <Grid item xs={12} sm={6} md={4} key={item.id}>
-                        <Card 
-                            sx={{ 
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                position: 'relative'
-                            }}
-                        >
-                            <CardMedia
-                                component="img"
-                                height="200"
-                                image={item.image_url || 'https://via.placeholder.com/300x200?text=No+Image'}
-                                alt={item.name}
-                                sx={{ objectFit: 'cover' }}
-                            />
-                            <CardContent sx={{ flexGrow: 1 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
-                                    <Typography variant="h6" component="h2">
-                                        {item.name}
-                                    </Typography>
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => handleEditOpen(item)}
-                                        color="primary"
-                                    >
-                                        <EditIcon />
-                                    </IconButton>
-                                </Box>
-
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                    {item.description}
-                                </Typography>
-
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                    <Typography variant="h6" color="primary">
-                                        ${Number(item.branch_price || item.price).toFixed(2)}
-                                    </Typography>
-                                    <Chip
-                                        label={item.category}
-                                        size="small"
-                                        color="primary"
-                                        variant="outlined"
-                                    />
-                                </Box>
-
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            checked={item.branch_availability !== undefined ? item.branch_availability : item.is_available}
-                                            onChange={(e) => handleAvailabilityChange(item.id, e.target.checked)}
-                                            color="success"
-                                        />
-                                    }
-                                    label={
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            {item.branch_availability !== undefined ? item.branch_availability : item.is_available ? (
-                                                <AvailableIcon fontSize="small" color="success" />
-                                            ) : (
-                                                <UnavailableIcon fontSize="small" color="error" />
-                                            )}
-                                            <Typography variant="body2">
-                                                {item.branch_availability !== undefined ? item.branch_availability : item.is_available ? 
-                                                    'Available' : 'Unavailable'}
-                                            </Typography>
-                                        </Box>
-                                    }
-                                />
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                ))}
-            </Grid>
-
-            <Dialog 
-                open={editDialogOpen} 
-                onClose={handleEditClose}
-                fullWidth
-                maxWidth="sm"
-            >
-                <DialogTitle>
-                    Edit Menu Item
-                </DialogTitle>
-                {editItem && (
-                    <DialogContent>
-                        <Box sx={{ mt: 2 }}>
-                            <Typography variant="subtitle1" gutterBottom>
-                                {editItem.name}
-                            </Typography>
-                            
-                            <TextField
-                                fullWidth
-                                label="Price"
-                                type="number"
-                                value={editItem.branch_price}
-                                onChange={(e) => setEditItem({...editItem, branch_price: e.target.value})}
-                                InputProps={{
-                                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                                }}
-                                sx={{ mt: 2 }}
-                            />
-
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        checked={editItem.branch_availability}
-                                        onChange={(e) => setEditItem({...editItem, branch_availability: e.target.checked})}
-                                        color="success"
-                                    />
-                                }
-                                label="Available at this branch"
-                                sx={{ mt: 2 }}
-                            />
-                        </Box>
-                    </DialogContent>
-                )}
-                <DialogActions>
-                    <Button onClick={handleEditClose}>Cancel</Button>
-                    <Button 
-                        onClick={handleEditSave}
-                        variant="contained"
-                    >
-                        Save Changes
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </Box>
+        <>
+            <ManagementPageHeader eyebrow="Branch operations" title="Branch menu" description="Control local pricing and availability for this branch." />
+            {error && <ManagementAlert onClose={() => setError(null)}>{error}</ManagementAlert>}
+            {success && <ManagementAlert tone="success" onClose={() => setSuccess('')}>{success}</ManagementAlert>}
+            <ManagementCard className="mb-4 p-4"><div className="flex flex-wrap gap-3"><div className="relative min-w-[240px] flex-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" /><input className="management-input h-9 w-full rounded-md pl-9 pr-3 text-sm" placeholder="Search menu items..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} /></div><div className="flex items-center gap-2"><Filter className="h-4 w-4 text-slate-500" /><select className="management-input h-9 rounded-md px-3 text-sm" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>{categories.map(category => <option key={category}>{category}</option>)}</select></div></div></ManagementCard>
+            <div className="grid gap-4 xl:grid-cols-2">{filteredItems.map(item => {
+                const available = item.branch_availability !== undefined ? item.branch_availability : item.is_available;
+                return <ManagementCard key={item.id} className="overflow-hidden"><div className="flex gap-4 p-4"><div className="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-slate-800">{item.image_url ? <img src={item.image_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xs text-slate-600">No image</div>}</div><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><div><h2 className="font-medium text-slate-100">{item.name}</h2><p className="mt-1 line-clamp-2 text-xs text-slate-500">{item.description}</p></div><ManagementButton variant="ghost" size="sm" onClick={() => handleEditOpen(item)}><Edit2 className="h-4 w-4" /></ManagementButton></div><div className="mt-3 flex items-center justify-between gap-2"><div className="flex items-center gap-2"><span className="font-semibold text-indigo-300">${Number(item.branch_price || item.price).toFixed(2)}</span><ManagementBadge>{item.category}</ManagementBadge></div><label className="flex cursor-pointer items-center gap-2 text-xs text-slate-400"><input type="checkbox" className="h-4 w-4 accent-indigo-500" checked={available} onChange={e => handleAvailabilityChange(item.id, e.target.checked)} />{available ? <><CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> Available</> : <><XCircle className="h-3.5 w-3.5 text-red-400" /> Unavailable</>}</label></div></div></div></ManagementCard>;
+            })}</div>
+            {filteredItems.length === 0 && <ManagementCard className="p-12 text-center text-sm text-slate-500">No matching menu items found.</ManagementCard>}
+            {editItem && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true"><div className="management-card w-full max-w-md"><div className="border-b border-[#202832] px-6 py-4"><h2 className="text-lg font-semibold text-slate-50">Edit menu item</h2><p className="mt-1 text-sm text-slate-500">{editItem.name}</p></div><div className="space-y-5 p-6"><label className="block space-y-1.5"><span className="text-sm font-medium text-slate-300">Branch price</span><input className="management-input h-10 w-full rounded-md px-3 text-sm" type="number" step="0.01" value={editItem.branch_price} onChange={e => setEditItem({ ...editItem, branch_price: e.target.value })} /></label><label className="flex items-center gap-3 text-sm text-slate-300"><input type="checkbox" className="h-4 w-4 accent-indigo-500" checked={editItem.branch_availability} onChange={e => setEditItem({ ...editItem, branch_availability: e.target.checked })} /> Available at this branch</label></div><div className="flex justify-end gap-2 border-t border-[#202832] px-6 py-4"><ManagementButton variant="outline" onClick={() => setEditItem(null)}>Cancel</ManagementButton><ManagementButton onClick={saveItem}>Save changes</ManagementButton></div></div></div>}
+        </>
     );
 };
-
 export default BranchMenu;

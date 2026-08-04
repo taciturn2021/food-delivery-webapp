@@ -260,18 +260,19 @@ const initializeDatabase = async () => {
         );
 
         if (existingAdmin.rows.length > 0) {
-            // Delete existing admin's password
+            // Update the existing row in place so foreign-key references remain valid
             await client.query(
-                'DELETE FROM users WHERE username = $1',
-                ['admin']
+                'UPDATE users SET email = $2, password = $3, role = $4 WHERE username = $1',
+                ['admin', email, hashedPassword, 'admin']
             );
-            console.log('Deleted existing admin user password');
-        } 
+            console.log('Updated default admin user');
+        } else {
             await client.query(
-                'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, email, role',
+                'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4)',
                 ['admin', email, hashedPassword, 'admin']
             );
             console.log('Created new admin user');
+        }
         
 
         

@@ -87,32 +87,49 @@ npm install
 
 3. Set up environment variables:
 ```bash
-# Create .env file in the backend directory
+# Create the backend environment file from the example
 cd backend
 cp .env.example .env
 
-# Fill in required environment variables:
-# - Database credentials
-# - JWT secret
-# - API keys
+# Set the supplied database credentials in backend/.env.
+# For local development use:
+#   PORT=5001
+#   NODE_ENV=development
+#   FRONTEND_URL=http://localhost:3000
+
+# Configure the web frontend
+cd ../frontend
+cp .env.example .env
+# VITE_API_URL=http://localhost:5001/fooddelivery/api
+# VITE_PORT=3000
+
+# Configure the rider app
+cd ../riderApp
+cp .env.example .env
+# API_BASE_URL=http://localhost:5001/fooddelivery/api
 ```
 
 4. Start the applications:
 ```bash
-# Start backend server
+# Start the backend server (terminal 1)
 cd backend
 npm run dev
 
-# Start frontend application (in a new terminal)
+# Start the frontend application (terminal 2)
 cd frontend
 npm run dev
 
-# For rider app development
+# For rider app development (terminal 3)
 cd riderApp
 npm start
 ```
 
 Note: The database tables will be automatically initialized on first startup of the backend server.
+
+The web app is available at `http://localhost:3000` and the backend API at
+`http://localhost:5001/fooddelivery/api`. If the rider app runs on a physical
+device, replace `localhost` in `riderApp/.env` with the development machine's
+LAN IP. For an Android emulator, use `http://10.0.2.2:5001/fooddelivery/api`.
 
 
 ## 👥 User Roles

@@ -1,367 +1,114 @@
-import React, { useState, useEffect } from 'react';
-import {
-    Box,
-    Paper,
-    Typography,
-    Button,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    TextField,
-    IconButton,
-    Chip,
-    Grid,
-    Tabs,
-    Tab,
-} from '@mui/material';
-import {
-    Add as AddIcon,
-    Edit as EditIcon,
-    Delete as DeleteIcon,
-} from '@mui/icons-material';
+import React, { useEffect, useState } from 'react';
+import { Edit2, MapPin, Plus, Trash2 } from 'lucide-react';
 import { getAllBranches, createBranch, updateBranch, deleteBranch } from '../../../services/api';
 import MapLocationPicker from '../../../components/common/MapLocationPicker';
+import { ManagementAlert, ManagementBadge, ManagementButton, ManagementCard, ManagementPageHeader } from '../../../components/management/ManagementPrimitives';
 
-const TabPanel = ({ children, value, index }) => (
-    <div hidden={value !== index} style={{ display: value === index ? 'block' : 'none' }}>
-        {value === index && children}
-    </div>
-);
+const emptyForm = { name: '', address: '', phone: '', status: 'active', managerName: '', managerEmail: '', managerPassword: '', openingTime: '09:00', closingTime: '22:00', location: null };
 
 const BranchManagement = () => {
     const [branches, setBranches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [formData, setFormData] = useState({
-        name: '',
-        address: '',
-        phone: '',
-        status: 'active',
-        managerName: '',
-        managerEmail: '',
-        managerPassword: '',
-        location: null
-    });
+    const [formData, setFormData] = useState(emptyForm);
     const [editingId, setEditingId] = useState(null);
     const [open, setOpen] = useState(false);
     const [activeTab, setActiveTab] = useState(0);
 
-    useEffect(() => {
-        loadBranches();
-    }, []);
-
+    useEffect(() => { loadBranches(); }, []);
     const loadBranches = async () => {
-        try {
-            const response = await getAllBranches();
-            setBranches(response.data);
-        } catch (error) {
-            setError('Failed to load branches');
-        } finally {
-            setLoading(false);
-        }
+        try { const response = await getAllBranches(); setBranches(response.data); }
+        catch (err) { setError('Failed to load branches'); }
+        finally { setLoading(false); }
     };
-
-    const handleLocationChange = (location) => {
-        setFormData({
-            ...formData,
-            location
-        });
-    };
-
+    const resetForm = () => { setFormData(emptyForm); setEditingId(null); setActiveTab(0); };
     const handleOpen = (branch = null) => {
         if (branch) {
             setFormData({
-                name: branch.name,
-                address: branch.address,
-                phone: branch.phone,
-                status: branch.status,
-                location: branch.latitude && branch.longitude ? {
-                    lat: parseFloat(branch.latitude),
-                    lng: parseFloat(branch.longitude)
-                } : null,
-                managerName: branch.manager_name || '',
-                managerEmail: branch.manager_email || '',
-                managerPassword: ''
+                name: branch.name || '', address: branch.address || '', phone: branch.phone || '', status: branch.status || 'active',
+                location: branch.latitude && branch.longitude ? { lat: parseFloat(branch.latitude), lng: parseFloat(branch.longitude) } : null,
+                managerName: branch.manager_name || '', managerEmail: branch.manager_email || '', managerPassword: '',
+                openingTime: branch.opening_time?.slice(0, 5) || '09:00', closingTime: branch.closing_time?.slice(0, 5) || '22:00'
             });
             setEditingId(branch.id);
-        } else {
-            resetForm();
-        }
+        } else resetForm();
         setOpen(true);
-        setActiveTab(0);
-    };    const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        // Check if manager details are provided when creating a new branch
+    };
+    const handleClose = () => { resetForm(); setOpen(false); };
+    const handleSubmit = async (event) => {
+        event.preventDefault();
         if (!editingId && (!formData.managerName || !formData.managerEmail || !formData.managerPassword)) {
             setError('Branch manager details are required when creating a new branch');
-            setActiveTab(1); // Switch to manager tab to highlight the required fields
+            setActiveTab(1);
             return;
         }
-        
         try {
             if (editingId) {
                 const updateData = {
-                    name: formData.name,
-                    address: formData.address,
-                    phone: formData.phone,
-                    status: formData.status,
-                    latitude: formData.location?.lat,
-                    longitude: formData.location?.lng,
-                    manager_name: formData.managerName,
-                    manager_email: formData.managerEmail
+                    name: formData.name, address: formData.address, phone: formData.phone, status: formData.status,
+                    latitude: formData.location?.lat, longitude: formData.location?.lng,
+                    manager_name: formData.managerName, manager_email: formData.managerEmail
                 };
-    
-                // Only include password if it's provided (for password update)
-                if (formData.managerPassword && formData.managerPassword.trim() !== '') {
-                    updateData.manager_password = formData.managerPassword;
-                }
-    
+                if (formData.managerPassword?.trim()) updateData.manager_password = formData.managerPassword;
                 await updateBranch(editingId, updateData);
             } else {
-                await createBranch({
-                    ...formData,
-                    latitude: formData.location?.lat,
-                    longitude: formData.location?.lng
-                });
+                await createBranch({ ...formData, latitude: formData.location?.lat, longitude: formData.location?.lng });
             }
-            loadBranches();
+            await loadBranches();
             handleClose();
-        } catch (error) {
-            setError(error.response?.data?.message || 'Error saving branch');
-        }
+        } catch (err) { setError(err.response?.data?.message || 'Error saving branch'); }
     };
-
-    const handleClose = () => {
-        resetForm();
-        setOpen(false);
-    };
-
     const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to delete this branch?')) {
-            try {
-                await deleteBranch(id);
-                loadBranches();
-            } catch (error) {
-                setError('Failed to delete branch');
-            }
-        }
+        if (!window.confirm('Are you sure you want to delete this branch?')) return;
+        try { await deleteBranch(id); loadBranches(); } catch (err) { setError('Failed to delete branch'); }
     };
 
-    const resetForm = () => {
-        setFormData({
-            name: '',
-            address: '',
-            phone: '',
-            status: 'active',
-            managerName: '',
-            managerEmail: '',
-            managerPassword: '',
-            location: null
-        });
-        setEditingId(null);
-        setActiveTab(0);
-    };
-
-    if (loading) return <div>Loading...</div>;
-    if (error) return <div>Error: {error}</div>;
-
+    if (loading) return <div className="py-16 text-center text-sm text-slate-400">Loading branches...</div>;
     return (
-        <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h4">Branch Management</Typography>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => handleOpen()}
-                >
-                    Add New Branch
-                </Button>
-            </Box>
-
-            <TableContainer component={Paper}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Name</TableCell>
-                            <TableCell>Address</TableCell>
-                            <TableCell>Phone</TableCell>
-                            <TableCell>Status</TableCell>
-                            <TableCell>Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {branches.map((branch) => (
-                            <TableRow key={branch.id}>
-                                <TableCell>{branch.name}</TableCell>
-                                <TableCell>{branch.address}</TableCell>
-                                <TableCell>{branch.phone}</TableCell>
-                                <TableCell>
-                                    <Chip
-                                        label={branch.status}
-                                        color={branch.status === 'active' ? 'success' : 'default'}
-                                        size="small"
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <IconButton
-                                        size="small"
-                                        onClick={() => handleOpen(branch)}
-                                    >
-                                        <EditIcon />
-                                    </IconButton>
-                                    <IconButton
-                                        size="small"
-                                        color="error"
-                                        onClick={() => handleDelete(branch.id)}
-                                    >
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <Dialog 
-                open={open} 
-                onClose={handleClose} 
-                maxWidth="md" 
-                fullWidth
-            >
-                <DialogTitle>
-                    {editingId ? 'Edit Branch' : 'Add New Branch'}
-                </DialogTitle>
-                <DialogContent>
-                    <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-                        <Tabs value={activeTab} onChange={(e, v) => setActiveTab(v)}>
-                            <Tab label="Branch Info" />
-                            <Tab label="Manager Account" />
-                        </Tabs>
-                    </Box>
-
-                    <Box component="form" onSubmit={handleSubmit}>
-                        <TabPanel value={activeTab} index={0}>
-                            <Grid container spacing={2}>
-                                <Grid item xs={12}>
-                                    <TextField
-                                        fullWidth
-                                        label="Branch Name"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                        required
-                                    />
-                                </Grid>
-                                <Grid item xs={12}>
-                                    <TextField
-                                        fullWidth
-                                        label="Address"
-                                        value={formData.address}
-                                        onChange={(e) => setFormData({...formData, address: e.target.value})}
-                                        required
-                                    />
-                                </Grid>
-                                <Grid item xs={12}>
-                                    <TextField
-                                        fullWidth
-                                        label="Phone Number"
-                                        value={formData.phone}
-                                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                                        required
-                                    />
-                                </Grid>
-                                <Grid item xs={6}>
-                                    <TextField
-                                        label="Opening Time"
-                                        type="time"
-                                        value={formData.openingTime || '09:00'}
-                                        InputLabelProps={{ shrink: true }}
-                                        onChange={(e) => setFormData({...formData, openingTime: e.target.value})}
-                                        required
-                                        fullWidth
-                                    />
-                                </Grid>
-                                <Grid item xs={6}>
-                                    <TextField
-                                        label="Closing Time"
-                                        type="time"
-                                        value={formData.closingTime || '22:00'}
-                                        InputLabelProps={{ shrink: true }}
-                                        onChange={(e) => setFormData({...formData, closingTime: e.target.value})}
-                                        required
-                                        fullWidth
-                                    />
-                                </Grid>
-                                <Grid item xs={12}>
-                                    <Typography variant="subtitle1" gutterBottom>
-                                        Branch Location (Click on map to set location)
-                                    </Typography>
-                                    <MapLocationPicker
-                                        location={formData.location}
-                                        onLocationChange={handleLocationChange}
-                                    />
-                                </Grid>
-                            </Grid>
-                        </TabPanel>
-
-                        <TabPanel value={activeTab} index={1}>
-                            <Grid container spacing={2}>
-                                <Grid item xs={12}>
-                                    <TextField
-                                        fullWidth
-                                        label="Manager Name"
-                                        value={formData.managerName}
-                                        onChange={(e) => setFormData({...formData, managerName: e.target.value})}
-                                        required={!editingId}
-                                    />
-                                </Grid>
-                                <Grid item xs={12}>
-                                    <TextField
-                                        fullWidth
-                                        type="email"
-                                        label="Manager Email"
-                                        value={formData.managerEmail}
-                                        onChange={(e) => setFormData({...formData, managerEmail: e.target.value})}
-                                        required={!editingId}
-                                    />
-                                </Grid>
-                                <Grid item xs={12}>
-                                    <TextField
-                                        fullWidth
-                                        type="password"
-                                        label="Manager Password"
-                                        value={formData.managerPassword}
-                                        onChange={(e) => setFormData({...formData, managerPassword: e.target.value})}
-                                        required={!editingId}
-                                        helperText={editingId ? 'Leave blank to keep current password' : 'Enter password for new manager'}
-                                    />
-                                </Grid>
-                            </Grid>
-                        </TabPanel>
-                    </Box>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClose}>Cancel</Button>
-                    <Button 
-                        type="submit" 
-                        variant="contained" 
-                        onClick={handleSubmit}
-                        disabled={!formData.location}
-                    >
-                        {editingId ? 'Save Changes' : 'Create Branch'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </Box>
+        <>
+            <ManagementPageHeader eyebrow="Locations" title="Branch management" description="Manage locations, operating details, and branch manager accounts." actions={<ManagementButton onClick={() => handleOpen()}><Plus className="h-4 w-4" /> Add new branch</ManagementButton>} />
+            {error && <ManagementAlert onClose={() => setError(null)}>{error}</ManagementAlert>}
+            <ManagementCard className="overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="management-table w-full min-w-[760px] text-left text-sm">
+                        <thead><tr><th className="px-5 py-3">Branch</th><th className="px-5 py-3">Address</th><th className="px-5 py-3">Phone</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th></tr></thead>
+                        <tbody>{branches.map(branch => <tr key={branch.id} className="text-slate-300">
+                            <td className="px-5 py-4"><p className="font-medium text-slate-100">{branch.name}</p><p className="mt-1 flex items-center gap-1 text-xs text-slate-500"><MapPin className="h-3 w-3" /> {branch.manager_name || 'No manager assigned'}</p></td>
+                            <td className="max-w-xs truncate px-5 py-4 text-slate-400">{branch.address}</td><td className="px-5 py-4">{branch.phone}</td>
+                            <td className="px-5 py-4"><ManagementBadge tone={branch.status === 'active' ? 'success' : 'neutral'}>{branch.status}</ManagementBadge></td>
+                            <td className="px-5 py-4"><div className="flex justify-end gap-1"><ManagementButton variant="ghost" size="sm" onClick={() => handleOpen(branch)} aria-label={`Edit ${branch.name}`}><Edit2 className="h-4 w-4" /></ManagementButton><ManagementButton variant="ghost" size="sm" className="text-red-300 hover:bg-red-500/10" onClick={() => handleDelete(branch.id)} aria-label={`Delete ${branch.name}`}><Trash2 className="h-4 w-4" /></ManagementButton></div></td>
+                        </tr>)}</tbody>
+                    </table>
+                </div>
+                {branches.length === 0 && <div className="px-5 py-12 text-center text-sm text-slate-500">No branches found.</div>}
+            </ManagementCard>
+            {open && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true">
+                <div className="management-card max-h-[90vh] w-full max-w-3xl overflow-y-auto shadow-2xl">
+                    <div className="border-b border-[#202832] px-6 py-4"><h2 className="text-lg font-semibold text-slate-50">{editingId ? 'Edit branch' : 'Add new branch'}</h2></div>
+                    <div className="flex border-b border-[#202832] px-6"><button type="button" onClick={() => setActiveTab(0)} className={`border-b-2 px-4 py-3 text-sm ${activeTab === 0 ? 'border-indigo-400 text-indigo-300' : 'border-transparent text-slate-500'}`}>Branch info</button><button type="button" onClick={() => setActiveTab(1)} className={`border-b-2 px-4 py-3 text-sm ${activeTab === 1 ? 'border-indigo-400 text-indigo-300' : 'border-transparent text-slate-500'}`}>Manager account</button></div>
+                    <form onSubmit={handleSubmit}>
+                        <div className="space-y-5 p-6">
+                            {activeTab === 0 ? <div className="grid gap-4 sm:grid-cols-2">
+                                <Field label="Branch name" value={formData.name} onChange={v => setFormData({ ...formData, name: v })} required />
+                                <Field label="Phone number" value={formData.phone} onChange={v => setFormData({ ...formData, phone: v })} required />
+                                <Field label="Address" className="sm:col-span-2" value={formData.address} onChange={v => setFormData({ ...formData, address: v })} required />
+                                <Field label="Opening time" type="time" value={formData.openingTime} onChange={v => setFormData({ ...formData, openingTime: v })} required />
+                                <Field label="Closing time" type="time" value={formData.closingTime} onChange={v => setFormData({ ...formData, closingTime: v })} required />
+                                <label className="space-y-1.5 sm:col-span-2"><span className="text-sm font-medium text-slate-300">Status</span><select className="management-input h-10 w-full rounded-md px-3 text-sm" value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+                                <div className="sm:col-span-2"><p className="mb-2 text-sm font-medium text-slate-300">Branch location <span className="text-slate-500">(click map to set)</span></p><div className="overflow-hidden rounded-md"><MapLocationPicker location={formData.location} onLocationChange={location => setFormData({ ...formData, location })} /></div></div>
+                            </div> : <div className="grid gap-4">
+                                <Field label="Manager name" value={formData.managerName} onChange={v => setFormData({ ...formData, managerName: v })} required={!editingId} />
+                                <Field label="Manager email" type="email" value={formData.managerEmail} onChange={v => setFormData({ ...formData, managerEmail: v })} required={!editingId} />
+                                <Field label="Manager password" type="password" value={formData.managerPassword} onChange={v => setFormData({ ...formData, managerPassword: v })} required={!editingId} hint={editingId ? 'Leave blank to keep current password.' : 'Enter a password for the new manager.'} />
+                            </div>}
+                        </div>
+                        <div className="flex justify-end gap-2 border-t border-[#202832] px-6 py-4"><ManagementButton type="button" variant="outline" onClick={handleClose}>Cancel</ManagementButton><ManagementButton type="submit" disabled={!formData.location}>{editingId ? 'Save changes' : 'Create branch'}</ManagementButton></div>
+                    </form>
+                </div>
+            </div>}
+        </>
     );
 };
 
+const Field = ({ label, value, onChange, hint, className = '', ...props }) => <label className={`block space-y-1.5 ${className}`}><span className="text-sm font-medium text-slate-300">{label}</span><input className="management-input h-10 w-full rounded-md px-3 text-sm" value={value} onChange={e => onChange(e.target.value)} {...props} />{hint && <span className="text-xs text-slate-500">{hint}</span>}</label>;
 export default BranchManagement;

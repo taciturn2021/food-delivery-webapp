@@ -1,0 +1,13 @@
+<svg width="800" height="560" viewBox="0 0 800 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="560" fill="#F6EACB"/>
+  <circle cx="672" cy="98" r="142" fill="#ECD79E"/>
+  <circle cx="107" cy="466" r="180" fill="#F0DDAF"/>
+  <path d="M400 159C505 159 587 211 587 275C587 340 505 391 400 391C295 391 213 340 213 275C213 211 295 159 400 159Z" fill="#E76543"/>
+  <path d="M226 269C235 355 310 416 400 416C490 416 565 355 574 269C536 301 474 318 400 318C326 318 264 301 226 269Z" fill="#BD4931"/>
+  <circle cx="329" cy="252" r="21" fill="#FFF8E9"/>
+  <circle cx="397" cy="225" r="21" fill="#6F8972"/>
+  <circle cx="469" cy="258" r="21" fill="#D9A441"/>
+  <path d="M255 153C297 126 337 121 370 139" stroke="#6F8972" stroke-width="14" stroke-linecap="round"/>
+  <path d="M430 139C466 119 511 128 544 157" stroke="#E76543" stroke-width="14" stroke-linecap="round"/>
+  <text x="400" y="505" text-anchor="middle" fill="#202522" font-family="Arial, sans-serif" font-size="22" font-weight="700">Shareable plate</text>
+</svg>

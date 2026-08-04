@@ -93,16 +93,17 @@ const AddressForm = ({ address, onSubmit, onClose, branches }) => {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[725px]">
+      <DialogContent className="customer-surface max-h-[90vh] w-[min(94vw,46rem)] overflow-y-auto border border-[var(--customer-line)] bg-[var(--customer-surface)] p-5 text-[var(--customer-ink)] sm:p-7">
         <DialogHeader>
-          <DialogTitle>{address ? 'Edit Address' : 'Add New Address'}</DialogTitle>
+          <DialogTitle className="text-2xl font-black tracking-[-0.05em]">{address ? 'Edit address' : 'Add a delivery address'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="col-span-2">
                 <Input
-                  placeholder="Street Address"
+                  placeholder="Street address"
+                  className="border-[var(--customer-line)] bg-[var(--customer-soft)] text-[var(--customer-ink)] focus:border-[var(--customer-coral)]"
                   value={formData.street}
                   onChange={(e) => setFormData(prev => ({ ...prev, street: e.target.value }))}
                   required
@@ -111,6 +112,7 @@ const AddressForm = ({ address, onSubmit, onClose, branches }) => {
               <div>
                 <Input
                   placeholder="City"
+                  className="border-[var(--customer-line)] bg-[var(--customer-soft)] text-[var(--customer-ink)] focus:border-[var(--customer-coral)]"
                   value={formData.city}
                   onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
                   required
@@ -119,6 +121,7 @@ const AddressForm = ({ address, onSubmit, onClose, branches }) => {
               <div>
                 <Input
                   placeholder="State"
+                  className="border-[var(--customer-line)] bg-[var(--customer-soft)] text-[var(--customer-ink)] focus:border-[var(--customer-coral)]"
                   value={formData.state}
                   onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
                   required
@@ -126,7 +129,8 @@ const AddressForm = ({ address, onSubmit, onClose, branches }) => {
               </div>
               <div>
                 <Input
-                  placeholder="ZIP Code"
+                  placeholder="ZIP code"
+                  className="border-[var(--customer-line)] bg-[var(--customer-soft)] text-[var(--customer-ink)] focus:border-[var(--customer-coral)]"
                   value={formData.zipCode}
                   onChange={(e) => setFormData(prev => ({ ...prev, zipCode: e.target.value }))}
                   required
@@ -137,10 +141,10 @@ const AddressForm = ({ address, onSubmit, onClose, branches }) => {
                   value={formData.branchId?.toString() || undefined}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, branchId: parseInt(value) }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="border-[var(--customer-line)] bg-[var(--customer-soft)] text-[var(--customer-ink)] focus:border-[var(--customer-coral)]">
                     <SelectValue placeholder="Select Branch" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="border-[var(--customer-line)] bg-[var(--customer-surface)] text-[var(--customer-ink)]">
                     {branches.map(branch => (
                       <SelectItem key={branch.id} value={branch.id.toString()}>
                         {branch.name} - {branch.address}
@@ -152,11 +156,12 @@ const AddressForm = ({ address, onSubmit, onClose, branches }) => {
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium">Mark your location on the map</span>
+              <span className="text-sm font-semibold">Mark your location on the map</span>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
+                className="border-[var(--customer-line)] bg-[var(--customer-soft)] text-[var(--customer-ink)] hover:bg-[var(--customer-soft-hover)] hover:text-[var(--customer-ink)]"
                 onClick={getUserLocation}
                 disabled={locationLoading}
               >
@@ -169,10 +174,10 @@ const AddressForm = ({ address, onSubmit, onClose, branches }) => {
               </Button>
             </div>
 
-            <div className="relative h-[300px] w-full">
+            <div className="relative h-[300px] w-full overflow-hidden rounded-2xl border border-[var(--customer-line)]">
               {locationLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-50">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <div className="absolute inset-0 flex items-center justify-center bg-[var(--customer-paper)]/80 z-50">
+                  <Loader2 className="h-8 w-8 animate-spin text-[var(--customer-coral)]" />
                 </div>
               )}
               <MapContainer
@@ -194,10 +199,10 @@ const AddressForm = ({ address, onSubmit, onClose, branches }) => {
             )}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" className="border-[var(--customer-line)] bg-[var(--customer-soft)] text-[var(--customer-ink)] hover:bg-[var(--customer-soft-hover)] hover:text-[var(--customer-ink)]" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">
+            <Button type="submit" className="bg-[var(--customer-coral)] text-white hover:bg-[var(--customer-coral-dark)]">
               {address ? 'Update' : 'Add'} Address
             </Button>
           </DialogFooter>

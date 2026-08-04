@@ -1,253 +1,38 @@
 import React from 'react';
-import {
-    Box,
-    Grid,
-    Card,
-    CardContent,
-    Typography,
-    LinearProgress,
-    Button,
-    useTheme,
-} from '@mui/material';
-import {
-    ShoppingCart as OrderIcon,
-    AccessTime as TimeIcon,
-    AttachMoney as MoneyIcon,
-    LocalShipping as DeliveryIcon,
-    Restaurant as MenuIcon,
-} from '@mui/icons-material';
-
-const StatCard = ({ title, value, subtext, icon, color }) => {
-    const theme = useTheme();
-    
-    return (
-        <Card 
-            sx={{ 
-                height: '100%',
-                transition: 'transform 0.2s',
-                '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: theme.shadows[4]
-                }
-            }}
-        >
-            <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 3 }}>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: 48,
-                            height: 48,
-                            borderRadius: 2,
-                            bgcolor: `${color}.lighter`,
-                            color: `${color}.main`,
-                        }}
-                    >
-                        {icon}
-                    </Box>
-                </Box>
-
-                <Typography variant="h6" color="text.secondary" gutterBottom>
-                    {title}
-                </Typography>
-                
-                <Typography variant="h4" sx={{ mb: 1 }}>
-                    {value}
-                </Typography>
-
-                {subtext && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        {subtext}
-                    </Typography>
-                )}
-            </CardContent>
-        </Card>
-    );
-};
-
-const OrderProgress = ({ title, value, total, color }) => (
-    <Box sx={{ mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-                {title}
-            </Typography>
-            <Typography variant="body2" color="text.primary">
-                {value}
-            </Typography>
-        </Box>
-        <LinearProgress
-            variant="determinate"
-            value={value > 0 ? (value / (total || 1)) * 100 : 0}
-            sx={{
-                height: 8,
-                borderRadius: 4,
-                bgcolor: `${color}.lighter`,
-                '& .MuiLinearProgress-bar': {
-                    bgcolor: `${color}.main`,
-                    borderRadius: 4,
-                },
-            }}
-        />
-    </Box>
-);
+import { ClipboardList, Clock3, DollarSign, Bike, Utensils } from 'lucide-react';
+import { ManagementButton, ManagementCard, ManagementPageHeader, ManagementStat } from '../../../components/management/ManagementPrimitives';
 
 const BranchOverview = ({ orders = [], onSectionChange }) => {
-    // Filter orders for today's date only
-    const todayOrders = orders.filter(order => {
-        const orderDate = new Date(order.created_at);
-        const today = new Date();
-        return orderDate.toDateString() === today.toDateString();
-    });
-
-    // Calculate statistics from today's orders
-    const orderStats = todayOrders.reduce((acc, order) => {
-        // Count orders by status
+    const todayOrders = orders.filter(order => new Date(order.created_at).toDateString() === new Date().toDateString());
+    const stats = todayOrders.reduce((acc, order) => {
         acc[order.status] = (acc[order.status] || 0) + 1;
-        
-        // Sum up revenue only from today's orders
-        if (!['cancelled'].includes(order.status)) {
-            acc.totalRevenue += parseFloat(order.total || 0);
-        }
+        if (order.status !== 'cancelled') acc.totalRevenue += parseFloat(order.total || 0);
         return acc;
-    }, {
-        pending: 0,
-        preparing: 0,
-        delivering: 0,
-        totalRevenue: 0
-    });
-
-    const orderStatuses = [
-        { 
-            title: 'Orders Pending',
-            value: orderStats.pending, 
-            color: 'warning' 
-        },
-        { 
-            title: 'Orders Preparing', 
-            value: orderStats.preparing, 
-            color: 'info' 
-        },
-        { 
-            title: 'Orders Delivering', 
-            value: orderStats.delivering, 
-            color: 'success' 
-        }
+    }, { pending: 0, preparing: 0, delivering: 0, totalRevenue: 0 });
+    const active = stats.pending + stats.preparing + stats.delivering;
+    const statuses = [
+        ['Orders pending', stats.pending, 'amber'],
+        ['Orders preparing', stats.preparing, 'sky'],
+        ['Orders delivering', stats.delivering, 'emerald']
     ];
 
-    const totalActiveOrders = orderStats.pending + orderStats.preparing + orderStats.delivering;
-
     return (
-        <Box sx={{ py: 3 }}>
-            <Typography variant="h4" sx={{ mb: 4 }}>
-                Branch Overview
-            </Typography>
-
-            <Grid container spacing={3}>
-                <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                        title="Active Orders"
-                        value={totalActiveOrders}
-                        subtext={`${orderStats.pending} pending approval`}
-                        icon={<OrderIcon />}
-                        color="primary"
-                    />
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                        title="Orders Preparing"
-                        value={orderStats.preparing}
-                        subtext="In kitchen"
-                        icon={<TimeIcon />}
-                        color="info"
-                    />
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                        title="Today's Revenue"
-                        value={`$${orderStats.totalRevenue.toFixed(2)}`}
-                        subtext="From all orders"
-                        icon={<MoneyIcon />}
-                        color="warning"
-                    />
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                        title="Active Deliveries"
-                        value={orderStats.delivering}
-                        subtext="In transit"
-                        icon={<DeliveryIcon />}
-                        color="success"
-                    />
-                </Grid>
-
-                <Grid item xs={12}>
-                    <Card sx={{ height: '100%' }}>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                                <Typography variant="h6">
-                                    Order Status Overview
-                                </Typography>
-                                <Button 
-                                    size="small" 
-                                    onClick={() => onSectionChange('orders')}
-                                >
-                                    View All Orders
-                                </Button>
-                            </Box>
-                            
-                            {orderStatuses.map((status, index) => (
-                                <OrderProgress
-                                    key={index}
-                                    title={status.title}
-                                    value={status.value}
-                                    total={Math.max(totalActiveOrders, 1)}
-                                    color={status.color}
-                                />
-                            ))}
-                        </CardContent>
-                    </Card>
-                </Grid>
-
-                <Grid item xs={12}>
-                    <Card sx={{ height: '100%' }}>
-                        <CardContent>
-                            <Typography variant="h6" gutterBottom>
-                                Quick Actions
-                            </Typography>
-                            <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
-                                <Button
-                                    variant="contained"
-                                    startIcon={<OrderIcon />}
-                                    onClick={() => onSectionChange('orders')}
-                                >
-                                    Manage Orders
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    startIcon={<MenuIcon />}
-                                    onClick={() => onSectionChange('menu')}
-                                >
-                                    Update Menu
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    startIcon={<DeliveryIcon />}
-                                    onClick={() => onSectionChange('riders')}
-                                >
-                                    Manage Delivery Staff
-                                </Button>
-                            </Box>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
-        </Box>
+        <>
+            <ManagementPageHeader eyebrow="Operations" title="Branch overview" description="A live snapshot of today's order activity." />
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <ManagementStat label="Active orders" value={active} detail={`${stats.pending} pending approval`} icon={<ClipboardList className="h-4 w-4" />} />
+                <ManagementStat label="Orders preparing" value={stats.preparing} detail="In kitchen" icon={<Clock3 className="h-4 w-4" />} tone="sky" />
+                <ManagementStat label="Today's revenue" value={`$${stats.totalRevenue.toFixed(2)}`} detail="From all orders" icon={<DollarSign className="h-4 w-4" />} tone="amber" />
+                <ManagementStat label="Active deliveries" value={stats.delivering} detail="In transit" icon={<Bike className="h-4 w-4" />} tone="emerald" />
+            </div>
+            <div className="mt-4 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+                <ManagementCard className="p-5">
+                    <div className="flex items-center justify-between"><div><h2 className="text-sm font-semibold text-slate-100">Order status overview</h2><p className="mt-1 text-xs text-slate-500">Current workload by stage.</p></div><ManagementButton variant="outline" size="sm" onClick={() => onSectionChange('orders')}>View all orders</ManagementButton></div>
+                    <div className="mt-6 space-y-5">{statuses.map(([label, value, tone]) => <div key={label}><div className="mb-2 flex justify-between text-sm"><span className="text-slate-400">{label}</span><span className="font-medium text-slate-200">{value}</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-800"><div className={`h-full rounded-full ${tone === 'amber' ? 'bg-amber-400' : tone === 'sky' ? 'bg-sky-400' : 'bg-emerald-400'}`} style={{ width: `${value > 0 ? (value / Math.max(active, 1)) * 100 : 0}%` }} /></div></div>)}</div>
+                </ManagementCard>
+                <ManagementCard className="p-5"><h2 className="text-sm font-semibold text-slate-100">Quick actions</h2><p className="mt-1 text-xs text-slate-500">Jump to the operational tools you use most.</p><div className="mt-5 grid gap-2"><ManagementButton onClick={() => onSectionChange('orders')} className="justify-start"><ClipboardList className="h-4 w-4" /> Manage orders</ManagementButton><ManagementButton variant="outline" onClick={() => onSectionChange('menu')} className="justify-start"><Utensils className="h-4 w-4" /> Update menu</ManagementButton><ManagementButton variant="outline" onClick={() => onSectionChange('riders')} className="justify-start"><Bike className="h-4 w-4" /> Manage delivery staff</ManagementButton></div></ManagementCard>
+            </div>
+        </>
     );
 };
-
 export default BranchOverview;

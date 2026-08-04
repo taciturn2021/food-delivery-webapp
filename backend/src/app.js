@@ -4,7 +4,6 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { initializeDatabase } from './config/database.js';
 import cookieParser from 'cookie-parser';
 
 // Routes
@@ -27,8 +26,22 @@ const app = express();
 app.set('trust proxy', 1);
 
 // CORS configuration
+const frontendUrls = (process.env.FRONTEND_URL || 'http://localhost:3000')
+    .split(',')
+    .map((url) => url.trim())
+    .filter(Boolean);
+
 const corsOptions = {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Frontend URL
+    origin: (origin, callback) => {
+        const isDevelopmentTunnel = process.env.NODE_ENV === 'development' &&
+            /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/i.test(origin || '');
+
+        if (!origin || frontendUrls.includes(origin) || isDevelopmentTunnel) {
+            return callback(null, true);
+        }
+
+        return callback(new Error('Origin is not allowed by CORS'));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -39,9 +52,6 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(cookieParser());
-
-// Initialize database
-initializeDatabase().catch(console.error);
 
 // Routes - specific rate limiters are applied in each route file
 app.use('/fooddelivery/api/auth', authRoutes);

@@ -1,0 +1,14 @@
+<svg width="800" height="560" viewBox="0 0 800 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="560" fill="#F6DDE2"/>
+  <circle cx="684" cy="105" r="135" fill="#EDBBC7"/>
+  <circle cx="92" cy="452" r="178" fill="#F0C8D1"/>
+  <path d="M242 267H558L529 431H271L242 267Z" fill="#E76543"/>
+  <path d="M242 267C270 222 327 199 400 199C473 199 530 222 558 267" fill="#FFF8E9"/>
+  <path d="M284 267C306 239 345 226 400 226C455 226 494 239 516 267" stroke="#D9A441" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="337" cy="194" r="25" fill="#E76543"/>
+  <circle cx="400" cy="177" r="27" fill="#BD4931"/>
+  <circle cx="465" cy="196" r="25" fill="#E76543"/>
+  <path d="M400 150V109" stroke="#6F8972" stroke-width="11" stroke-linecap="round"/>
+  <path d="M400 112C380 92 382 75 400 64C419 77 420 94 400 112Z" fill="#6F8972"/>
+  <text x="400" y="505" text-anchor="middle" fill="#202522" font-family="Arial, sans-serif" font-size="22" font-weight="700">Sweet finish</text>
+</svg>

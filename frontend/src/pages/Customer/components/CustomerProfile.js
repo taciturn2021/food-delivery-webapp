@@ -1,214 +1,150 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { ArrowLeft, MapPin, Pencil, Plus, Store, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import { getCustomerAddresses, addAddress, updateAddress, deleteAddress, getPublicBranches } from '../../../services/api';
-import { ArrowLeft, MapPin, Store, PlusCircle, Pencil, Trash2 } from 'lucide-react';
-import { AddressForm } from '../../../components/ui/form-address';
-import { Button } from '../../../components/ui/button';
-import { Card, CardContent } from '../../../components/ui/card';
-import { Alert, AlertDescription } from '../../../components/ui/alert';
+import { addAddress, deleteAddress, getCustomerAddresses, getPublicBranches, updateAddress } from '../../../services/api';
 import CustomerHeader from '../../../components/customer/CustomerHeader';
+import { CustomerEmpty, CustomerError, CustomerLoading } from '../../../components/customer/CustomerStates';
+import { AddressForm } from '../../../components/ui/form-address';
 
 const CustomerProfile = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [addresses, setAddresses] = useState([]);
     const [branches, setBranches] = useState([]);
     const [showAddressForm, setShowAddressForm] = useState(false);
     const [selectedAddress, setSelectedAddress] = useState(null);
-    const [error, setError] = useState('');
-    const [successMessage, setSuccessMessage] = useState('');
-    const { user } = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [notice, setNotice] = useState('');
+
+    const loadData = async () => {
+        try {
+            setLoading(true);
+            const [addressResponse, branchResponse] = await Promise.all([
+                getCustomerAddresses(),
+                getPublicBranches()
+            ]);
+            setAddresses(addressResponse.data);
+            setBranches(branchResponse.data.filter((branch) => branch.status === 'active'));
+            setError(null);
+        } catch (fetchError) {
+            console.error('Error loading customer profile:', fetchError);
+            setError('We could not load your saved addresses.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        loadAddresses();
-        loadBranches();
+        loadData();
     }, []);
 
-    const loadAddresses = async () => {
+    const saveAddress = async (addressData) => {
         try {
-            const response = await getCustomerAddresses();
-            setAddresses(response.data);
-        } catch (error) {
-            setError('Failed to load addresses');
-        }
-    };
-
-    const loadBranches = async () => {
-        try {
-            const response = await getPublicBranches();
-            const activeBranches = response.data.filter(branch => branch.status === 'active');
-            setBranches(activeBranches);
-        } catch (error) {
-            setError('Failed to load branches');
-        }
-    };
-
-    const handleAddAddress = async (addressData) => {
-        try {
-            await addAddress(addressData);
-            await loadAddresses();
+            if (selectedAddress) {
+                await updateAddress(selectedAddress.id, addressData);
+                setNotice('Address updated');
+            } else {
+                await addAddress(addressData);
+                setNotice('Address added');
+            }
             setShowAddressForm(false);
-            setSuccessMessage('Address added successfully');
-            setTimeout(() => setSuccessMessage(''), 3000);
-        } catch (error) {
-            setError('Failed to add address');
-        }
-    };
-
-    const handleUpdateAddress = async (addressData) => {
-        try {
-            await updateAddress(selectedAddress.id, addressData);
-            await loadAddresses();
             setSelectedAddress(null);
-            setSuccessMessage('Address updated successfully');
-            setTimeout(() => setSuccessMessage(''), 3000);
-        } catch (error) {
-            setError('Failed to update address');
+            await loadData();
+            window.setTimeout(() => setNotice(''), 2500);
+        } catch (saveError) {
+            setError(saveError.response?.data?.message || 'We could not save that address.');
         }
     };
 
-    const handleDeleteAddress = async (addressId) => {
+    const handleDelete = async (addressId) => {
+        if (!window.confirm('Delete this saved address?')) return;
         try {
             await deleteAddress(addressId);
-            await loadAddresses();
-            setSuccessMessage('Address deleted successfully');
-            setTimeout(() => setSuccessMessage(''), 3000);
-        } catch (error) {
-            setError('Failed to delete address');
+            setAddresses((current) => current.filter((address) => address.id !== addressId));
+            setNotice('Address removed');
+            window.setTimeout(() => setNotice(''), 2500);
+        } catch (deleteError) {
+            setError(deleteError.response?.data?.message || 'We could not remove that address.');
         }
-    };
-    
-    const getBranchName = (branchId) => {
-        const branch = branches.find(b => b.id === branchId);
-        return branch ? branch.name : 'Unknown Branch';
     };
 
     return (
-        <>
+        <div className="customer-page pb-20 md:pb-0">
             <CustomerHeader />
-            <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 pt-16">
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-red-500/20"></div>
-                <div className="container mx-auto px-4 py-6 sm:py-8 relative z-10">
-                    <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-orange-100 p-4 sm:p-6">
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
-                            <div className="flex items-center gap-2">
-                                <button 
-                                    onClick={() => navigate('/')}
-                                    className="hover:bg-orange-100 p-2 rounded-full transition-colors text-orange-600"
-                                >
-                                    <ArrowLeft className="h-5 w-5" />
-                                </button>
-                                <h1 className="text-xl sm:text-2xl font-semibold text-orange-900">Manage Addresses</h1>
-                            </div>
-                            <Button 
-                                onClick={() => setShowAddressForm(true)}
-                                className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30 text-xs sm:text-sm py-1.5 sm:py-2.5"
-                                size="sm"
-                            >
-                                <PlusCircle className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                                Add New Address
-                            </Button>
-                        </div>
-
-                        {error && (
-                            <Alert variant="destructive" className="mb-4 sm:mb-6 text-xs sm:text-sm">
-                                <AlertDescription>{error}</AlertDescription>
-                            </Alert>
-                        )}
-
-                        {successMessage && (
-                            <Alert className="mb-4 sm:mb-6 bg-green-50 text-green-700 border-green-200 text-xs sm:text-sm">
-                                <AlertDescription>{successMessage}</AlertDescription>
-                            </Alert>
-                        )}
-
-                        {addresses.length === 0 ? (
-                            <div className="text-center py-8 sm:py-12">
-                                <h2 className="text-lg sm:text-xl font-semibold text-orange-900 mb-2">
-                                    You don't have any addresses yet
-                                </h2>
-                                <p className="text-orange-700 mb-4 sm:mb-6 text-sm sm:text-base">
-                                    Add an address to get started ordering food
-                                </p>
-                                <Button 
-                                    onClick={() => setShowAddressForm(true)}
-                                    className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30 text-xs sm:text-sm py-1.5 sm:py-2.5"
-                                    size="sm"
-                                >
-                                    <PlusCircle className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                                    Add New Address
-                                </Button>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
-                                {addresses.map((address) => (
-                                    <Card key={address.id} className="bg-white/95 backdrop-blur-sm border-orange-100">
-                                        <CardContent className="p-3 sm:p-6">
-                                            <div className="flex justify-between">
-                                                <div>
-                                                    <div className="flex items-center gap-1 sm:gap-2 text-base sm:text-lg font-medium text-orange-900 mb-1">
-                                                        <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 flex-shrink-0" />
-                                                        <span className="line-clamp-1">{address.street}</span>
-                                                    </div>
-                                                    <p className="text-orange-700 text-xs sm:text-base">
-                                                        {address.city}, {address.state} {address.zipCode}
-                                                    </p>
-                                                    <div className="flex items-center gap-1 mt-2 text-xs sm:text-sm text-orange-600">
-                                                        <Store className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                                                        {getBranchName(address.branchId)}
-                                                    </div>
-                                                </div>
-                                                <div className="flex gap-1 sm:gap-2 ml-2 flex-shrink-0">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-7 w-7 sm:h-9 sm:w-9 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                                        onClick={() => setSelectedAddress(address)}
-                                                    >
-                                                        <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-7 w-7 sm:h-9 sm:w-9 text-red-500 hover:text-red-600 hover:bg-red-50"
-                                                        onClick={() => handleDeleteAddress(address.id)}
-                                                    >
-                                                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        )}
-                        
-                        <div className="mt-6 sm:mt-8 flex justify-center">
-                            <Button 
-                                variant="outline" 
-                                onClick={() => navigate('/customer/profile/edit')}
-                                className="border-orange-200 text-orange-700 hover:bg-orange-50 text-xs sm:text-sm py-1.5 sm:py-2.5"
-                                size="sm"
-                            >
-                                Edit Profile
-                            </Button>
-                        </div>
-
-                        {(showAddressForm || selectedAddress) && (
-                            <AddressForm
-                                address={selectedAddress}
-                                branches={branches}
-                                onSubmit={selectedAddress ? handleUpdateAddress : handleAddAddress}
-                                onClose={() => {
-                                    setShowAddressForm(false);
-                                    setSelectedAddress(null);
-                                }}
-                            />
-                        )}
+            <main className="customer-container pt-[7.5rem]">
+                <div className="mb-7 flex items-center gap-3">
+                    <button type="button" onClick={() => navigate('/')} className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--customer-line)] transition hover:border-[var(--customer-coral)]">
+                        <ArrowLeft className="h-4 w-4" />
+                    </button>
+                    <div>
+                        <p className="customer-eyebrow">Your details</p>
+                        <h1 className="mt-1 text-3xl font-black tracking-[-0.06em]">Saved addresses</h1>
                     </div>
+                    <button type="button" onClick={() => { setSelectedAddress(null); setShowAddressForm(true); }} className="ml-auto flex items-center gap-2 rounded-full bg-[var(--customer-coral)] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[var(--customer-coral-dark)]">
+                        <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Add address</span>
+                    </button>
                 </div>
-            </div>
-        </>
+
+                <div className="customer-surface mb-6 flex items-center gap-4 p-5">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--customer-sage-soft)] text-lg font-black text-[var(--customer-sage)]">
+                        {user?.username?.[0]?.toUpperCase() || 'U'}
+                    </span>
+                    <div>
+                        <p className="text-sm text-[var(--customer-muted)]">Signed in as</p>
+                        <p className="font-bold">{user?.username || 'Customer'}</p>
+                    </div>
+                    <button type="button" onClick={() => navigate('/customer/profile/edit')} className="ml-auto text-sm font-bold text-[var(--customer-coral-dark)] hover:underline">
+                        Edit profile
+                    </button>
+                </div>
+
+                {notice && <div className="mb-5 rounded-2xl border border-[var(--customer-sage)] bg-[var(--customer-sage-soft)] px-4 py-3 text-sm font-semibold text-[var(--customer-sage)]">{notice}</div>}
+                {loading ? <CustomerLoading label="Loading your addresses..." /> : error ? <CustomerError message={error} onRetry={loadData} /> : addresses.length === 0 ? (
+                    <CustomerEmpty
+                        title="No saved addresses"
+                        description="Save your delivery spot once and checkout will be much faster."
+                        action={<button type="button" onClick={() => setShowAddressForm(true)} className="mt-3 rounded-full bg-[var(--customer-coral)] px-5 py-3 text-sm font-bold text-white">Add your first address</button>}
+                    />
+                ) : (
+                    <div className="grid gap-4 md:grid-cols-2">
+                        {addresses.map((address) => {
+                            const branch = branches.find((item) => item.id === (address.branchId ?? address.branch_id));
+                            return (
+                                <article key={address.id} className="customer-surface p-5">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex min-w-0 gap-3">
+                                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--customer-soft)] text-[var(--customer-coral)]"><MapPin className="h-5 w-5" /></span>
+                                            <div className="min-w-0">
+                                                <h2 className="truncate font-bold">{address.street || address.street_address}</h2>
+                                                <p className="mt-1 text-sm text-[var(--customer-muted)]">{address.city}, {address.state} {address.zipCode || address.postal_code}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <button type="button" onClick={() => { setSelectedAddress(address); setShowAddressForm(false); }} className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--customer-muted)] hover:bg-[var(--customer-soft)] hover:text-[var(--customer-ink)]" aria-label="Edit address"><Pencil className="h-4 w-4" /></button>
+                                            <button type="button" onClick={() => handleDelete(address.id)} className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--customer-muted)] hover:bg-[var(--customer-danger-soft)] hover:text-[var(--customer-coral-dark)]" aria-label="Delete address"><Trash2 className="h-4 w-4" /></button>
+                                        </div>
+                                    </div>
+                                    <div className="mt-5 flex items-center gap-2 border-t border-[var(--customer-line)] pt-4 text-xs font-semibold text-[var(--customer-sage)]">
+                                        <Store className="h-4 w-4" /> {branch?.name || 'Branch not available'}
+                                    </div>
+                                </article>
+                            );
+                        })}
+                    </div>
+                )}
+            </main>
+
+            {(showAddressForm || selectedAddress) && (
+                <AddressForm
+                    address={selectedAddress}
+                    branches={branches}
+                    onSubmit={saveAddress}
+                    onClose={() => { setShowAddressForm(false); setSelectedAddress(null); }}
+                />
+            )}
+        </div>
     );
 };
 

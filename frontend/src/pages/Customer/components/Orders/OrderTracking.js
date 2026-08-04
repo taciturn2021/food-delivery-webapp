@@ -1,506 +1,173 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useToast } from '../../../../components/ui/use-toast';
-import { getOrderById, cancelOrder } from '../../../../services/api';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, Bike, Check, Clock3, Home, Loader2, MapPin, MessageCircle, Store, Utensils, X } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
-import { 
-  ArrowLeft, 
-  MapPin, 
-  ShoppingBag, 
-  Clock, 
-  Store, 
-  AlertTriangle, 
-  Check, 
-  Loader2,
-  X,
-  Home,
-  Utensils,
-  Bike
-} from 'lucide-react';
+import { cancelOrder, getOrderById } from '../../../../services/api';
+import { useToast } from '../../../../components/ui/use-toast';
 import CustomerHeader from '../../../../components/customer/CustomerHeader';
-import { Button } from '../../../../components/ui/button';
-import { Card, CardContent } from '../../../../components/ui/card';
-import { Badge } from '../../../../components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../../components/ui/dialog';
-import 'leaflet/dist/leaflet.css';
+import { CustomerError, CustomerLoading } from '../../../../components/customer/CustomerStates';
 
-// Status display configuration
-const orderStatusConfig = {
-  'pending': { 
-    label: 'Pending Confirmation', 
-    color: 'bg-yellow-500',
-    textColor: 'text-yellow-500',
-    icon: <Clock className="h-5 w-5" />
-  },
-  'preparing': { 
-    label: 'Preparing', 
-    color: 'bg-indigo-500',
-    textColor: 'text-indigo-500',
-    icon: <ShoppingBag className="h-5 w-5" />
-  },
-  'delivering': { 
-    label: 'Out for Delivery', 
-    color: 'bg-orange-500',
-    textColor: 'text-orange-500',
-    icon: <MapPin className="h-5 w-5" />
-  },
-  'delivered': { 
-    label: 'Delivered', 
-    color: 'bg-green-500',
-    textColor: 'text-green-500',
-    icon: <Check className="h-5 w-5" />
-  },
-  'cancelled': { 
-    label: 'Cancelled', 
-    color: 'bg-red-500',
-    textColor: 'text-red-500',
-    icon: <X className="h-5 w-5" />
-  }
-};
-
-const OrderTracking = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [order, setOrder] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [cancelLoading, setCancelLoading] = useState(false);
-  const [refreshInterval, setRefreshInterval] = useState(null);
+const statuses = [
+    { key: 'pending', label: 'Order received', detail: 'Waiting for the kitchen to confirm.', icon: Clock3 },
+    { key: 'preparing', label: 'Being prepared', detail: 'The kitchen is making your order.', icon: Utensils },
+    { key: 'delivering', label: 'On the way', detail: 'Your order is heading to you.', icon: Bike },
+    { key: 'delivered', label: 'Delivered', detail: 'Enjoy your meal.', icon: Check }
+];
 
 const formatPrice = (price) => {
-    return typeof price === 'string' ? parseFloat(price).toFixed(2) : '0.00';
-  };
+    const numericPrice = Number.parseFloat(price);
+    return Number.isFinite(numericPrice) ? numericPrice.toFixed(2) : '0.00';
+};
 
-  const fetchOrder = useCallback(async () => {
+const parseAddress = (address) => {
+    if (!address) return {};
+    if (typeof address !== 'string') return address;
     try {
-      const response = await getOrderById(id);
-      setOrder(response.data);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching order:', err);
-      setError('Failed to load order. Please try again.');
-    } finally {
-      setLoading(false);
+        return JSON.parse(address);
+    } catch {
+        return { street: address };
     }
-  }, [id]); // Remove refreshInterval from dependency array
+};
 
-  useEffect(() => {
-    fetchOrder();
-    
-    // Create 30-second refresh interval for real-time updates
-    const interval = setInterval(fetchOrder, 30000);
-    
-    return () => {
-      clearInterval(interval);
+const markerIcon = (emoji, color) => L.divIcon({
+    className: '',
+    html: `<div style="align-items:center;background:${color};border:3px solid white;border-radius:999px;box-shadow:0 4px 12px rgba(0,0,0,.2);display:flex;font-size:15px;height:34px;justify-content:center;width:34px">${emoji}</div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17]
+});
+
+const OrderTracking = () => {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const { toast } = useToast();
+    const [order, setOrder] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [cancelling, setCancelling] = useState(false);
+
+    const fetchOrder = useCallback(async () => {
+        try {
+            const response = await getOrderById(id);
+            setOrder(response.data);
+            setError('');
+        } catch (fetchError) {
+            console.error('Error fetching order:', fetchError);
+            setError('We could not load this order.');
+        } finally {
+            setLoading(false);
+        }
+    }, [id]);
+
+    useEffect(() => {
+        fetchOrder();
+        const interval = window.setInterval(fetchOrder, 30000);
+        return () => window.clearInterval(interval);
+    }, [fetchOrder]);
+
+    const address = useMemo(() => parseAddress(order?.delivery_address), [order?.delivery_address]);
+    const currentIndex = statuses.findIndex((status) => status.key === order?.status);
+    const canCancel = order && ['pending', 'preparing'].includes(order.status);
+
+    const handleCancel = async () => {
+        if (!window.confirm('Cancel this order? This cannot be undone.')) return;
+        try {
+            setCancelling(true);
+            await cancelOrder(id);
+            await fetchOrder();
+            toast({ title: 'Order cancelled', description: 'The order has been cancelled.', variant: 'success' });
+        } catch (cancelError) {
+            toast({ title: 'Could not cancel order', description: cancelError.response?.data?.message || 'Please try again.', variant: 'destructive' });
+        } finally {
+            setCancelling(false);
+        }
     };
-  }, [fetchOrder]);
 
-  const handleCancelOrder = async () => {
-    try {
-      setCancelLoading(true);
-      await cancelOrder(id);
-      fetchOrder(); // Refresh after cancellation
-      setCancelDialogOpen(false);
-      
-      toast({
-        title: "Order Cancelled",
-        description: "Your order has been cancelled successfully.",
-        variant: "success"
-      });
-    } catch (error) {
-      console.error('Error cancelling order:', error);
-      toast({
-        title: "Failed to cancel order",
-        description: error.response?.data?.message || "Something went wrong. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setCancelLoading(false);
-    }
-  };
+    const customerPosition = address.latitude && address.longitude ? [Number(address.latitude), Number(address.longitude)] : null;
+    const branchPosition = order?.branch_latitude && order?.branch_longitude ? [Number(order.branch_latitude), Number(order.branch_longitude)] : null;
+    const riderPosition = order?.rider_latitude && order?.rider_longitude ? [Number(order.rider_latitude), Number(order.rider_longitude)] : null;
+    const mapCenter = customerPosition || branchPosition || riderPosition;
 
-  const canCancel = order && ['pending', 'preparing'].includes(order.status);
+    return (
+        <div className="customer-page pb-20 md:pb-0">
+            <CustomerHeader />
+            <main className="customer-container pt-[7.5rem]">
+                <div className="mb-7 flex items-center gap-3">
+                    <button type="button" onClick={() => navigate('/customer/orders')} className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--customer-line)] transition hover:border-[var(--customer-coral)]"><ArrowLeft className="h-4 w-4" /></button>
+                    <div><p className="customer-eyebrow">Live order</p><h1 className="mt-1 text-3xl font-black tracking-[-0.06em]">Order #{id}</h1></div>
+                    {order && <span className="ml-auto rounded-full bg-[var(--customer-sage-soft)] px-3 py-1.5 text-xs font-bold text-[var(--customer-sage)]">{order.status}</span>}
+                </div>
 
-  return (
-    <>
-      <CustomerHeader />
-      <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 pt-16">
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-red-500/20"></div>
-        <div className="container mx-auto px-4 py-6 sm:py-8 relative z-10">
-          <div className="flex flex-wrap items-center gap-2 mb-4 sm:mb-6">
-            <button 
-              onClick={() => navigate('/customer/orders')}
-              className="hover:bg-orange-100 p-2 rounded-full transition-colors text-orange-600"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <h1 className="text-xl sm:text-2xl font-semibold text-orange-900">Order #{id}</h1>
-            
-            {order && order.status !== 'cancelled' && order.status !== 'delivered' && (
-              <Badge 
-                className={`ml-auto ${orderStatusConfig[order.status]?.color} text-white px-2 sm:px-3 py-1 text-xs sm:text-sm`}
-              >
-                <span className="flex items-center">
-                  {orderStatusConfig[order.status]?.icon}
-                  <span className="ml-1 hidden xs:inline">{orderStatusConfig[order.status]?.label}</span>
-                </span>
-              </Badge>
-            )}
-            
-            {order && (order.status === 'cancelled' || order.status === 'delivered') && (
-              <Badge 
-                className={`ml-auto ${orderStatusConfig[order.status]?.color} text-white px-2 sm:px-3 py-1 text-xs sm:text-sm`}
-              >
-                <span className="flex items-center">
-                  {orderStatusConfig[order.status]?.icon}
-                  <span className="ml-1 hidden xs:inline">{orderStatusConfig[order.status]?.label}</span>
-                </span>
-              </Badge>
-            )}
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center items-center min-h-[60vh]">
-              <div className="flex flex-col items-center">
-                <Loader2 className="h-8 w-8 animate-spin text-orange-600 mb-4" />
-                <p className="text-orange-600">Loading order details...</p>
-              </div>
-            </div>
-          ) : error ? (
-            <div className="bg-red-100 border-l-4 border-red-500 p-4 rounded text-red-700 mb-6">
-              <div className="flex items-center">
-                <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0" />
-                <p className="text-sm sm:text-base">{error}</p>
-              </div>
-              <Button 
-                onClick={fetchOrder} 
-                variant="outline" 
-                size="sm"
-                className="mt-3 sm:mt-4 text-red-600 border-red-200 hover:bg-red-50 text-xs sm:text-sm"
-              >
-                Try Again
-              </Button>
-            </div>
-          ) : order ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-              <div className="md:col-span-2 space-y-4 sm:space-y-6">
-                {/* Order Status Timeline */}
-                <Card className="bg-white/95 backdrop-blur-sm border-orange-100">
-                  <CardContent className="p-4 sm:p-6">
-                    <h2 className="text-lg font-semibold text-orange-900 mb-3 sm:mb-4">Order Status</h2>
-                    <div className="relative">
-                      <div className="absolute left-3 sm:left-4 top-0 bottom-0 w-0.5 bg-orange-100"></div>
-                      {['pending', 'preparing', 'delivering', 'delivered'].map((status, index) => {
-                        const isCompleted = order.status === 'delivered' 
-                          ? ['pending', 'preparing', 'delivering', 'delivered'].indexOf(status) <= ['pending', 'preparing', 'delivering', 'delivered'].indexOf(order.status)
-                          : ['pending', 'preparing', 'delivering'].indexOf(status) <= ['pending', 'preparing', 'delivering'].indexOf(order.status);
-                        
-                        const isCurrent = order.status === status;
-                        return (
-                          <div key={status} className="flex mb-4 sm:mb-6 items-center relative">
-                            <div className={`z-10 flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full 
-                              ${isCompleted 
-                                ? orderStatusConfig[isCurrent ? status : status === 'delivered' ? 'delivered' : 'delivered'].color
-                                : 'bg-gray-200'} 
-                              ${isCompleted ? 'text-white' : 'text-gray-500'}`}
-                            >
-                              {isCompleted ? (
-                                <span className="w-3 h-3 sm:w-5 sm:h-5">
-                                  {orderStatusConfig[isCurrent ? status : status === 'delivered' ? 'delivered' : 'delivered'].icon}
-                                </span>
-                              ) : index + 1}
+                {loading ? <CustomerLoading label="Finding your order..." /> : error ? <CustomerError message={error} onRetry={fetchOrder} /> : order && (
+                    <>
+                        <section className="customer-surface mb-6 overflow-hidden p-5 sm:p-7">
+                            <div className="flex flex-wrap items-start justify-between gap-4">
+                                <div><p className="customer-eyebrow">From the kitchen</p><h2 className="mt-1 text-2xl font-black">{order.branch_name}</h2><p className="mt-2 text-sm text-[var(--customer-muted)]">We will keep this page updated as your order moves.</p></div>
+                                <div className="rounded-2xl bg-[var(--customer-soft)] px-4 py-3 text-right"><p className="text-xs text-[var(--customer-muted)]">Order total</p><p className="mt-1 text-xl font-black text-[var(--customer-coral-dark)]">${formatPrice(order.total_amount)}</p></div>
                             </div>
-                            <div className="ml-3 sm:ml-4">
-                              <p className={`font-medium text-sm sm:text-base ${isCompleted && isCurrent ? orderStatusConfig[status].textColor : !isCompleted ? 'text-gray-500' : 'text-orange-600'}`}>
-                                {orderStatusConfig[status].label}
-                              </p>
-                              {isCurrent && (
-                                <p className="text-xs sm:text-sm text-orange-600">
-                                  {status === 'pending' && 'Waiting for restaurant to confirm your order'}
-                                  {status === 'preparing' && 'The restaurant is preparing your food'}
-                                  {status === 'delivering' && 'Your food is on the way!'}
-                                  {status === 'delivered' && 'Enjoy your meal!'}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {order.status === 'cancelled' && (
-                        <div className="flex mt-4 sm:mt-6 items-center">
-                          <div className="z-10 flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-red-500 text-white">
-                            <X className="h-3 w-3 sm:h-5 sm:w-5" />
-                          </div>
-                          <div className="ml-3 sm:ml-4">
-                            <p className="font-medium text-sm sm:text-base text-red-500">Order Cancelled</p>
-                            <p className="text-xs sm:text-sm text-red-600">This order has been cancelled</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Order Items */}
-                <Card className="bg-white/95 backdrop-blur-sm border-orange-100">
-                  <CardContent className="p-4 sm:p-6">
-                    <h2 className="text-lg font-semibold text-orange-900 mb-3 sm:mb-4">Order Items</h2>
-                    <div className="space-y-3 sm:space-y-4">
-                      {order.items.map((item) => (
-                        <div key={item.id} className="flex justify-between items-center p-2 sm:p-3 border-b border-orange-100 last:border-0">
-                          <div>
-                            <p className="font-medium text-orange-900 text-sm sm:text-base">{item.name}</p>
-                            <p className="text-xs sm:text-sm text-orange-600">${formatPrice(item.price_at_time)} × {item.quantity}</p>
-                            {item.special_instructions && (
-                              <p className="text-xs text-gray-500 mt-1">Note: {item.special_instructions}</p>
+                            {order.status === 'cancelled' ? (
+                                <div className="mt-8 flex items-center gap-3 rounded-2xl bg-[var(--customer-danger-soft)] p-4 text-[var(--customer-coral-dark)]"><X className="h-5 w-5" /><span className="text-sm font-semibold">This order was cancelled.</span></div>
+                            ) : (
+                                <div className="mt-8 grid gap-5 sm:grid-cols-4">
+                                    {statuses.map((status, index) => {
+                                        const Icon = status.icon;
+                                        const completed = currentIndex >= index || order.status === 'delivered';
+                                        const current = order.status === status.key;
+                                        return (
+                                            <div key={status.key} className="relative">
+                                                {index < statuses.length - 1 && <span className={`absolute left-9 right-[-1rem] top-5 hidden h-0.5 sm:block ${completed && currentIndex > index ? 'bg-[var(--customer-coral)]' : 'bg-[var(--customer-line)]'}`} />}
+                                                <div className="relative flex items-center gap-3 sm:block">
+                                                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${completed ? 'bg-[var(--customer-coral)] text-white' : 'bg-[var(--customer-soft)] text-[var(--customer-muted)]'}`}><Icon className="h-4 w-4" /></span>
+                                                    <span className="sm:mt-3 sm:block"><span className={`block text-sm font-bold ${current ? 'text-[var(--customer-coral-dark)]' : ''}`}>{status.label}</span><span className="mt-1 block text-xs leading-5 text-[var(--customer-muted)]">{current ? status.detail : completed ? 'Done' : 'Coming up'}</span></span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             )}
-                          </div>
-                          <p className="font-medium text-orange-900 text-sm sm:text-base">${formatPrice(item.price_at_time) * item.quantity}</p>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-orange-100">
-                      <div className="flex justify-between">
-                        <span className="font-medium text-orange-900 text-sm sm:text-base">Total</span>
-                        <span className="font-bold text-orange-900 text-sm sm:text-base">${formatPrice(order.total_amount)}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                        </section>
 
-              <div className="space-y-4 sm:space-y-6">
-                {/* Delivery Tracking */}
-                <Card className="bg-white/95 backdrop-blur-sm border-orange-100">
-                  <CardContent className="p-4 sm:p-6">
-                    <h2 className="text-lg font-semibold text-orange-900 mb-3 sm:mb-4">Delivery Tracking</h2>
-                    <div style={{ height: '250px', width: '100%' }} className="sm:h-[300px]">
-                      {(() => {
-                        // Parse delivery address if it's a string
-                        let deliveryAddress = order.delivery_address;
-                        if (typeof deliveryAddress === 'string') {
-                          try {
-                            deliveryAddress = JSON.parse(deliveryAddress);
-                          } catch (e) {
-                            console.error('Error parsing delivery address:', e);
-                          }
-                        }
-                        
-                        // Check if we have valid location data
-                        const hasCustomerLocation = deliveryAddress?.latitude && deliveryAddress?.longitude;
-                        const hasBranchLocation = order.branch_latitude && order.branch_longitude;
-                        const hasRiderLocation = order.rider_latitude && order.rider_longitude;
-                        
-                        // Determine center coordinates for the map
-                        let center = [0, 0];
-                        if (hasCustomerLocation) {
-                          center = [parseFloat(deliveryAddress.latitude), parseFloat(deliveryAddress.longitude)];
-                        } else if (hasBranchLocation) {
-                          center = [parseFloat(order.branch_latitude), parseFloat(order.branch_longitude)];
-                        } else if (hasRiderLocation) {
-                          center = [parseFloat(order.rider_latitude), parseFloat(order.rider_longitude)];
-                        }
-                        
-                        if (hasCustomerLocation || hasBranchLocation || hasRiderLocation) {
-                          // Custom icon creation
-                          const createCustomIcon = (IconComponent, color) => {
-                            // Create a DOM element to render the SVG
-                            const customIcon = L.divIcon({
-                              html: `<div style="color: ${color}; background: white; border-radius: 50%; padding: 4px; border: 2px solid ${color}; display: flex; align-items: center; justify-content: center;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                  ${IconComponent === Home ? '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' : ''}
-                                  ${IconComponent === Utensils ? '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2"/><path d="M18.5 15a2.5 2.5 0 0 0 0 5H23"/><path d="M21 22v-2"/>' : ''}
-                                  ${IconComponent === Bike ? '<circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5V14l-3-3 4-3 2 3h2"/>' : ''}
-                                </svg>
-                              </div>`,
-                              className: '',
-                              iconSize: [26, 26],
-                              iconAnchor: [13, 13]
-                            });
-                            return customIcon;
-                          };
+                        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+                            <section className="customer-surface p-5 sm:p-7">
+                                <div className="mb-5 flex items-center justify-between"><h2 className="text-xl font-bold">Your order</h2><span className="text-sm text-[var(--customer-muted)]">{order.items?.length || 0} items</span></div>
+                                <div className="divide-y divide-[var(--customer-line)]">
+                                    {(order.items || []).map((item) => <div key={item.id} className="flex items-center justify-between gap-3 py-4 first:pt-0"><div><p className="font-bold">{item.name}</p><p className="mt-1 text-sm text-[var(--customer-muted)]">${formatPrice(item.price_at_time)} × {item.quantity}</p>{item.special_instructions && <p className="mt-1 text-xs text-[var(--customer-muted)]">Note: {item.special_instructions}</p>}</div><p className="font-bold">${formatPrice(Number(item.price_at_time) * item.quantity)}</p></div>)}
+                                </div>
+                                <div className="mt-4 flex justify-between border-t border-[var(--customer-line)] pt-4 font-black"><span>Total</span><span className="text-[var(--customer-coral-dark)]">${formatPrice(order.total_amount)}</span></div>
+                            </section>
 
-                          // Create the custom icons
-                          const customerIcon = createCustomIcon(Home, '#1E40AF'); // Blue
-                          const restaurantIcon = createCustomIcon(Utensils, '#9D174D'); // Pink/Purple
-                          const riderIcon = createCustomIcon(Bike, '#047857'); // Green
-
-                          return (
-                            <MapContainer
-                              center={center}
-                              zoom={13}
-                              style={{ height: '100%', width: '100%' }}
-                              attributionControl={false}
-                            >
-                              <TileLayer
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                              />
-                              
-                              {/* Customer location marker with custom icon */}
-                              {hasCustomerLocation && (
-                                <Marker 
-                                  position={[parseFloat(deliveryAddress.latitude), parseFloat(deliveryAddress.longitude)]}
-                                  icon={customerIcon}
-                                >
-                                  <Popup>Delivery Location</Popup>
-                                </Marker>
-                              )}
-                              
-                              {/* Branch location marker with custom icon */}
-                              {hasBranchLocation && (
-                                <Marker 
-                                  position={[parseFloat(order.branch_latitude), parseFloat(order.branch_longitude)]}
-                                  icon={restaurantIcon}
-                                >
-                                  <Popup>{order.branch_name}</Popup>
-                                </Marker>
-                              )}
-                              
-                              {/* Rider location marker with custom icon */}
-                              {hasRiderLocation && order.status !== 'delivered' && (
-                                <Marker 
-                                  position={[parseFloat(order.rider_latitude), parseFloat(order.rider_longitude)]}
-                                  icon={riderIcon}
-                                >
-                                  <Popup>{order.rider_first_name} {order.rider_last_name} (Rider)</Popup>
-                                </Marker>
-                              )}
-                            </MapContainer>
-                          );
-                        } else {
-                          return (
-                            <div className="h-full flex flex-col items-center justify-center bg-orange-50 rounded border border-orange-200 p-4">
-                              <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-orange-500 mb-2" />
-                              <p className="text-orange-600 text-center text-sm sm:text-base">Location data unavailable</p>
-                              <p className="text-orange-400 text-xs sm:text-sm text-center mt-1">The delivery locations couldn't be loaded</p>
+                            <div className="space-y-6">
+                                <section className="customer-surface overflow-hidden">
+                                    <div className="flex items-center justify-between p-5 sm:p-7 pb-3"><div><p className="customer-eyebrow">Delivery</p><h2 className="mt-1 text-xl font-bold">Follow the handoff</h2></div><MapPin className="h-5 w-5 text-[var(--customer-coral)]" /></div>
+                                    <div className="h-64 bg-[var(--customer-soft)]">
+                                        {mapCenter ? (
+                                            <MapContainer center={mapCenter} zoom={13} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
+                                                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap contributors' />
+                                                {customerPosition && <Marker position={customerPosition} icon={markerIcon('⌂', '#E76543')}><Popup>Delivery address</Popup></Marker>}
+                                                {branchPosition && <Marker position={branchPosition} icon={markerIcon('✦', '#6F8972')}><Popup>{order.branch_name}</Popup></Marker>}
+                                                {riderPosition && order.status !== 'delivered' && <Marker position={riderPosition} icon={markerIcon('●', '#D9A441')}><Popup>Rider location</Popup></Marker>}
+                                            </MapContainer>
+                                        ) : (
+                                            <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-[var(--customer-muted)]"><MapPin className="h-6 w-6" /><p>Location updates are not available yet.</p></div>
+                                        )}
+                                    </div>
+                                </section>
+                                <section className="customer-surface p-5 sm:p-7">
+                                    <p className="customer-eyebrow">At a glance</p>
+                                    <div className="mt-4 space-y-4 text-sm">
+                                        <p className="flex items-start gap-3"><Home className="mt-0.5 h-4 w-4 shrink-0 text-[var(--customer-coral)]" /><span><span className="block font-bold">Delivering to</span><span className="mt-1 block text-[var(--customer-muted)]">{address.street || 'Saved address'}{address.city ? `, ${address.city}` : ''}</span></span></p>
+                                        <p className="flex items-start gap-3"><Store className="mt-0.5 h-4 w-4 shrink-0 text-[var(--customer-coral)]" /><span><span className="block font-bold">Restaurant</span><span className="mt-1 block text-[var(--customer-muted)]">{order.branch_name}</span></span></p>
+                                        {order.rider_first_name && <p className="flex items-start gap-3"><MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--customer-coral)]" /><span><span className="block font-bold">Your rider</span><span className="mt-1 block text-[var(--customer-muted)]">{order.rider_first_name} {order.rider_last_name}</span></span></p>}
+                                    </div>
+                                    {canCancel && <button type="button" onClick={handleCancel} disabled={cancelling} className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[var(--customer-coral)] text-sm font-bold text-[var(--customer-coral-dark)] transition hover:bg-[var(--customer-danger-soft)] disabled:opacity-50">{cancelling && <Loader2 className="h-4 w-4 animate-spin" />} Cancel order</button>}
+                                </section>
                             </div>
-                          );
-                        }
-                      })()}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Delivery Information */}
-                <Card className="bg-white/95 backdrop-blur-sm border-orange-100">
-                  <CardContent className="p-4 sm:p-6">
-                    <h2 className="text-lg font-semibold text-orange-900 mb-3 sm:mb-4">Delivery Information</h2>
-                    
-                    <div className="space-y-3 sm:space-y-4">
-                      <div>
-                        <p className="text-xs sm:text-sm text-orange-600 mb-1">Delivery Address</p>
-                        <p className="font-medium text-orange-900 text-sm sm:text-base">
-                          {typeof order.delivery_address === 'string'
-                            ? JSON.parse(order.delivery_address).street
-                            : order.delivery_address?.street}
-                        </p>
-                        <p className="text-xs sm:text-sm text-orange-700">
-                          {typeof order.delivery_address === 'string'
-                            ? `${JSON.parse(order.delivery_address).city}, ${JSON.parse(order.delivery_address).state} ${JSON.parse(order.delivery_address).zipCode}`
-                            : `${order.delivery_address?.city}, ${order.delivery_address?.state} ${order.delivery_address?.zipCode}`}
-                        </p>
-                      </div>
-                      
-                      <div>
-                        <p className="text-xs sm:text-sm text-orange-600 mb-1">Restaurant</p>
-                        <p className="font-medium text-orange-900 text-sm sm:text-base">{order.branch_name}</p>
-                      </div>
-
-                      {order.rider_first_name && (
-                        <div>
-                          <p className="text-xs sm:text-sm text-orange-600 mb-1">Delivery Rider</p>
-                          <p className="font-medium text-orange-900 text-sm sm:text-base">{order.rider_first_name} {order.rider_last_name}</p>
-                          {order.rider_phone && <p className="text-xs sm:text-sm text-orange-700">{order.rider_phone}</p>}
                         </div>
-                      )}
-                      
-                      <div>
-                        <p className="text-xs sm:text-sm text-orange-600 mb-1">Order Date</p>
-                        <p className="font-medium text-orange-900 text-sm sm:text-base">
-                          {new Date(order.created_at).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-
-                    {canCancel && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full mt-4 sm:mt-6 border-red-200 text-red-600 hover:bg-red-50 text-xs sm:text-sm py-2 sm:py-5"
-                        onClick={() => setCancelDialogOpen(true)}
-                      >
-                        Cancel Order
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-orange-100 border-l-4 border-orange-500 p-3 sm:p-4 rounded text-orange-700 mb-4 sm:mb-6">
-              <p className="text-sm sm:text-base">Order not found. It may have been cancelled or removed.</p>
-              <Button 
-                onClick={() => navigate('/customer/orders')} 
-                variant="outline" 
-                size="sm"
-                className="mt-3 sm:mt-4 text-orange-600 border-orange-200 hover:bg-orange-50 text-xs sm:text-sm"
-              >
-                Back to Orders
-              </Button>
-            </div>
-          )}
+                    </>
+                )}
+            </main>
         </div>
-      </div>
-
-      {/* Cancel Order Confirmation Dialog */}
-      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] w-[95vw] mx-auto">
-          <DialogHeader>
-            <DialogTitle>Cancel Order?</DialogTitle>
-          </DialogHeader>
-          <div className="py-3 sm:py-4">
-            <p className="text-gray-700 text-sm sm:text-base">
-              Are you sure you want to cancel this order? This action cannot be undone.
-            </p>
-          </div>
-          <DialogFooter className="flex-col space-y-2 sm:space-y-0 sm:flex-row sm:space-x-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto text-xs sm:text-sm"
-              onClick={() => setCancelDialogOpen(false)}
-            >
-              No, Keep Order
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              className="w-full sm:w-auto text-xs sm:text-sm"
-              onClick={handleCancelOrder}
-              disabled={cancelLoading}
-            >
-              {cancelLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-                  Cancelling...
-                </>
-              ) : (
-                'Yes, Cancel Order'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
+    );
 };
 
 export default OrderTracking;

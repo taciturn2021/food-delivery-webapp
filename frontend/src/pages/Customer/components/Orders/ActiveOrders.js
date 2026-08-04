@@ -1,256 +1,87 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ArrowRight, Check, Clock3, MapPin, RefreshCw, ShoppingBag, Store, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getCustomerActiveOrders } from '../../../../services/api';
-import { 
-  ArrowLeft, 
-  ShoppingBag, 
-  Loader2, 
-  AlertTriangle, 
-  Clock,
-  Store,
-  MapPin,
-  ArrowRight,
-  Check,
-  X 
-} from 'lucide-react';
 import CustomerHeader from '../../../../components/customer/CustomerHeader';
-import { Button } from '../../../../components/ui/button';
-import { Card, CardContent } from '../../../../components/ui/card';
-import { Badge } from '../../../../components/ui/badge';
+import { CustomerEmpty, CustomerError, CustomerLoading } from '../../../../components/customer/CustomerStates';
 
-// Status display configuration
 export const orderStatusConfig = {
-  'pending': { 
-    label: 'Pending', 
-    color: 'bg-yellow-500',
-    textColor: 'text-yellow-500',
-    icon: <Clock className="h-4 w-4" />
-  },
-  'preparing': { 
-    label: 'Preparing', 
-    color: 'bg-blue-500',
-    textColor: 'text-blue-500',
-    icon: <Check className="h-4 w-4" />
-  },
-  'delivering': { 
-    label: 'Out for Delivery', 
-    color: 'bg-orange-500',
-    textColor: 'text-orange-500',
-    icon: <MapPin className="h-4 w-4" />
-  },
-  'delivered': { 
-    label: 'Delivered', 
-    color: 'bg-green-500',
-    textColor: 'text-green-500',
-    icon: <Check className="h-4 w-4" />
-  },
-  'cancelled': { 
-    label: 'Cancelled', 
-    color: 'bg-red-500',
-    textColor: 'text-red-500',
-    icon: <X className="h-4 w-4" />
-  }
+    pending: { label: 'Pending', tone: 'bg-[var(--customer-soft)] text-[var(--customer-gold)]', icon: Clock3 },
+    preparing: { label: 'Preparing', tone: 'bg-[var(--customer-soft)] text-[#8eb4d0]', icon: ShoppingBag },
+    delivering: { label: 'Out for delivery', tone: 'bg-[var(--customer-selected)] text-[var(--customer-coral)]', icon: MapPin },
+    delivered: { label: 'Delivered', tone: 'bg-[var(--customer-sage-soft)] text-[var(--customer-sage)]', icon: Check },
+    cancelled: { label: 'Cancelled', tone: 'bg-[var(--customer-danger-soft)] text-[var(--customer-coral)]', icon: X }
+};
+
+const formatPrice = (price) => {
+    const numericPrice = Number.parseFloat(price);
+    return Number.isFinite(numericPrice) ? numericPrice.toFixed(2) : '0.00';
 };
 
 const ActiveOrders = () => {
-  const navigate = useNavigate();
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [refreshInterval, setRefreshInterval] = useState(null);
+    const navigate = useNavigate();
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
-  const formatPrice = (price) => {
-    return typeof price === 'string' ? parseFloat(price).toFixed(2) : '0.00';
-  };
+    const fetchOrders = useCallback(async () => {
+        try {
+            setLoading(true);
+            const response = await getCustomerActiveOrders();
+            setOrders(response.data);
+            setError('');
+        } catch (fetchError) {
+            console.error('Error fetching active orders:', fetchError);
+            setError('We could not load your active orders.');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleString();
-  };
+    useEffect(() => {
+        fetchOrders();
+        const interval = window.setInterval(fetchOrders, 60000);
+        return () => window.clearInterval(interval);
+    }, [fetchOrders]);
 
-  const fetchActiveOrders = async () => {
-    try {
-      const response = await getCustomerActiveOrders();
-      setOrders(response.data);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching active orders:', err);
-      setError('Failed to load orders. Please try again.');
-      
-      // Clear interval if error
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-        setRefreshInterval(null);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchActiveOrders();
-    
-    // Create 1-minute refresh interval for real-time updates
-    const interval = setInterval(fetchActiveOrders, 60000);
-    setRefreshInterval(interval);
-    
-    return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-      }
-    };
-  }, []);
-
-  const handleViewOrder = (orderId) => {
-    navigate(`/customer/orders/${orderId}`);
-  };
-
-  return (
-    <>
-      <CustomerHeader />
-      <div className="min-h-screen bg-[url('/src/components/ui/assets/food-pattern-bg.jpg')] bg-repeat bg-orange-50 pt-16">
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-red-500/20"></div>
-        <div className="container mx-auto px-4 py-8 relative z-10">
-          <div className="flex items-center gap-2 mb-6">
-            <Button 
-              variant="ghost"
-              className="p-2 text-orange-600 hover:bg-orange-100 rounded-full"
-              onClick={() => navigate('/')}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-2xl font-semibold text-orange-900">Active Orders</h1>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchActiveOrders}
-              className="ml-auto border-orange-200 text-orange-700 hover:bg-orange-50"
-            >
-              Refresh
-            </Button>
-          </div>
-
-          <div className="flex justify-center items-center mb-6">
-            <Button
-              variant="outline"
-              className="text-orange-600 hover:bg-orange-100 font-medium border-orange-300 px-6 py-2 shadow-sm hover:shadow transition-all"
-              onClick={() => navigate('/customer/orders/history')}
-            >
-              <div className="flex items-center">
-                View Order History
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </div>
-            </Button>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center items-center min-h-[60vh]">
-              <div className="flex flex-col items-center">
-                <Loader2 className="h-8 w-8 animate-spin text-orange-600 mb-4" />
-                <p className="text-orange-600">Loading your active orders...</p>
-              </div>
-            </div>
-          ) : error ? (
-            <div className="bg-red-100 border-l-4 border-red-500 p-4 rounded text-red-700 mb-6">
-              <div className="flex items-center">
-                <AlertTriangle className="h-5 w-5 mr-2" />
-                <p>{error}</p>
-              </div>
-              <Button 
-                onClick={fetchActiveOrders} 
-                variant="outline" 
-                className="mt-4 text-red-600 border-red-200 hover:bg-red-50"
-              >
-                Try Again
-              </Button>
-            </div>
-          ) : orders.length === 0 ? (
-            <Card className="bg-white/95 backdrop-blur-sm border-orange-100">
-              <CardContent className="p-8 flex flex-col items-center">
-                <ShoppingBag className="h-12 w-12 text-orange-300 mb-4" />
-                <h2 className="text-xl font-semibold text-orange-900 mb-2">No Active Orders</h2>
-                <p className="text-orange-600 text-center mb-6">
-                  You don't have any active orders at the moment.
-                </p>
-                <Button
-                  onClick={() => navigate('/')}
-                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-lg shadow-orange-500/30"
-                >
-                  Browse Menu
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-6">
-              {orders.map(order => (
-                <Card key={order.id} className="bg-white/95 backdrop-blur-sm border-orange-100">
-                  <CardContent className="p-6">
-                    <div className="flex flex-wrap justify-between items-start gap-4 mb-4">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-semibold text-orange-900">Order #{order.id}</h3>
-                          <Badge 
-                            className={`${orderStatusConfig[order.status]?.color} text-white px-3 py-1 text-xs`}
-                          >
-                            <span className="flex items-center">
-                              {orderStatusConfig[order.status]?.icon}
-                              <span className="ml-1">{orderStatusConfig[order.status]?.label}</span>
-                            </span>
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-orange-600 mt-1">
-                          {formatDate(order.created_at)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium text-orange-900">
-                          Total: ${formatPrice(order.total_amount)}
-                        </p>
-                        <p className="text-sm text-orange-600 mt-1">
-                          {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
-                        </p>
-                      </div>
+    return (
+        <div className="customer-page pb-20 md:pb-0">
+            <CustomerHeader />
+            <main className="customer-container pt-[7.5rem]">
+                <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+                    <div><p className="customer-eyebrow">Keep an eye on dinner</p><h1 className="mt-1 text-3xl font-black tracking-[-0.06em]">Active orders</h1></div>
+                    <div className="flex gap-2">
+                        <button type="button" onClick={fetchOrders} className="flex items-center gap-2 rounded-full border border-[var(--customer-line)] px-4 py-2.5 text-sm font-bold transition hover:border-[var(--customer-coral)]"><RefreshCw className="h-4 w-4" /> Refresh</button>
+                        <button type="button" onClick={() => navigate('/customer/orders/history')} className="flex items-center gap-2 rounded-full bg-[var(--customer-coral)] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[var(--customer-coral-dark)]">History <ArrowRight className="h-4 w-4" /></button>
                     </div>
+                </div>
 
-                    <div className="mb-6">
-                        <p className="text-sm text-orange-600 mb-1">Delivered to:</p>
-                        {order.delivery_address ? (
-                          <>
-                            <p className="font-medium text-orange-900">
-                              {typeof order.delivery_address === 'string' 
-                                ? JSON.parse(order.delivery_address).street 
-                                : order.delivery_address.street}
-                            </p>
-                            <p className="text-sm text-orange-700">
-                              {typeof order.delivery_address === 'string' 
-                                ? `${JSON.parse(order.delivery_address).city}, ${JSON.parse(order.delivery_address).state} ${JSON.parse(order.delivery_address).zipCode}`
-                                : `${order.delivery_address.city}, ${order.delivery_address.state} ${order.delivery_address.zipCode}`}
-                            </p>
-                          </>
-                        ) : (
-                          <p className="text-sm text-orange-700">No address information available</p>
-                        )}
-                      </div>
-
-                    <div className="flex items-center border-t border-orange-100 pt-4">
-                      <Store className="h-5 w-5 text-orange-600 mr-2" />
-                      <span className="text-orange-900">{order.branch_name}</span>
-                      <Button
-                        className="ml-auto"
-                        onClick={() => handleViewOrder(order.id)}
-                      >
-                        Track Order
-                      </Button>
+                {loading ? <CustomerLoading label="Checking with the kitchen..." /> : error ? <CustomerError message={error} onRetry={fetchOrders} /> : !orders.length ? (
+                    <CustomerEmpty title="No active orders" description="Your next meal will appear here once you place an order." action={<button type="button" onClick={() => navigate('/')} className="mt-3 rounded-full bg-[var(--customer-coral)] px-5 py-3 text-sm font-bold text-white">Browse the menu</button>} />
+                ) : (
+                    <div className="grid gap-4 lg:grid-cols-2">
+                        {orders.map((order) => {
+                            const config = orderStatusConfig[order.status] || orderStatusConfig.pending;
+                            const StatusIcon = config.icon;
+                            return (
+                                <article key={order.id} className="customer-surface p-5 transition hover:-translate-y-0.5">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div><p className="text-xs font-bold uppercase tracking-[0.1em] text-[var(--customer-muted)]">Order #{order.id}</p><p className="mt-2 text-lg font-bold">{order.branch_name}</p></div>
+                                        <span className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ${config.tone}`}><StatusIcon className="h-3.5 w-3.5" /> {config.label}</span>
+                                    </div>
+                                    <div className="mt-6 flex items-center justify-between border-t border-[var(--customer-line)] pt-4 text-sm">
+                                        <span className="flex items-center gap-2 text-[var(--customer-muted)]"><Store className="h-4 w-4" /> {order.items?.length || 0} items</span>
+                                        <span className="font-black text-[var(--customer-coral-dark)]">${formatPrice(order.total_amount)}</span>
+                                    </div>
+                                    <button type="button" onClick={() => navigate(`/customer/orders/${order.id}`)} className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[var(--customer-coral)] text-sm font-bold text-white transition hover:bg-[var(--customer-coral-dark)]">Track order <ArrowRight className="h-4 w-4" /></button>
+                                </article>
+                            );
+                        })}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                )}
+            </main>
         </div>
-      </div>
-    </>
-  );
+    );
 };
 
 export default ActiveOrders;
