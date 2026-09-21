@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Loader2, LockKeyhole, UtensilsCrossed } from 'lucide-react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { login as loginApi } from '../services/api';
 
 const Login = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user, login } = useAuth();
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     if (user) {
-        const redirectPath = { customer: '/', admin: '/admin', branch_manager: '/branch', rider: '/rider' }[user.role] || '/';
-        return <Navigate to={redirectPath} replace />;
+        const from = location.state?.from?.pathname || ({ customer: '/', admin: '/admin', branch_manager: '/branch', rider: '/rider' }[user.role] || '/');
+        return <Navigate to={from} replace />;
     }
 
     const handleSubmit = async (event) => {
@@ -28,7 +29,8 @@ const Login = () => {
                     return;
                 }
                 login(response.data.token, response.data.user);
-                navigate('/');
+                const from = location.state?.from?.pathname || '/';
+                navigate(from, { replace: true });
             }
         } catch (loginError) {
             setError(loginError.response?.data?.message || 'That email and password combination did not work.');
@@ -76,7 +78,7 @@ const Login = () => {
                         </button>
                     </form>
                     <p className="mt-8 text-center text-sm text-[var(--customer-muted)]">
-                        New here? <button type="button" onClick={() => navigate('/register')} className="font-bold text-[var(--customer-coral-dark)] hover:underline">Create an account</button>
+                        New here? <button type="button" onClick={() => navigate('/register', { state: location.state })} className="font-bold text-[var(--customer-coral-dark)] hover:underline">Create an account</button>
                     </p>
                 </div>
             </main>

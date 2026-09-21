@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -333,13 +333,25 @@ const App = () => {
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  if (!user || !allowedRoles.includes(user.role)) {
-    return <Navigate to={user?.role === 'customer' ? '/' : '/'} />;
+  if (!user) {
+    const isStaffRoute = allowedRoles.some(role => ['admin', 'branch_manager', 'rider'].includes(role));
+    return <Navigate to={isStaffRoute ? '/admin/login' : '/login'} state={{ from: location }} replace />;
+  }
+
+  if (!allowedRoles.includes(user.role)) {
+    const roleHome = {
+      customer: '/',
+      admin: '/admin',
+      branch_manager: '/branch',
+      rider: '/rider'
+    }[user.role] || '/';
+    return <Navigate to={roleHome} replace />;
   }
 
   return children;

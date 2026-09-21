@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Check, Loader2, UserRound } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { registerCustomer } from '../../../services/api';
 
 const CustomerRegister = () => {
     const navigate = useNavigate();
-    const { login } = useAuth();
+    const location = useLocation();
+    const { user, login } = useAuth();
+
+    if (user) {
+        const from = location.state?.from?.pathname || '/';
+        return <Navigate to={from} replace />;
+    }
     const [activeStep, setActiveStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -58,7 +64,8 @@ const CustomerRegister = () => {
             });
             if (response.data?.token && response.data?.user) {
                 await login(response.data.token, response.data.user);
-                navigate('/');
+                const from = location.state?.from?.pathname || '/';
+                navigate(from, { replace: true });
             } else {
                 setError('Registration failed. Please try again.');
             }
@@ -126,7 +133,7 @@ const CustomerRegister = () => {
                             </button>
                         </div>
                     </form>
-                    <p className="mt-8 text-center text-sm text-[var(--customer-muted)]">Already have an account? <button type="button" onClick={() => navigate('/login')} className="font-bold text-[var(--customer-coral-dark)] hover:underline">Sign in</button></p>
+                    <p className="mt-8 text-center text-sm text-[var(--customer-muted)]">Already have an account? <button type="button" onClick={() => navigate('/login', { state: location.state })} className="font-bold text-[var(--customer-coral-dark)] hover:underline">Sign in</button></p>
                 </div>
             </main>
         </div>
